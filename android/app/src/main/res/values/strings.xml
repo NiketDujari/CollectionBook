@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="facebook_app_id">
+        1384156986930104
+    </string>
+
+    <string name="facebook_client_token">
+        32ede20110c725da487088f804bcdfa3
+    </string>
+
+    <string name="facebook_app_name">
+        Alpine Global
+    </string>
+
+</resources>

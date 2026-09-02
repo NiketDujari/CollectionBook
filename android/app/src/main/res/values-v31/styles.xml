@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<resources>
+
+    <style
+        name="LaunchTheme"
+        parent="@android:style/Theme.Light.NoTitleBar">
+
+        <!-- Same khadi background as Flutter splash -->
+        <item name="android:windowSplashScreenBackground">
+            @color/splash_background
+        </item>
+
+        <!-- Use Collection Book splash artwork -->
+        <item name="android:windowSplashScreenAnimatedIcon">
+            @drawable/splash_logo_android
+        </item>
+
+        <!-- Do not show Android branding at bottom -->
+        <item name="android:windowSplashScreenBrandingImage">
+            @null
+        </item>
+
+        <!-- Transition background -->
+        <item name="android:windowBackground">
+            @color/splash_background
+        </item>
+
+        <!-- Dark icons because splash background is light -->
+        <item name="android:windowLightStatusBar">
+            true
+        </item>
+
+        <item name="android:navigationBarColor">
+            @color/splash_background
+        </item>
+
+        <item name="android:windowLightNavigationBar">
+            true
+        </item>
+
+    </style>
+
+
+    <style
+        name="NormalTheme"
+        parent="@android:style/Theme.Light.NoTitleBar">
+
+        <item name="android:windowBackground">
+            @color/splash_background
+        </item>
+
+    </style>
+
+</resources>
