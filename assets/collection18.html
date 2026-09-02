@@ -3918,6 +3918,23 @@ notification_customer_payment:
 
 notification_owner_employee_payment:
     'Recorded a payment of ₹{amount} for {customerName}',
+    notification_customer_entry_deleted:
+    'Deleted a {entryType} entry of ₹{amount}',
+
+notification_owner_employee_entry_deleted:
+    'Deleted a {entryType} entry of ₹{amount} for {customerName}',
+
+notification_customer_payment_deleted:
+    'Deleted a payment of ₹{amount}',
+
+notification_owner_employee_payment_deleted:
+    'Deleted a payment of ₹{amount} for {customerName}',
+
+    notification_customer_contact_deleted:
+    'Deleted your ledger containing {entryCount} transactions',
+
+notification_owner_employee_contact_deleted:
+    'Deleted {customerName} and {entryCount} ledger transactions',
 
 notification_entry_type_sale:
     'Sale',
@@ -3934,7 +3951,7 @@ flow_sales_ahead:
 
 flow_balanced:
     'Sales and collections are balanced',txt_ledger_creator_only:
-    'Only the ledger creator can add entries'
+    'Only the ledger creator can add entries',
       },
       hi: {
         app_sub: "क्रेडिट और लेजर प्रबंधन", btn_setup: "सेट अप", nav_dash: "डैशबोर्ड", nav_collect: "लेना है", nav_pay: "देना है", nav_cust: "संपर्क", nav_fraud: "धोखाधड़ी अलर्ट",
@@ -4001,6 +4018,24 @@ notification_customer_payment:
 
 notification_owner_employee_payment:
     '{customerName} के लिए ₹{amount} का भुगतान दर्ज किया गया',
+
+    notification_customer_entry_deleted:
+    '₹{amount} की {entryType} प्रविष्टि हटाई गई',
+
+notification_owner_employee_entry_deleted:
+    '{customerName} के लिए ₹{amount} की {entryType} प्रविष्टि हटाई गई',
+
+notification_customer_payment_deleted:
+    '₹{amount} का भुगतान हटाया गया',
+
+notification_owner_employee_payment_deleted:
+    '{customerName} के लिए ₹{amount} का भुगतान हटाया गया',
+
+    notification_customer_contact_deleted:
+    'आपका लेजर जिसमें {entryCount} लेनदेन थे, हटा दिया गया',
+
+notification_owner_employee_contact_deleted:
+    '{customerName} और {entryCount} लेजर लेनदेन हटा दिए गए',
 
 notification_entry_type_sale:
     'बिक्री',
@@ -4083,6 +4118,24 @@ notification_customer_payment:
 
 notification_owner_employee_payment:
     '{customerName}-এর জন্য ₹{amount} পেমেন্ট রেকর্ড করা হয়েছে',
+
+    notification_customer_entry_deleted:
+    '₹{amount}-এর {entryType} এন্ট্রি মুছে ফেলা হয়েছে',
+
+notification_owner_employee_entry_deleted:
+    '{customerName}-এর জন্য ₹{amount}-এর {entryType} এন্ট্রি মুছে ফেলা হয়েছে',
+
+notification_customer_payment_deleted:
+    '₹{amount} পেমেন্ট মুছে ফেলা হয়েছে',
+
+notification_owner_employee_payment_deleted:
+    '{customerName}-এর জন্য ₹{amount} পেমেন্ট মুছে ফেলা হয়েছে',
+
+    notification_customer_contact_deleted:
+    'আপনার {entryCount}টি লেনদেনসহ লেজার মুছে ফেলা হয়েছে',
+
+notification_owner_employee_contact_deleted:
+    '{customerName} এবং {entryCount}টি লেজার লেনদেন মুছে ফেলা হয়েছে',
 
 notification_entry_type_sale:
     'বিক্রয়',
@@ -5628,6 +5681,362 @@ function getCurrentActor() {
                 ? 'employee'
                 : 'owner'
     };
+}
+
+async function sendDeleteNotifications(
+    entry,
+    payment
+) {
+    if (
+        !entry ||
+        !window.NativeBridge ||
+        typeof window.NativeBridge.postMessage !==
+            'function'
+    ) {
+        return;
+    }
+
+    var customerPhone =
+        cleanPhone10(
+            entry.customerPhone || ''
+        );
+
+    var customerName =
+        entry.customerName ||
+        'Customer';
+
+    var businessName =
+        window.flutterSession?.businessName ||
+        (profile && profile.shop) ||
+        window.flutterSession?.businessOwnerName ||
+        (profile && profile.name) ||
+        'Collection Book';
+
+    var isPayment =
+        !!payment;
+
+    var amount =
+        isPayment
+            ? Number(payment.amount || 0)
+            : Number(
+                entry.grossAmount ||
+                entry.originalAmount ||
+                entry.amount ||
+                0
+            );
+
+    var entryType =
+        entry.type === 'debtor'
+            ? 'sale'
+            : 'purchase';
+
+    var typeText =
+        entry.type === 'debtor'
+            ? 'Sale'
+            : 'Purchase';
+
+
+    /*
+     * ------------------------------------------
+     * Notify customer
+     * ------------------------------------------
+     */
+    if (customerPhone) {
+
+        var customerMessage =
+            isPayment
+                ? (
+                    'Deleted a payment of ₹' +
+                    amount
+                )
+                : (
+                    'Deleted a ' +
+                    typeText +
+                    ' entry of ₹' +
+                    amount
+                );
+
+        window.NativeBridge.postMessage(
+            'SEND_NOTIFICATION:' +
+            JSON.stringify({
+                targetPhone:
+                    customerPhone,
+
+                senderName:
+                    businessName,
+
+                /*
+                 * Deletion should NOT trigger
+                 * WhatsApp fallback.
+                 *
+                 * This is an app notification
+                 * for registered users.
+                 */
+                whatsappConsent:
+                    false,
+
+                message:
+                    customerMessage,
+
+                notificationKey:
+                    isPayment
+                        ? 'customer_payment_deleted'
+                        : 'customer_entry_deleted',
+
+                params:
+                    isPayment
+                        ? {
+                            amount:
+                                amount
+                        }
+                        : {
+                            entryType:
+                                entryType,
+
+                            amount:
+                                amount
+                        }
+            })
+        );
+    }
+
+
+    /*
+     * ------------------------------------------
+     * If employee deleted it,
+     * notify business owner as well.
+     * ------------------------------------------
+     */
+    if (
+        currentRoleMode === 'employee' &&
+        window.flutterSession
+    ) {
+
+        var ownerPhone =
+            cleanPhone10(
+                window.flutterSession
+                    .ownerPhone ||
+                ''
+            );
+
+        var employeeName =
+            window.flutterSession
+                .employeeName ||
+            'Employee';
+
+        if (ownerPhone) {
+
+            var ownerMessage =
+                isPayment
+                    ? (
+                        'Deleted a payment of ₹' +
+                        amount +
+                        ' for ' +
+                        customerName
+                    )
+                    : (
+                        'Deleted a ' +
+                        typeText +
+                        ' entry of ₹' +
+                        amount +
+                        ' for ' +
+                        customerName
+                    );
+
+            window.NativeBridge.postMessage(
+                'SEND_NOTIFICATION:' +
+                JSON.stringify({
+                    targetPhone:
+                        ownerPhone,
+
+                    senderName:
+                        employeeName +
+                        ' (Employee)',
+
+                    whatsappConsent:
+                        false,
+
+                    message:
+                        ownerMessage,
+
+                    notificationKey:
+                        isPayment
+                            ? 'owner_employee_payment_deleted'
+                            : 'owner_employee_entry_deleted',
+
+                    params:
+                        isPayment
+                            ? {
+                                amount:
+                                    amount,
+
+                                customerName:
+                                    customerName
+                            }
+                            : {
+                                entryType:
+                                    entryType,
+
+                                amount:
+                                    amount,
+
+                                customerName:
+                                    customerName
+                            }
+                })
+            );
+        }
+    }
+}
+
+async function sendContactDeleteNotifications(
+    contact,
+    deletedEntries
+) {
+    if (
+        !contact ||
+        !window.NativeBridge ||
+        typeof window.NativeBridge.postMessage !==
+            'function'
+    ) {
+        return;
+    }
+
+    var customerPhone =
+        cleanPhone10(
+            contact.phone || ''
+        );
+
+    var customerName =
+        contact.name ||
+        'Customer';
+
+    var entryCount =
+        Array.isArray(deletedEntries)
+            ? deletedEntries.length
+            : 0;
+
+    var businessName =
+        window.flutterSession?.businessName ||
+        (profile && profile.shop) ||
+        window.flutterSession?.businessOwnerName ||
+        (profile && profile.name) ||
+        'Collection Book';
+
+
+    /*
+     * ------------------------------------------
+     * Notify customer
+     * ------------------------------------------
+     */
+    if (customerPhone) {
+
+        var customerMessage =
+            'Deleted your ledger containing ' +
+            entryCount +
+            (
+                entryCount === 1
+                    ? ' transaction'
+                    : ' transactions'
+            );
+
+        window.NativeBridge.postMessage(
+            'SEND_NOTIFICATION:' +
+            JSON.stringify({
+                targetPhone:
+                    customerPhone,
+
+                senderName:
+                    businessName,
+
+                /*
+                 * No WhatsApp fallback for
+                 * delete notifications.
+                 */
+                whatsappConsent:
+                    false,
+
+                message:
+                    customerMessage,
+
+                notificationKey:
+                    'customer_contact_deleted',
+
+                params: {
+                    entryCount:
+                        entryCount
+                }
+            })
+        );
+    }
+
+
+    /*
+     * ------------------------------------------
+     * Employee deleted contact:
+     * notify business owner too.
+     * ------------------------------------------
+     */
+    if (
+        currentRoleMode === 'employee' &&
+        window.flutterSession
+    ) {
+
+        var ownerPhone =
+            cleanPhone10(
+                window.flutterSession
+                    .ownerPhone ||
+                ''
+            );
+
+        var employeeName =
+            window.flutterSession
+                .employeeName ||
+            'Employee';
+
+        if (ownerPhone) {
+
+            var ownerMessage =
+                'Deleted ' +
+                customerName +
+                ' and ' +
+                entryCount +
+                (
+                    entryCount === 1
+                        ? ' ledger transaction'
+                        : ' ledger transactions'
+                );
+
+            window.NativeBridge.postMessage(
+                'SEND_NOTIFICATION:' +
+                JSON.stringify({
+                    targetPhone:
+                        ownerPhone,
+
+                    senderName:
+                        employeeName +
+                        ' (Employee)',
+
+                    whatsappConsent:
+                        false,
+
+                    message:
+                        ownerMessage,
+
+                    notificationKey:
+                        'owner_employee_contact_deleted',
+
+                    params: {
+                        customerName:
+                            customerName,
+
+                        entryCount:
+                            entryCount
+                    }
+                })
+            );
+        }
+    }
 }
 
 function getFraudIdentity(phone, name) {
@@ -8052,9 +8461,21 @@ if (deletePendingBtn) {
         'This will permanently remove this pending transaction.',
         'Delete',
         async function () {
-
+            var deletedPayment =
+    null;
             if (pendingPaymentId) {
-
+                deletedPayment =
+    (
+        pendingEntry.payments ||
+        []
+    ).find(
+        function (payment) {
+            return (
+                payment.id ===
+                pendingPaymentId
+            );
+        }
+    );
                 // Delete only the pending payment.
                 pendingEntry.payments =
                     (pendingEntry.payments || []).filter(
@@ -8084,7 +8505,10 @@ if (deletePendingBtn) {
                     );
                 }
             }
-
+await sendDeleteNotifications(
+    pendingEntry,
+    deletedPayment
+);
             renderAll();
 
             if (
@@ -8100,43 +8524,139 @@ if (deletePendingBtn) {
 
     return;
 }
-        var delItemBtn = closest(tNode, '[data-action="delete-item"]');
-        if(delItemBtn) {
-          showCustomConfirm('Delete Transaction', 'Delete this? Cannot be undone.', 'Delete', async function() {
-            var did = delItemBtn.dataset.eid; var dpid = delItemBtn.dataset.pid;
-           if(dpid) {
+        var delItemBtn =
+    closest(
+        tNode,
+        '[data-action="delete-item"]'
+    );
 
-  for(var j=0;j<ledger.length;j++){
-    if(ledger[j].id === did){
-      ledger[j].payments = ledger[j].payments.filter(function(px){
-        return px.id !== dpid;
-      });
-      break;
-    }
-  }
+if (delItemBtn) {
 
-} else {
+    showCustomConfirm(
+        'Delete Transaction',
+        'Delete this? Cannot be undone.',
+        'Delete',
+        async function () {
 
-  ledger = ledger.filter(function(x){
-    return x.id !== did;
-  });
+            var did =
+                delItemBtn.dataset.eid;
 
-  // Delete the Firestore document as well
-  if (window.NativeBridge && typeof window.NativeBridge.postMessage === 'function') {
-    window.NativeBridge.postMessage("DELETE_ENTRY:" + did);
-  }
+            var dpid =
+                delItemBtn.dataset.pid;
 
-}
+            /*
+             * Capture entry BEFORE deleting it.
+             *
+             * We need its customer phone,
+             * amount, type, etc. for the
+             * notification.
+             */
+            var deletedEntry =
+                ledger.find(function (entry) {
+                    return entry.id === did;
+                });
 
-await saveLedger();
+            if (!deletedEntry) {
+                showToast(
+                    'Transaction not found'
+                );
 
-renderAll();
-renderHistory();
+                return;
+            }
 
-showToast('Deleted');
-          });
-          return;
+            var deletedPayment =
+                null;
+
+
+            /*
+             * ---------------------------------
+             * Delete payment
+             * ---------------------------------
+             */
+            if (dpid) {
+
+                deletedPayment =
+                    (
+                        deletedEntry.payments ||
+                        []
+                    ).find(
+                        function (payment) {
+                            return (
+                                payment.id ===
+                                dpid
+                            );
+                        }
+                    );
+
+                deletedEntry.payments =
+                    (
+                        deletedEntry.payments ||
+                        []
+                    ).filter(
+                        function (payment) {
+                            return (
+                                payment.id !==
+                                dpid
+                            );
+                        }
+                    );
+
+            } else {
+
+                /*
+                 * ---------------------------------
+                 * Delete complete Sale/Purchase
+                 * ---------------------------------
+                 */
+
+                ledger =
+                    ledger.filter(
+                        function (entry) {
+                            return (
+                                entry.id !==
+                                did
+                            );
+                        }
+                    );
+
+                if (
+                    window.NativeBridge &&
+                    typeof window.NativeBridge
+                        .postMessage ===
+                        'function'
+                ) {
+                    window.NativeBridge
+                        .postMessage(
+                            'DELETE_ENTRY:' +
+                            did
+                        );
+                }
+            }
+
+
+            await saveLedger();
+
+
+            /*
+             * Send push + in-app notification
+             * only after local deletion/save
+             * succeeds.
+             */
+            await sendDeleteNotifications(
+                deletedEntry,
+                deletedPayment
+            );
+
+
+            renderAll();
+            renderHistory();
+
+            showToast('Deleted');
         }
+    );
+
+    return;
+}
         var collectBtnCust = closest(tNode, '[data-action="collect-payment-cust"]');
         if(collectBtnCust){
           collectTargetCustId = collectBtnCust.dataset.custid; collectTargetType = collectBtnCust.dataset.type; var c = myCustById(collectTargetCustId);
@@ -10368,7 +10888,17 @@ if (
             }
         });
     }
-
+/*
+ * Send ONE summary notification.
+ *
+ * Do not call sendDeleteNotifications()
+ * for every entry here, otherwise deleting
+ * a large contact could create dozens of pushes.
+ */
+await sendContactDeleteNotifications(
+    contactToDelete,
+    entriesToDelete
+);
     showToast('Contact and ledger deleted');
 
 } else {

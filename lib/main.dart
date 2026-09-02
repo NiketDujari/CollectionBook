@@ -127,11 +127,101 @@ class _StartupLoaderState extends State<StartupLoader> {
     _future = _initialize();
   }
 
+  Future<void> _resolveBusinessWithRetry() async {
+    const maxAttempts = 5;
+
+    for (
+    var attempt = 1;
+    attempt <= maxAttempts;
+    attempt++
+    ) {
+      try {
+        debugPrint(
+          'resolveBusiness attempt $attempt/$maxAttempts',
+        );
+
+        await SessionService.resolveBusiness();
+
+        debugPrint(
+          'resolveBusiness succeeded on attempt $attempt',
+        );
+
+        return;
+      } on FirebaseException catch (
+    e,
+    stackTrace
+    ) {
+    debugPrint(
+    'resolveBusiness Firebase error '
+    'attempt=$attempt '
+    'code=${e.code} '
+    'message=${e.message}',
+    );
+
+    /*
+       * Only retry errors that are expected
+       * to be temporary.
+       */
+    final retryable =
+    e.code == 'unavailable' ||
+    e.code == 'deadline-exceeded' ||
+    e.code == 'aborted' ||
+    e.code == 'internal';
+
+    if (
+    !retryable ||
+    attempt == maxAttempts
+    ) {
+    debugPrintStack(
+    stackTrace: stackTrace,
+    );
+
+    rethrow;
+    }
+
+    /*
+       * 500ms, 1s, 1.5s, 2s...
+       */
+    await Future.delayed(
+    Duration(
+    milliseconds:
+    500 * attempt,
+    ),
+    );
+    } catch (
+    e,
+    stackTrace
+    ) {
+    /*
+       * Don't silently retry programming,
+       * permission or application-state errors.
+       */
+    debugPrint(
+    'resolveBusiness non-Firebase error: $e',
+    );
+
+    debugPrintStack(
+    stackTrace: stackTrace,
+    );
+
+    rethrow;
+    }
+  }
+  }
+
+
   Future<bool> _initialize() async {
     final stopwatch =
     Stopwatch()..start();
 
-    await SessionService.resolveBusiness();
+    /*
+   * On a cold install/start Android networking
+   * and Firestore may need a short moment before
+   * the first remote request succeeds.
+   *
+   * Keep the splash visible and retry silently.
+   */
+    await _resolveBusinessWithRetry();
 
     try {
       await NotificationService.initialize();
