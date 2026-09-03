@@ -3,6 +3,12 @@ const {
 } = require("firebase-functions/v2/firestore");
 
 const {
+  onSchedule,
+} = require(
+  "firebase-functions/v2/scheduler"
+);
+
+const {
   onCall,
   HttpsError,
 } = require("firebase-functions/v2/https");
@@ -29,6 +35,172 @@ const whatsappConfig = {
   languageCode: "en",
   namespace: "213795ad_86bc_4371_9765_533f2a21dbde",
 };
+
+/*
+ * ====================================================
+ * COLLECTION BOOK ENGAGEMENT NOTIFICATION TEMPLATES
+ * ====================================================
+ */
+
+const engagementNotifications = [
+  {
+    title: "Aaj ka hisaab? 👀",
+    body:
+      "2 minute nikalo aur aaj ka ledger update kar lo 📒",
+  },
+  {
+    title: "Kal pe mat chhodo 😌",
+    body:
+      "Aaj ka hisaab aaj hi complete kar lo.",
+  },
+  {
+    title:
+      "Customer ka 'kal de dunga' yaad hai? 👀",
+    body:
+      "Pending collections ek baar check kar lo 💰",
+  },
+  {
+    title:
+      "Hisaab yaad rakhna mushkil hai? 😵‍💫",
+    body:
+      "Isliye toh Collection Book hai 😌",
+  },
+  {
+    title:
+      "Business busy hai? 📈",
+    body:
+      "Hisaab messy nahi hona chahiye. Ledger update kar lo.",
+  },
+  {
+    title:
+      "Aaj kisne payment kiya? 👀",
+    body:
+      "Collection Book ko bhi bata do 😄",
+  },
+  {
+    title:
+      "Khata check kiya? 📒",
+    body:
+      "Pending payments ko pending mat rehne do.",
+  },
+  {
+    title:
+      "Ek chhota reminder 😌",
+    body:
+      "Sales aur payments record karna mat bhoolna.",
+  },
+  {
+    title:
+      "Calculator ko chhutti do 😎",
+    body:
+      "Hisaab Collection Book mein update kar lo.",
+  },
+  {
+    title:
+      "Business ka memory card 🧠",
+    body:
+      "Jo yaad nahi rakhna, Collection Book mein likh do.",
+  },
+  {
+    title:
+      "Khata updated hai? ✅",
+    body:
+      "Pending collections ek baar check kar lo.",
+  },
+  {
+    title:
+      "Paise yaad rakhne ka kaam humara 😌",
+    body:
+      "Bas apna ledger updated rakho.",
+  },
+  {
+    title:
+      "Khata shaant kyun hai? 👀",
+    body:
+      "Business update karna reh gaya kya?",
+  },
+  {
+    title:
+      "Kisi ka payment pending hai? 💰",
+    body:
+      "Collection Book kholo aur ek baar check kar lo.",
+  },
+  {
+    title:
+      "Hisaab clear, tension clear 😌",
+    body:
+      "Apna latest ledger update kar lo.",
+  },
+  {
+    title:
+      "Kuch record karna reh toh nahi gaya? 👀",
+    body:
+      "Sales aur payments ek baar verify kar lo.",
+  },
+  {
+    title:
+      "Udhaar ka hisaab ready hai? 📒",
+    body:
+      "Pending entries ko Collection Book mein update kar lo.",
+  },
+  {
+    title:
+      "2 minute ka kaam ⏱️",
+    body:
+      "Ledger update karo aur hisaab tension-free rakho.",
+  },
+  {
+    title:
+      "Payment aayi? 💸",
+    body:
+      "Record kar do, warna baad mein yaad karna padega 😄",
+  },
+  {
+    title:
+      "Khata kholne ka time 👀",
+    body:
+      "Pending dues aur recent payments check kar lo.",
+  },
+];
+
+function getRandomEngagementNotification(
+  lastTitle,
+) {
+  let candidates =
+    engagementNotifications;
+
+  /*
+   * Avoid sending the exact same notification
+   * title twice in a row to the same user.
+   */
+  if (lastTitle) {
+    candidates =
+      engagementNotifications.filter(
+        (item) =>
+          item.title !== lastTitle,
+      );
+  }
+
+  /*
+   * Defensive fallback.
+   */
+  if (candidates.length === 0) {
+    candidates =
+      engagementNotifications;
+  }
+
+  const randomIndex =
+    Math.floor(
+      Math.random() *
+      candidates.length
+    );
+
+  return candidates[
+    randomIndex
+  ];
+}
+
+
 
 async function sendWhatsAppAppInvitation({
   targetPhone,
@@ -358,8 +530,21 @@ const notificationParams =
                    },
 
                    android: {
-                     priority:
-                       "high",
+                     priority: "high",
+
+                     notification: {
+                       channelId:
+                         "collection_book_high",
+
+                       priority:
+                         "high",
+
+                       defaultSound:
+                         true,
+
+                       defaultVibrateTimings:
+                         true,
+                     },
                    },
                  });
 
@@ -701,6 +886,256 @@ const notificationParams =
           error: String(error),
         });
       }
+    },
+  );
+
+/*
+ * ====================================================
+ * SCHEDULED ENGAGEMENT NOTIFICATIONS
+ * ====================================================
+ *
+ * Runs in Asia/Kolkata:
+ *
+ * Monday    - 10:00 AM
+ * Wednesday - 7:00 PM
+ * Saturday  - 6:00 PM
+ *
+ * These are engagement pushes only. They are not saved
+ * in the user's in-app notification history.
+ */
+
+async function sendEngagementNotifications() {
+  const db =
+    admin.firestore();
+
+  console.log(
+    "Starting scheduled engagement notifications",
+  );
+
+  const usersSnapshot =
+    await db
+      .collection("users")
+      .get();
+
+  if (usersSnapshot.empty) {
+    console.log(
+      "No Collection Book users found.",
+    );
+
+    return;
+  }
+
+  let successCount = 0;
+  let failureCount = 0;
+  let skippedCount = 0;
+  let invalidTokenCount = 0;
+
+  for (
+    const userDocument
+    of usersSnapshot.docs
+  ) {
+    const user =
+      userDocument.data();
+
+    /*
+     * Explicit opt-out.
+     *
+     * Missing field currently means enabled.
+     */
+    if (
+      user.engagementNotificationsEnabled ===
+        false
+    ) {
+      skippedCount++;
+
+      continue;
+    }
+
+    const fcmToken =
+      user.fcmToken;
+
+    /*
+     * Skip users without a usable FCM token.
+     */
+    if (
+      !fcmToken ||
+      typeof fcmToken !== "string"
+    ) {
+      skippedCount++;
+
+      continue;
+    }
+
+    /*
+     * Avoid repeating the user's previous
+     * engagement notification.
+     */
+    const selectedNotification =
+      getRandomEngagementNotification(
+        user.lastEngagementNotificationTitle,
+      );
+
+    try {
+      await admin
+        .messaging()
+        .send({
+          token:
+            fcmToken,
+
+          notification: {
+            title:
+              selectedNotification.title,
+
+            body:
+              selectedNotification.body,
+          },
+
+          data: {
+            type:
+              "engagement",
+
+            source:
+              "scheduled",
+          },
+
+         android: {
+           priority:
+             "high",
+
+           notification: {
+             channelId:
+               "collection_book_engagement_v1",
+
+             priority:
+               "high",
+
+             visibility:
+               "public",
+
+             defaultSound:
+               true,
+
+             defaultVibrateTimings:
+               true,
+           },
+         },
+        });
+
+      /*
+       * Save the last notification so that the
+       * next run does not immediately repeat it.
+       */
+      await userDocument.ref.set(
+        {
+          lastEngagementNotificationTitle:
+            selectedNotification.title,
+
+          lastEngagementNotificationAt:
+            admin.firestore
+              .FieldValue
+              .serverTimestamp(),
+        },
+        {
+          merge: true,
+        },
+      );
+
+      successCount++;
+
+      console.log(
+        "Engagement notification sent:",
+        userDocument.id,
+      );
+    } catch (error) {
+      failureCount++;
+
+      console.error(
+        "Scheduled notification failed:",
+        userDocument.id,
+        error,
+      );
+
+      const errorCode =
+        error?.code || "";
+
+      /*
+       * Remove FCM tokens that Firebase says are
+       * no longer valid.
+       */
+      const invalidToken =
+        errorCode ===
+          "messaging/registration-token-not-registered" ||
+        errorCode ===
+          "messaging/invalid-registration-token" ||
+        errorCode ===
+          "messaging/invalid-argument";
+
+      if (invalidToken) {
+        invalidTokenCount++;
+
+        await userDocument.ref.update({
+          fcmToken:
+            admin.firestore
+              .FieldValue
+              .delete(),
+
+          fcmUpdatedAt:
+            admin.firestore
+              .FieldValue
+              .serverTimestamp(),
+        });
+
+        console.log(
+          "Removed invalid FCM token:",
+          userDocument.id,
+        );
+      }
+    }
+  }
+
+  console.log(
+    "Scheduled notification run completed",
+    {
+      totalUsers:
+        usersSnapshot.size,
+
+      success:
+        successCount,
+
+      failed:
+        failureCount,
+
+      skipped:
+        skippedCount,
+
+      invalidTokensRemoved:
+        invalidTokenCount,
+    },
+  );
+}
+
+/*
+ * ====================================================
+ * DAILY ENGAGEMENT NOTIFICATION
+ * ====================================================
+ *
+ * Every day at 7:00 PM IST.
+ */
+exports.sendDailyEngagementNotification =
+  onSchedule(
+    {
+      schedule:
+        "0 10,19 * * *",
+
+      timeZone:
+        "Asia/Kolkata",
+
+      region:
+        "asia-south1",
+    },
+
+    async () => {
+      await sendEngagementNotifications();
     },
   );
 
