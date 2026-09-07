@@ -30,11 +30,13 @@ Future<void> firebaseMessagingBackgroundHandler(
     RemoteMessage message,
     ) async {
   await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
+    options:
+    DefaultFirebaseOptions.currentPlatform,
   );
 
   debugPrint(
-    'FCM background message: ${message.messageId}',
+    'FCM background message: '
+        '${message.messageId}',
   );
 }
 

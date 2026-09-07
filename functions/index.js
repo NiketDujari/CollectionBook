@@ -1125,7 +1125,7 @@ exports.sendDailyEngagementNotification =
   onSchedule(
     {
       schedule:
-        "0 10,19 * * *",
+        "30 11,17 * * *",
 
       timeZone:
         "Asia/Kolkata",

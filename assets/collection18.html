@@ -1797,6 +1797,20 @@ body.no-delete-access
     background: transparent;
 }
 
+.settings-row-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.settings-row-svg {
+    width: 22px;
+    height: 22px;
+    display: block;
+    color: var(--text);
+    flex-shrink: 0;
+}
+
 /* Ensure desktop CSS does not turn it back into a popup */
 
 @media (min-width: 600px) {
@@ -2342,6 +2356,307 @@ nav.tabs button .count {
 
 .stat-tile.net-flow .stat-tile-icon {
     margin-top: 1px;
+}
+
+    .cb-tutorial {
+    position: fixed;
+    inset: 0;
+    z-index: 20000;
+    pointer-events: auto;
+}
+
+    .cb-tutorial {
+    --tutorial-padding: 8px;
+}
+
+.cb-tutorial::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: transparent;
+}
+
+.cb-tutorial-spotlight {
+    position: fixed;
+    z-index: 20001;
+    pointer-events: none;
+
+    border: 3px solid var(--turmeric);
+    border-radius: 16px;
+    background: transparent;
+
+    /*
+     * This darkens everything OUTSIDE the box
+     * while keeping the inside completely clear.
+     */
+   box-shadow:
+        0 0 0 9999px rgba(15, 18, 30, 0.62),
+        0 0 0 4px rgba(201, 138, 45, 0.18),
+        0 0 24px rgba(201, 138, 45, 0.40),
+        inset 0 0 0 1px rgba(255,255,255,0.10);
+
+    transition:
+        top .25s ease,
+        left .25s ease,
+        width .25s ease,
+        height .25s ease;
+}
+
+.cb-tutorial-card {
+    position: fixed;
+
+    width:
+        min(
+            calc(100vw - 32px),
+            360px
+        );
+
+    padding: 18px;
+
+    background:
+        var(--paper);
+
+    border:
+        1px solid
+        var(--khadi-line);
+
+    border-radius: 20px;
+
+    box-shadow:
+        0 18px 50px
+        rgba(0,0,0,.32);
+
+    z-index: 20002;
+
+    animation:
+        cbTutorialIn .22s ease-out;
+}
+
+@keyframes cbTutorialIn {
+    from {
+        opacity: 0;
+        transform:
+            translateY(8px)
+            scale(.98);
+    }
+
+    to {
+        opacity: 1;
+        transform:
+            translateY(0)
+            scale(1);
+    }
+}
+
+.cb-tutorial-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.cb-tutorial-badge {
+    color:
+        var(--turmeric);
+
+    font-size: .65rem;
+    font-weight: 800;
+    letter-spacing: .08em;
+}
+
+.cb-tutorial-skip {
+    border: none;
+    background: transparent;
+
+    color:
+        var(--muted);
+
+    font-size: .8rem;
+    font-weight: 600;
+}
+
+.cb-tutorial-icon {
+    width: 46px;
+    height: 46px;
+
+    margin-top: 14px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 14px;
+
+    background:
+        var(--turmeric-tint);
+
+    font-size: 1.35rem;
+}
+
+.cb-tutorial-card h3 {
+    margin:
+        12px 0 6px;
+
+    color:
+        var(--indigo);
+
+    font-family:
+        'Rozha One',
+        serif;
+
+    font-size: 1.35rem;
+}
+
+.cb-tutorial-card p {
+    margin: 0;
+
+    color:
+        var(--muted);
+
+    font-size: .88rem;
+    line-height: 1.5;
+}
+
+.cb-tutorial-footer {
+    margin-top: 18px;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 12px;
+}
+
+.cb-tutorial-progress {
+    display: flex;
+    gap: 5px;
+}
+
+.cb-tutorial-dot {
+    width: 6px;
+    height: 6px;
+
+    border-radius: 999px;
+
+    background:
+        var(--khadi-line);
+
+    transition:
+        width .2s ease,
+        background .2s ease;
+}
+
+.cb-tutorial-dot.active {
+    width: 20px;
+
+    background:
+        var(--turmeric);
+}
+
+.cb-tutorial-next {
+    border: none;
+
+    padding:
+        11px 18px;
+
+    border-radius: 12px;
+
+    background:
+        var(--indigo);
+
+    color:
+        var(--on-accent);
+
+    font-size: .85rem;
+    font-weight: 700;
+
+    box-shadow:
+        0 4px 12px
+        rgba(43,58,103,.20);
+}
+
+    .cb-tutorial-arrow {
+    position: fixed;
+
+    width: 18px;
+    height: 18px;
+
+    z-index: 20003;
+
+    pointer-events: none;
+
+    opacity: 0;
+
+    transition:
+        top .25s ease,
+        left .25s ease,
+        transform .25s ease,
+        opacity .2s ease;
+}
+
+/*
+ * Arrow body
+ */
+.cb-tutorial-arrow::before {
+    content: '';
+
+    position: absolute;
+
+    width: 14px;
+    height: 14px;
+
+    border-right:
+        4px solid
+        var(--turmeric);
+
+    border-bottom:
+        4px solid
+        var(--turmeric);
+
+    transform:
+        rotate(45deg);
+
+    filter:
+        drop-shadow(
+            0 2px 4px
+            rgba(0,0,0,.25)
+        );
+}
+
+/*
+ * Gentle movement so the user immediately
+ * notices what is being highlighted.
+ */
+.cb-tutorial-arrow.show {
+    opacity: 1;
+
+    animation:
+        cbTutorialArrowBounce
+        .9s ease-in-out
+        infinite;
+}
+
+@keyframes cbTutorialArrowBounce {
+
+    0%,
+    100% {
+        transform:
+            translateY(0);
+    }
+
+    50% {
+        transform:
+            translateY(5px);
+    }
+}
+
+    .cb-tutorial-arrow.arrow-down::before {
+    transform:
+        rotate(45deg);
+}
+
+.cb-tutorial-arrow.arrow-up::before {
+    transform:
+        rotate(225deg);
 }
 
   </style>
@@ -3004,6 +3319,39 @@ nav.tabs button .count {
         <button
                 type="button"
                 class="btn settings-row"
+                id="btn-help-tour"
+        >
+    <span
+            class="settings-row-icon"
+            aria-hidden="true"
+    >
+        <svg
+                viewBox="0 0 24 24"
+                class="settings-row-svg"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+        >
+            <path d="M12 3l1.1 3.3L16.5 7.5l-3.4 1.1L12 12l-1.1-3.4L7.5 7.5l3.4-1.2L12 3z"/>
+            <path d="M18.5 13l.7 2.1 2.1.7-2.1.7-.7 2.1-.7-2.1-2.1-.7 2.1-.7.7-2.1z"/>
+            <path d="M6 14l.9 2.7 2.7.9-2.7.9L6 21l-.9-2.7-2.7-.9 2.7-.9L6 14z"/>
+        </svg>
+    </span>
+
+          <span class="settings-row-label">
+        Take App Tour
+    </span>
+
+          <span class="settings-row-arrow">
+        ›
+    </span>
+        </button>
+
+        <button
+                type="button"
+                class="btn settings-row"
                 id="btn-settings-security"
         >
           <span class="settings-row-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 15v2"/></svg></span>
@@ -3391,7 +3739,19 @@ nav.tabs button .count {
     </div>
     <div id="en-new-customer-fields" style="display:none;">
       <div class="field-row">
-        <div class="field"><label data-i18n="lbl_phone">Phone</label><input type="tel" id="en-phone"></div>
+        <div class="field">
+          <label data-i18n="lbl_phone">
+            Phone <span style="color:#C62828;">*</span>
+          </label>
+
+          <input
+                  type="tel"
+                  id="en-phone"
+                  inputmode="numeric"
+                  maxlength="10"
+                  placeholder="10-digit phone number"
+          >
+        </div>
         <div class="field"><label data-i18n="lbl_area">Area / City</label><input id="en-area" data-i18n-ph="lbl_area" placeholder="Area"></div>
       </div>
     </div>
@@ -3736,6 +4096,62 @@ nav.tabs button .count {
   </div>
 </div>
 <div class="toast" id="toast"></div>
+<div id="cbTutorial" class="cb-tutorial" style="display:none;">
+
+  <div id="cbTutorialSpotlight"
+       class="cb-tutorial-spotlight"></div>
+
+  <div id="cbTutorialArrow"
+       class="cb-tutorial-arrow"></div>
+
+  <div id="cbTutorialCard"
+       class="cb-tutorial-card">
+
+    <div class="cb-tutorial-top">
+
+      <div class="cb-tutorial-badge">
+        ✨ QUICK TOUR
+      </div>
+
+      <button
+              type="button"
+              id="cbTutorialSkip"
+              class="cb-tutorial-skip">
+        Skip
+      </button>
+
+    </div>
+
+    <div
+            id="cbTutorialIcon"
+            class="cb-tutorial-icon">
+      📊
+    </div>
+
+    <h3 id="cbTutorialTitle">
+      Your business at a glance
+    </h3>
+
+    <p id="cbTutorialText"></p>
+
+    <div class="cb-tutorial-footer">
+
+      <div id="cbTutorialProgress"
+           class="cb-tutorial-progress">
+      </div>
+
+      <button
+              type="button"
+              id="cbTutorialNext"
+              class="cb-tutorial-next">
+        Next →
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
 <script src="js/bridge.js"></script>
 <script type="module">
   const firebaseConfig = {
@@ -3805,6 +4221,108 @@ nav.tabs button .count {
     var eventsBound = false;
     var pdfRetryCount = 0;
     var currentRoleMode = 'owner'; // 'owner' or 'employee'
+
+    var cbTutorialSteps = [
+
+    {
+        target:
+            '#screen-dashboard .stats-grid',
+
+        icon:
+            '📊',
+
+        title:
+            'Your business at a glance',
+
+        text:
+            'See how much you need to collect, pay, and what needs your attention.'
+    },
+
+    {
+        target:
+            '#tabs button[data-tab="debtors"]',
+
+        icon:
+            '💰',
+
+        title:
+            'Know who owes you',
+
+        text:
+            'All pending customer collections are organized here.'
+    },
+
+    {
+        target:
+            '#tabs button[data-tab="creditors"]',
+
+        icon:
+            '🧾',
+
+        title:
+            'Track what you owe',
+
+        text:
+            'Keep supplier and purchase dues organised in one place.'
+    },
+
+    {
+        target:
+            '#tabs button[data-tab="mycustomers"]',
+
+        icon:
+            '👥',
+
+        title:
+            'Your customer book',
+
+        text:
+            'Open any contact to see their ledger, payments and history.'
+    },
+
+    {
+        target:
+            '#fabBtn',
+
+        icon:
+            '➕',
+
+        title:
+            'Create your first ledger',
+
+        text:
+            'Tap here to add a customer and record your first sale or purchase.'
+    },
+
+    {
+        target:
+            '#tabs button[data-tab="directory"]',
+
+        icon:
+            '🛡️',
+
+        title:
+            'Check fraud alerts',
+
+        text:
+            'See contacts reported by businesses before you transact.'
+    },
+
+    {
+        target:
+            '#brandMenuBtn',
+
+        icon:
+            '⚙️',
+
+        title:
+            'You are ready!',
+
+        text:
+            'Manage your profile, employees, language, security and more from here.'
+    }
+
+];
 
     // Contact integration Global Scope for Flutter Bridge
     window.deviceContacts = [];
@@ -4173,6 +4691,562 @@ function isOwnerProfileSetup() {
     );
 }
 
+
+var cbTutorialIndex = 0;
+
+function cbRenderTutorialStep() {
+
+    var step =
+        cbTutorialSteps[
+            cbTutorialIndex
+        ];
+
+    if (!step) {
+        cbCompleteTutorial();
+        return;
+    }
+
+    var target =
+        document.querySelector(
+            step.target
+        );
+
+    if (!target) {
+
+        cbTutorialIndex++;
+
+        cbRenderTutorialStep();
+
+        return;
+    }
+
+    /*
+     * Make sure highlighted navigation
+     * elements are visible horizontally.
+     */
+    target.scrollIntoView({
+        behavior:
+            'smooth',
+
+        block:
+            'center',
+
+        inline:
+            'center'
+    });
+
+    setTimeout(
+        function () {
+
+            cbPositionTutorial(
+                target,
+                step
+            );
+
+        },
+        280
+    );
+}
+
+function cbPositionTutorial(
+    target,
+    step
+) {
+
+    var rect =
+        target.getBoundingClientRect();
+
+    var padding = 7;
+
+    var spotlight =
+        document.getElementById(
+            'cbTutorialSpotlight'
+        );
+
+    spotlight.style.left =
+        (rect.left - padding) +
+        'px';
+
+    spotlight.style.top =
+        (rect.top - padding) +
+        'px';
+
+    spotlight.style.width =
+        (rect.width + padding * 2) +
+        'px';
+
+    spotlight.style.height =
+        (rect.height + padding * 2) +
+        'px';
+
+    document.getElementById(
+        'cbTutorialIcon'
+    ).textContent =
+        step.icon;
+
+    document.getElementById(
+        'cbTutorialTitle'
+    ).textContent =
+        step.title;
+
+    document.getElementById(
+        'cbTutorialText'
+    ).textContent =
+        step.text;
+
+       var nextButton =
+    document.getElementById(
+        'cbTutorialNext'
+    );
+
+if (nextButton) {
+
+    var isLastStep =
+        cbTutorialIndex ===
+        cbTutorialSteps.length - 1;
+
+    nextButton.textContent =
+        isLastStep
+            ? 'Add my first entry →'
+            : 'Next →';
+}
+
+    cbRenderTutorialProgress();
+
+    cbPositionTutorialCard(
+    rect
+);
+
+cbPositionTutorialArrow(
+    rect
+);
+}
+
+function cbPositionTutorialCard(
+    targetRect
+) {
+
+    var card =
+        document.getElementById(
+            'cbTutorialCard'
+        );
+
+    var margin = 18;
+
+    var cardHeight =
+        card.offsetHeight;
+
+    var screenHeight =
+        window.innerHeight;
+
+    var top;
+
+    if (
+        targetRect.bottom +
+        cardHeight +
+        margin <
+        screenHeight
+    ) {
+
+        top =
+            targetRect.bottom +
+            margin;
+
+    } else {
+
+        top =
+            targetRect.top -
+            cardHeight -
+            margin;
+    }
+
+    top =
+        Math.max(
+            16,
+            Math.min(
+                top,
+                screenHeight -
+                cardHeight -
+                16
+            )
+        );
+
+    card.style.top =
+        top + 'px';
+
+    card.style.left =
+        '50%';
+
+    card.style.transform =
+        'translateX(-50%)';
+}
+
+function cbPrepareTutorialStep(
+    stepIndex
+) {
+
+    switch (stepIndex) {
+
+        case 0:
+            document
+                .querySelector(
+                    '#tabs button[data-tab="dashboard"]'
+                )
+                ?.click();
+            break;
+
+        case 1:
+            document
+                .querySelector(
+                    '#tabs button[data-tab="debtors"]'
+                )
+                ?.click();
+            break;
+
+        case 2:
+            document
+                .querySelector(
+                    '#tabs button[data-tab="creditors"]'
+                )
+                ?.click();
+            break;
+
+        case 3:
+            document
+                .querySelector(
+                    '#tabs button[data-tab="mycustomers"]'
+                )
+                ?.click();
+            break;
+
+        case 5:
+            document
+                .querySelector(
+                    '#tabs button[data-tab="directory"]'
+                )
+                ?.click();
+            break;
+
+        case 6:
+            /*
+             * Return to Dashboard before
+             * explaining the menu.
+             */
+            document
+                .querySelector(
+                    '#tabs button[data-tab="dashboard"]'
+                )
+                ?.click();
+            break;
+    }
+}
+
+function cbNextTutorialStep() {
+
+    cbTutorialIndex++;
+
+    if (
+        cbTutorialIndex >=
+        cbTutorialSteps.length
+    ) {
+
+        cbCompleteTutorial();
+
+        return;
+    }
+
+    cbPrepareTutorialStep(
+        cbTutorialIndex
+    );
+
+    setTimeout(
+        cbRenderTutorialStep,
+        100
+    );
+}
+
+async function cbFinishAndCreateEntry() {
+
+    await cbCompleteTutorial();
+
+    document
+        .getElementById(
+            'fabBtn'
+        )
+        ?.click();
+}
+
+var TUTORIAL_KEY =
+    'cb-tutorial-v1';
+
+    async function cbHasCompletedTutorial() {
+
+    try {
+
+        var result =
+            await window.storage.get(
+                TUTORIAL_KEY,
+                false
+            );
+
+        return (
+            result &&
+            result.value ===
+                'completed'
+        );
+
+    } catch (e) {
+
+        console.error(
+            'Tutorial state read failed:',
+            e
+        );
+
+        return false;
+    }
+}
+
+async function cbCompleteTutorial() {
+
+    try {
+
+        await window.storage.set(
+            TUTORIAL_KEY,
+            'completed',
+            false
+        );
+
+    } catch (e) {
+
+        console.error(
+            'Tutorial state save failed:',
+            e
+        );
+    }
+
+    document.getElementById(
+        'cbTutorial'
+    ).style.display =
+        'none';
+
+    cbTutorialIndex = 0;
+}
+
+function cbStartTutorial() {
+
+    /*
+     * Owner tutorial only.
+     */
+    if (
+        currentRoleMode ===
+        'employee'
+    ) {
+        return;
+    }
+
+    /*
+     * Close any UI that may still be open.
+     *
+     * Tutorial should always begin from a
+     * clean app state.
+     */
+    document
+        .querySelectorAll(
+            '.overlay.open, ' +
+            '.custom-modal-overlay.open'
+        )
+        .forEach(
+            function (overlay) {
+                overlay.classList.remove(
+                    'open'
+                );
+            }
+        );
+
+    /*
+     * Always begin the tour from Dashboard.
+     */
+    var dashboardButton =
+        document.querySelector(
+            '#tabs ' +
+            'button[data-tab="dashboard"]'
+        );
+
+    if (dashboardButton) {
+        dashboardButton.click();
+    }
+
+    /*
+     * Put the page back at the top before
+     * measuring tutorial targets.
+     */
+    window.scrollTo({
+        top: 0,
+        behavior: 'instant'
+    });
+
+    cbTutorialIndex = 0;
+
+    /*
+     * Wait until drawer/screen transitions
+     * have finished.
+     */
+    setTimeout(
+        function () {
+
+            var tutorial =
+                document.getElementById(
+                    'cbTutorial'
+                );
+
+            if (!tutorial) {
+                return;
+            }
+
+            tutorial.style.display =
+                'block';
+
+            cbPrepareTutorialStep(0);
+
+            setTimeout(
+                cbRenderTutorialStep,
+                100
+            );
+
+        },
+        250
+    );
+}
+
+function cbRenderTutorialProgress() {
+
+    var container =
+        document.getElementById(
+            'cbTutorialProgress'
+        );
+
+    if (!container) {
+        return;
+    }
+
+    container.innerHTML = '';
+
+    for (
+        var i = 0;
+        i < cbTutorialSteps.length;
+        i++
+    ) {
+
+        var dot =
+            document.createElement(
+                'div'
+            );
+
+        dot.className =
+            'cb-tutorial-dot';
+
+        if (
+            i ===
+            cbTutorialIndex
+        ) {
+            dot.classList.add(
+                'active'
+            );
+        }
+
+        container.appendChild(
+            dot
+        );
+    }
+}
+
+function cbPositionTutorialArrow(
+    targetRect
+) {
+
+    var arrow =
+        document.getElementById(
+            'cbTutorialArrow'
+        );
+
+    if (!arrow) {
+        return;
+    }
+
+    var arrowSize = 18;
+
+    var targetCenterX =
+        targetRect.left +
+        targetRect.width / 2;
+
+    var left =
+        targetCenterX -
+        arrowSize / 2;
+
+    var targetInTopHalf =
+        targetRect.top <
+        window.innerHeight / 2;
+
+    var top;
+
+    if (targetInTopHalf) {
+
+        /*
+         * Put arrow BELOW target,
+         * pointing upward.
+         */
+        top =
+            targetRect.bottom +
+            12;
+
+        arrow.classList.add(
+            'arrow-up'
+        );
+
+        arrow.classList.remove(
+            'arrow-down'
+        );
+
+    } else {
+
+        /*
+         * Put arrow ABOVE target,
+         * pointing downward.
+         */
+        top =
+            targetRect.top -
+            30;
+
+        arrow.classList.add(
+            'arrow-down'
+        );
+
+        arrow.classList.remove(
+            'arrow-up'
+        );
+    }
+
+    left =
+        Math.max(
+            12,
+            Math.min(
+                left,
+                window.innerWidth -
+                arrowSize -
+                12
+            )
+        );
+
+    arrow.style.left =
+        left + 'px';
+
+    arrow.style.top =
+        top + 'px';
+
+    arrow.classList.add(
+        'show'
+    );
+}
 
 function configureProfilePopup(
     firstTimeSetup
@@ -8913,6 +9987,63 @@ if (notificationButton) {
         }
     }
 );
+
+safeBind(
+    '#cbTutorialNext',
+    'click',
+    async function () {
+
+        var isLastStep =
+            cbTutorialIndex ===
+            cbTutorialSteps.length - 1;
+
+        if (isLastStep) {
+
+            await cbFinishAndCreateEntry();
+
+            return;
+        }
+
+        cbNextTutorialStep();
+    }
+);
+
+safeBind(
+    '#cbTutorialSkip',
+    'click',
+    async function () {
+
+        await cbCompleteTutorial();
+
+        showToast(
+            'You can restart the tour from Help anytime.'
+        );
+    }
+);
+
+safeBind(
+    '#btn-help-tour',
+    'click',
+    function () {
+
+        /*
+         * Tour is launched from Settings,
+         * so close Settings first.
+         */
+        closeOverlay(
+            '#settingsOverlay'
+        );
+
+        /*
+         * Give drawer animation enough time
+         * to finish before measuring elements.
+         */
+        setTimeout(
+            cbStartTutorial,
+            300
+        );
+    }
+);
 safeBind('#ob-gst', 'input', function () {
     this.value = this.value
         .toUpperCase()
@@ -9451,6 +10582,25 @@ safeBind(
     }
 );
 
+window.addEventListener(
+    'resize',
+    function () {
+
+        var tutorial =
+            document.getElementById(
+                'cbTutorial'
+            );
+
+        if (
+            tutorial &&
+            tutorial.style.display !==
+                'none'
+        ) {
+            cbRenderTutorialStep();
+        }
+    }
+);
+
 
 /*
  * Flutter callback used when ADDING
@@ -9730,11 +10880,30 @@ safeBind(
           if($('#en-new-customer-fields')) $('#en-new-customer-fields').style.display='block';
           if($('#en-new-customer-fields-bottom')) $('#en-new-customer-fields-bottom').style.display='block';
           $('#en-autocomplete').style.display='none';
-        } else {
-          var c = myCustById(item.dataset.id); if(!c) return;
-          selectedCustomerId = c.id; $('#en-customer-search').value = c.name; $('#en-autocomplete').style.display='none';
-          if($('#en-new-customer-fields')) $('#en-new-customer-fields').style.display='none';
-          if($('#en-new-customer-fields-bottom')) $('#en-new-customer-fields-bottom').style.display='none';
+       } else {
+  var c = myCustById(item.dataset.id);
+  if (!c) return;
+
+  selectedCustomerId = c.id;
+
+  $('#en-customer-search').value = c.name;
+
+  $('#en-autocomplete').style.display = 'none';
+
+  if ($('#en-new-customer-fields')) {
+    $('#en-new-customer-fields').style.display = 'none';
+  }
+
+  if ($('#en-new-customer-fields-bottom')) {
+    $('#en-new-customer-fields-bottom').style.display = 'none';
+  }
+
+  // IMPORTANT:
+  // Always populate the phone field from the selected customer.
+  if ($('#en-phone')) {
+    $('#en-phone').value =
+      cleanPhone10(c.phone || '');
+  }
           var note =
     $('#en-selected-note');
 
@@ -9803,6 +10972,14 @@ if (note) {
 var actor =
     getCurrentActor();
         var rawPhone = $('#en-phone') ? cleanPhone10($('#en-phone').value) : '';
+
+        if (!rawPhone || rawPhone.length !== 10) {
+    showToast('Customer phone number is required');
+    if ($('#en-phone')) {
+        $('#en-phone').focus();
+    }
+    return;
+}
 
         var checkCustId = selectedCustomerId;
         if(!checkCustId && rawPhone) {
@@ -9952,7 +11129,22 @@ var currentOwnerName =
             : ''
     ) ||
     'Business Owner';
-        var finalCustomerPhone = c ? c.phone : rawPhone;
+
+    var c = myCustById(checkCustId);
+       var finalCustomerPhone = cleanPhone10(
+    (c && c.phone) || rawPhone || ''
+);
+
+if (
+    c &&
+    !cleanPhone10(c.phone || '') &&
+    finalCustomerPhone
+) {
+    c.phone = finalCustomerPhone;
+    c.updatedAt = new Date().toISOString();
+
+    await saveCustomers();
+}
 
         var entry = {
     id: uid(),
@@ -10091,9 +11283,7 @@ sendMetaEvent(
      * Do not use targetCust here because targetCust may only
      * be assigned during the restore-existing-contact flow.
      */
-    var whatsappConsent =
-        c &&
-        true === true;
+var whatsappConsent = true;
 
     window.NativeBridge.postMessage(
     'SEND_NOTIFICATION:' +
@@ -10409,9 +11599,7 @@ if (
         "Recorded a payment of ₹" +
         originalAmt;
 
-    var whatsappConsent =
-        targetCust &&
-        true === true;
+   var whatsappConsent = true;
 
    window.NativeBridge.postMessage(
     'SEND_NOTIFICATION:' +
@@ -10606,6 +11794,19 @@ if (
         showToast(
             'Profile Saved'
         );
+
+        var tutorialDone =
+    await cbHasCompletedTutorial();
+
+if (!tutorialDone) {
+
+    setTimeout(
+        function () {
+            cbStartTutorial();
+        },
+        500
+    );
+}
     }
 );
       safeBind('#mg-slider', 'input', updateMgPreview);
