@@ -2659,6 +2659,32 @@ nav.tabs button .count {
         rotate(225deg);
 }
 
+    /* Central Rating Modal Styling */
+    .overlay.centered { align-items: center; padding: 20px; }
+    .rating-card { background: var(--paper); width: 100%; max-width: 400px; border-radius: 32px; padding: 44px 24px 32px; text-align: center; box-shadow: 0 25px 70px rgba(0,0,0,0.35); position: relative; overflow: hidden; animation: cbRatingPop 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+    @keyframes cbRatingPop { from { opacity: 0; transform: scale(0.8) translateY(40px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+    .rating-card .illust { font-size: 5.5rem; margin-bottom: 28px; display: block; filter: drop-shadow(0 12px 24px rgba(201, 138, 45, 0.25)); }
+    .rating-card h3 { font-size: 1.75rem; color: var(--indigo); margin: 0 0 12px; line-height: 1.2; }
+    .rating-card p { font-size: 1.05rem; color: var(--muted); margin: 0 0 36px; line-height: 1.5; padding: 0 12px; }
+    .rating-card .stars-row { display: flex; justify-content: center; gap: 12px; margin-bottom: 40px; }
+    .rating-card .rating-star { background: none; border: none; font-size: 3.4rem; color: var(--khadi-line); cursor: pointer; transition: all 0.2s; padding: 0; line-height: 1; outline: none; }
+    .rating-card .rating-star.active { color: var(--turmeric); transform: scale(1.2); filter: drop-shadow(0 0 15px rgba(201, 138, 45, 0.4)); }
+
+    /* Enhanced Feedback Modal Styling */
+    .feedback-card { background: var(--paper); width: 100%; max-width: 480px; border-radius: 28px; padding: 32px 24px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); position: relative; animation: cbFeedbackPop 0.3s ease-out; }
+    @keyframes cbFeedbackPop { from { opacity: 0; transform: scale(0.95) translateY(20px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+    .feedback-header { text-align: center; margin-bottom: 24px; }
+    .feedback-icon-circle { width: 68px; height: 64px; background: var(--khadi); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2.2rem; margin: 0 auto 16px; transition: all 0.3s ease; }
+    .feedback-card[data-type="bug"] .feedback-icon-circle { background: var(--madder-tint); color: var(--madder); }
+    .feedback-card[data-type="feature"] .feedback-icon-circle { background: var(--turmeric-tint); color: var(--turmeric); }
+    .feedback-card[data-type="general"] .feedback-icon-circle { background: var(--indigo-tint); color: var(--indigo); }
+    .feedback-card h3 { font-size: 1.55rem; margin: 0 0 8px; color: var(--indigo); }
+    .feedback-card .sheet-sub { margin: 0; font-size: 0.95rem; line-height: 1.4; color: var(--muted); }
+    .feedback-textarea { width: 100%; border: 2px solid var(--khadi-line); border-radius: 18px; padding: 16px; font-size: 1rem; background: var(--khadi); color: var(--charcoal); transition: all 0.2s ease; min-height: 150px; line-height: 1.5; margin-top: 20px; }
+    .feedback-textarea:focus { border-color: var(--indigo); background: var(--paper); box-shadow: 0 0 0 4px rgba(43, 58, 103, 0.1); outline: none; }
+    .feedback-footer { display: flex; justify-content: flex-end; margin-top: 10px; }
+    .feedback-char-badge { font-size: 0.72rem; font-weight: 700; padding: 4px 10px; border-radius: 8px; background: var(--khadi-line); color: var(--muted); }
+
   </style>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
@@ -3664,85 +3690,36 @@ nav.tabs button .count {
   </div>
 </div>
 <!-- Feedback Form Overlay -->
-<div class="overlay" id="feedbackOverlay">
+<div class="overlay centered" id="feedbackOverlay">
 
-  <div class="sheet">
+  <div class="feedback-card" id="feedbackCard">
 
-    <h3 style="color:var(--indigo);">
-      <span id="feedback-form-icon">💬</span>
-
-      <span id="feedback-form-title">
-                Your Feedback
-            </span>
-    </h3>
-
-    <p
-            class="sheet-sub"
-            id="feedback-form-subtitle"
-    >
-      Tell us what you think.
-    </p>
-
+    <div class="feedback-header">
+      <div class="feedback-icon-circle" id="feedback-form-icon">💬</div>
+      <h3 id="feedback-form-title" data-i18n="feedback_general_title">Your Feedback</h3>
+      <p class="sheet-sub" id="feedback-form-subtitle" data-i18n="feedback_general_hint">Tell us what you think.</p>
+    </div>
 
     <!-- Feedback Type -->
-    <input
-            type="hidden"
-            id="feedback-type"
-            value="general"
-    >
-
+    <input type="hidden" id="feedback-type" value="general">
 
     <!-- Message -->
-    <div class="field" style="margin-top:18px;">
-
-      <label>
-                <span id="feedback-message-label">
-                    Your Feedback
-                </span>
-
-        <span style="color:#C62828;">
-                    *
-                </span>
-      </label>
-
-      <textarea
-              id="feedback-message"
-              rows="6"
-              maxlength="2000"
-              placeholder="Write your feedback here..."
-              style="
-                    width:100%;
-                    resize:vertical;
-                    min-height:130px;
-                    padding:12px;
-                    border:1px solid var(--khadi-line);
-                    border-radius:12px;
-                    background:var(--khadi);
-                    color:var(--charcoal);
-                    font-family:inherit;
-                    font-size:.9rem;
-                    outline:none;
-                "
-      ></textarea>
-
-    </div>
-
+    <textarea
+            id="feedback-message"
+            maxlength="2000"
+            data-i18n-ph="feedback_placeholder"
+            placeholder="Write your feedback here..."
+            class="feedback-textarea"
+    ></textarea>
 
     <!-- Character Count -->
-    <div
-            style="
-                text-align:right;
-                color:var(--muted);
-                font-size:.7rem;
-                margin-top:4px;
-            "
-    >
-      <span id="feedback-char-count">0</span>/2000
+    <div class="feedback-footer">
+      <div class="feedback-char-badge">
+        <span id="feedback-char-count">0</span> / 2000
+      </div>
     </div>
 
-
-    <div class="sheet-actions">
-
+    <div class="sheet-actions" style="margin-top: 24px;">
       <button
               type="button"
               class="btn secondary"
@@ -3760,7 +3737,6 @@ nav.tabs button .count {
       >
         Send Feedback
       </button>
-
     </div>
 
   </div>
@@ -3768,39 +3744,24 @@ nav.tabs button .count {
 </div>
 
 <!-- Rating Overlay -->
-<div class="overlay" id="ratingOverlay">
+<div class="overlay centered" id="ratingOverlay">
 
-  <div class="sheet">
+  <div class="rating-card">
 
-    <h3
-            style="
-                color:var(--indigo);
-                text-align:center;
-            "
-    >
-      ⭐
-      <span data-i18n="feedback_rate_title">
-                Enjoying Collection Book?
-            </span>
+    <span class="illust">⭐</span>
+
+    <h3 data-i18n="feedback_rate_title">
+      Enjoying Collection Book?
     </h3>
 
-    <p
-            class="sheet-sub"
-            style="text-align:center;"
-            data-i18n="feedback_rate_subtitle"
-    >
+    <p data-i18n="feedback_rate_subtitle">
       A quick rating helps us improve and reach more businesses.
     </p>
 
 
     <div
             id="rating-stars"
-            style="
-                display:flex;
-                justify-content:center;
-                gap:8px;
-                margin:25px 0;
-            "
+            class="stars-row"
     >
 
       <button
@@ -4985,109 +4946,42 @@ function openFeedbackForm(type) {
     currentFeedbackType = type || 'general';
 
     var icon = '💬';
-    var title = 'Your Feedback';
-    var subtitle =
-        'Tell us what you think.';
-    var label = 'Your Feedback';
-    var placeholder =
-        'Write your feedback here...';
+    var titleKey = 'feedback_general_title';
+    var subKey = 'feedback_general_hint';
+    var phKey = 'feedback_placeholder';
 
     if (currentFeedbackType === 'bug') {
-
         icon = '🐛';
-
-        title = 'Report a Bug';
-
-        subtitle =
-            'Tell us what went wrong and what you were trying to do.';
-
-        label = 'What went wrong?';
-
-        placeholder =
-            'Describe the problem and what you were doing when it happened...';
-
+        titleKey = 'feedback_bug_title';
+        subKey = 'feedback_bug_hint';
+        phKey = 'feedback_placeholder'; // Generic placeholder used for all
     } else if (currentFeedbackType === 'feature') {
-
         icon = '💡';
-
-        title = 'Suggest a Feature';
-
-        subtitle =
-            'Tell us what feature would make Collection Book better for you.';
-
-        label = 'What feature would you like?';
-
-        placeholder =
-            'Tell us about the feature you would like to see...';
-
-    } else {
-
-        icon = '💬';
-
-        title = 'Your Feedback';
-
-        subtitle =
-            'Tell us what you think.';
-
-        label = 'Your Feedback';
-
-        placeholder =
-            'Write your feedback here...';
+        titleKey = 'feedback_feature_title';
+        subKey = 'feedback_feature_hint';
+        phKey = 'feedback_placeholder';
     }
 
+    var card = $('#feedbackCard');
+    if (card) card.dataset.type = currentFeedbackType;
 
-    if ($('#feedback-form-icon')) {
-        $('#feedback-form-icon').textContent =
-            icon;
-    }
-
-    if ($('#feedback-form-title')) {
-        $('#feedback-form-title').textContent =
-            title;
-    }
-
-    if ($('#feedback-form-subtitle')) {
-        $('#feedback-form-subtitle').textContent =
-            subtitle;
-    }
-
-    if ($('#feedback-message-label')) {
-        $('#feedback-message-label').textContent =
-            label;
-    }
+    if ($('#feedback-form-icon')) $('#feedback-form-icon').textContent = icon;
+    if ($('#feedback-form-title')) $('#feedback-form-title').textContent = t(titleKey);
+    if ($('#feedback-form-subtitle')) $('#feedback-form-subtitle').textContent = t(subKey);
 
     if ($('#feedback-message')) {
         $('#feedback-message').value = '';
-
-        $('#feedback-message').placeholder =
-            placeholder;
+        $('#feedback-message').placeholder = t(phKey);
     }
 
-    if ($('#feedback-type')) {
-        $('#feedback-type').value =
-            currentFeedbackType;
-    }
-
-    if ($('#feedback-char-count')) {
-        $('#feedback-char-count').textContent =
-            '0';
-    }
-
+    if ($('#feedback-type')) $('#feedback-type').value = currentFeedbackType;
+    if ($('#feedback-char-count')) $('#feedback-char-count').textContent = '0';
 
     closeOverlay('#helpSupportOverlay');
-
-    openOverlay(
-        '#feedbackOverlay',
-        true
-    );
-
+    openOverlay('#feedbackOverlay', true);
 
     setTimeout(function () {
-
-        if ($('#feedback-message')) {
-            $('#feedback-message').focus();
-        }
-
+        if ($('#feedback-message')) $('#feedback-message').focus();
     }, 200);
 }
 
@@ -11404,6 +11298,11 @@ $$('.rating-star').forEach(
                                 rating <= selectedRating
                                     ? '★'
                                     : '☆';
+
+                            item.classList.toggle(
+                                'active',
+                                rating <= selectedRating
+                            );
                         }
                     );
 
@@ -12091,10 +11990,13 @@ var ownerMessage =
                 setTimeout(function() {
                     // Reset star UI state
                     selectedRating = 0;
-                    $$('.rating-star').forEach(function (star) { star.textContent = '☆'; });
+                    $$('.rating-star').forEach(function (star) {
+                        star.textContent = '☆';
+                        star.classList.remove('active');
+                    });
                     if ($('#btn-rating-submit')) $('#btn-rating-submit').disabled = true;
 
-                    // Open the existing rating overlay
+                    // Open the central rating overlay
                     openOverlay('#ratingOverlay', true);
                 }, 800);
             }
