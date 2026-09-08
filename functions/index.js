@@ -19,6 +19,8 @@ const {
 
 const admin = require("firebase-admin");
 
+const functions = require('firebase-functions');
+
 admin.initializeApp();
 
 const msg91AuthKey = defineSecret(
@@ -1137,6 +1139,276 @@ exports.sendDailyEngagementNotification =
     async () => {
       await sendEngagementNotifications();
     },
+  );
+
+  /**
+   * Helper to check if a user has created any ledger entries.
+   * Connects the phone-number document to the UID document where the ledger subcollection lives.
+   */
+  async function userHasLedgerEntries(db, phoneNumber) {
+    try {
+      const uidDocsSnapshot = await db
+        .collection("users")
+        .where("accountPhone", "==", phoneNumber)
+        .get();
+
+      if (uidDocsSnapshot.empty) {
+        return false; // No UID doc found, definitely no ledger entries
+      }
+
+      for (const uidDoc of uidDocsSnapshot.docs) {
+        const ledgerSnapshot = await db
+          .collection("users")
+          .doc(uidDoc.id)
+          .collection("ledger")
+          .limit(1)
+          .get();
+
+        if (!ledgerSnapshot.empty) {
+          return true; // Found at least one ledger entry
+        }
+      }
+      return false;
+    } catch (error) {
+      console.error("Error checking ledger entries for phone:", phoneNumber, error);
+      return false; // Fail safe: don't block notifications if check fails
+    }
+  }
+
+  /**
+   * 1. HOURLY ONBOARDING NUDGE (~1 Hour Post-Registration)
+   * Runs every hour to catch users registered between 60 and 119 minutes ago.
+   */
+  exports.sendHourlyOnboardingNudge = onSchedule(
+    {
+      schedule: "0 * * * *",
+      timeZone: "Asia/Kolkata",
+      region: "asia-south1",
+    },
+    async () => {
+      const db = admin.firestore();
+      console.log("Starting hourly onboarding nudge run");
+
+      const now = new Date();
+      const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+      const twoHoursAgo = new Date(now.getTime() - 120 * 60 * 1000);
+
+      const usersSnapshot = await db
+        .collection("users")
+        .where("legalAcceptedAt", "<=", oneHourAgo)
+        .where("legalAcceptedAt", ">", twoHoursAgo)
+        .get();
+
+      if (usersSnapshot.empty) {
+        console.log("No new users found in the 1-2 hour window.");
+        return;
+      }
+
+      let successCount = 0;
+      let failureCount = 0;
+      let skippedCount = 0;
+      let invalidTokenCount = 0;
+
+      for (const userDoc of usersSnapshot.docs) {
+        const user = userDoc.data();
+        const fcmToken = user.fcmToken;
+        const phoneNumber = userDoc.id; // Phone-number doc key
+
+        if (!fcmToken || typeof fcmToken !== "string") {
+          skippedCount++;
+          continue;
+        }
+
+        // Check if they have already added a ledger entry
+        const hasLedger = await userHasLedgerEntries(db, phoneNumber);
+        if (hasLedger) {
+          skippedCount++;
+          continue;
+        }
+
+        try {
+          await admin.messaging().send({
+            token: fcmToken,
+            notification: {
+              title: "Add your first ledger ⏱️",
+              body: "Add your first contact and record their pending balance in just 30 seconds.",
+            },
+            data: {
+              route: "new_entry",
+              type: "onboarding",
+              timing: "hourly",
+            },
+            android: {
+              priority: "high",
+              notification: {
+                channelId: "collection_book_engagement_v1",
+                priority: "high",
+                visibility: "public",
+                defaultSound: true,
+                defaultVibrateTimings: true,
+              },
+            },
+          });
+
+          successCount++;
+          console.log("Hourly onboarding notification sent:", phoneNumber);
+        } catch (error) {
+          failureCount++;
+          console.error("Hourly onboarding notification failed:", phoneNumber, error);
+
+          const errorCode = error?.code || "";
+          const invalidToken =
+            errorCode === "messaging/registration-token-not-registered" ||
+            errorCode === "messaging/invalid-registration-token" ||
+            errorCode === "messaging/invalid-argument";
+
+          if (invalidToken) {
+            invalidTokenCount++;
+            await userDoc.ref.update({
+              fcmToken: admin.firestore.FieldValue.delete(),
+              fcmUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
+            console.log("Removed invalid FCM token for phone:", phoneNumber);
+          }
+        }
+      }
+
+      console.log("Hourly onboarding run completed", {
+        totalFound: usersSnapshot.size,
+        success: successCount,
+        failed: failureCount,
+        skipped: skippedCount,
+        invalidTokensRemoved: invalidTokenCount,
+      });
+    }
+  );
+
+  /**
+   * 2. DAILY ONBOARDING REMINDERS (Day 1, Day 3, Day 7)
+   * Runs once a day at 01:00 PM IST.
+   */
+  exports.sendDailyOnboardingReminders = onSchedule(
+    {
+      schedule: "0 13 * * *",
+      timeZone: "Asia/Kolkata",
+      region: "asia-south1",
+    },
+    async () => {
+      const db = admin.firestore();
+      console.log("Starting daily onboarding reminders run");
+
+      const today = new Date();
+      const targetDays = [1, 3, 7];
+
+      for (const daysAgo of targetDays) {
+        const targetDate = new Date(today);
+        targetDate.setDate(today.getDate() - daysAgo);
+
+        const startOfDay = new Date(targetDate.setHours(0, 0, 0, 0));
+        const endOfDay = new Date(targetDate.setHours(23, 59, 59, 999));
+
+        const usersSnapshot = await db
+          .collection("users")
+          .where("legalAcceptedAt", ">=", startOfDay)
+          .where("legalAcceptedAt", "<=", endOfDay)
+          .get();
+
+        if (usersSnapshot.empty) {
+          console.log(`No users found for Day ${daysAgo} milestone.`);
+          continue;
+        }
+
+        let title = "";
+        let body = "";
+
+        if (daysAgo === 1) {
+          title = "Start your first ledger 📊";
+          body = "Don't let your dues pile up. Add your first contact and record their pending balance.";
+        } else if (daysAgo === 3) {
+          title = "Keep your accounts organized 📝";
+          body = "Collection Book remembers so you don't have to. Tap here to set up your first ledger.";
+        } else if (daysAgo === 7) {
+          title = "Ready to start your Collection Book? 🚀";
+          body = "Start tracking your sales and payments today to keep your business cash flow organized.";
+        }
+
+        let successCount = 0;
+        let failureCount = 0;
+        let skippedCount = 0;
+        let invalidTokenCount = 0;
+
+        for (const userDoc of usersSnapshot.docs) {
+          const user = userDoc.data();
+          const fcmToken = user.fcmToken;
+          const phoneNumber = userDoc.id;
+
+          if (!fcmToken || typeof fcmToken !== "string") {
+            skippedCount++;
+            continue;
+          }
+
+          const hasLedger = await userHasLedgerEntries(db, phoneNumber);
+          if (hasLedger) {
+            skippedCount++;
+            continue;
+          }
+
+          try {
+            await admin.messaging().send({
+              token: fcmToken,
+              notification: {
+                title: title,
+                body: body,
+              },
+              data: {
+                route: "new_entry",
+                type: "onboarding",
+                timing: `day_${daysAgo}`,
+              },
+              android: {
+                priority: "high",
+                notification: {
+                  channelId: "collection_book_engagement_v1",
+                  priority: "high",
+                  visibility: "public",
+                  defaultSound: true,
+                  defaultVibrateTimings: true,
+                },
+              },
+            });
+
+            successCount++;
+            console.log(`Day ${daysAgo} onboarding notification sent:`, phoneNumber);
+          } catch (error) {
+            failureCount++;
+            console.error(`Day ${daysAgo} onboarding notification failed:`, phoneNumber, error);
+
+            const errorCode = error?.code || "";
+            const invalidToken =
+              errorCode === "messaging/registration-token-not-registered" ||
+              errorCode === "messaging/invalid-registration-token" ||
+              errorCode === "messaging/invalid-argument";
+
+            if (invalidToken) {
+              invalidTokenCount++;
+              await userDoc.ref.update({
+                fcmToken: admin.firestore.FieldValue.delete(),
+                fcmUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
+              });
+              console.log("Removed invalid FCM token for phone:", phoneNumber);
+            }
+          }
+        }
+
+        console.log(`Day ${daysAgo} onboarding run completed`, {
+          totalFound: usersSnapshot.size,
+          success: successCount,
+          failed: failureCount,
+          skipped: skippedCount,
+          invalidTokensRemoved: invalidTokenCount,
+        });
+      }
+    }
   );
 
 /*
