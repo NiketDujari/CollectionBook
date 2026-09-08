@@ -3527,6 +3527,132 @@ nav.tabs button .count {
 
     </div>
 
+    <!-- Feedback & Support -->
+    <div
+            style="
+        margin-top:18px;
+        border:1px solid var(--khadi-line);
+        border-radius:14px;
+        background:var(--paper);
+        overflow:hidden;
+    "
+    >
+
+      <div
+              style="
+            padding:16px;
+            border-bottom:1px solid var(--khadi-line);
+        "
+      >
+        <div
+                style="
+                font-weight:700;
+                color:var(--indigo);
+                font-size:1rem;
+            "
+                data-i18n="feedback_title"
+        >
+          Feedback &amp; Support
+        </div>
+
+        <div
+                style="
+                margin-top:5px;
+                color:var(--muted);
+                font-size:.78rem;
+                line-height:1.4;
+            "
+                data-i18n="feedback_subtitle"
+        >
+          Tell us what you think. Your feedback helps us improve Collection Book.
+        </div>
+      </div>
+
+      <div style="padding:12px;">
+
+        <button
+                type="button"
+                class="btn settings-row"
+                id="btn-feedback-bug"
+        >
+            <span class="settings-row-icon" aria-hidden="true">
+                🐛
+            </span>
+
+          <span
+                  class="settings-row-label"
+                  data-i18n="feedback_bug"
+          >
+                Report a Bug
+            </span>
+
+          <span class="settings-row-arrow">›</span>
+        </button>
+
+
+        <button
+                type="button"
+                class="btn settings-row"
+                id="btn-feedback-feature"
+        >
+            <span class="settings-row-icon" aria-hidden="true">
+                💡
+            </span>
+
+          <span
+                  class="settings-row-label"
+                  data-i18n="feedback_feature"
+          >
+                Suggest a Feature
+            </span>
+
+          <span class="settings-row-arrow">›</span>
+        </button>
+
+
+        <button
+                type="button"
+                class="btn settings-row"
+                id="btn-feedback-general"
+        >
+            <span class="settings-row-icon" aria-hidden="true">
+                💬
+            </span>
+
+          <span
+                  class="settings-row-label"
+                  data-i18n="feedback_general"
+          >
+                Give Feedback
+            </span>
+
+          <span class="settings-row-arrow">›</span>
+        </button>
+
+
+        <button
+                type="button"
+                class="btn settings-row"
+                id="btn-feedback-rate"
+        >
+            <span class="settings-row-icon" aria-hidden="true">
+                ⭐
+            </span>
+
+          <span
+                  class="settings-row-label"
+                  data-i18n="feedback_rate"
+          >
+                Rate Collection Book
+            </span>
+
+          <span class="settings-row-arrow">›</span>
+        </button>
+
+      </div>
+
+    </div>
+
     <div class="sheet-actions">
       <button
               class="btn secondary"
@@ -3539,6 +3665,205 @@ nav.tabs button .count {
 
   </div>
 </div>
+<!-- Feedback Form Overlay -->
+<div class="overlay" id="feedbackOverlay">
+
+  <div class="sheet">
+
+    <h3 style="color:var(--indigo);">
+      <span id="feedback-form-icon">💬</span>
+
+      <span id="feedback-form-title">
+                Your Feedback
+            </span>
+    </h3>
+
+    <p
+            class="sheet-sub"
+            id="feedback-form-subtitle"
+    >
+      Tell us what you think.
+    </p>
+
+
+    <!-- Feedback Type -->
+    <input
+            type="hidden"
+            id="feedback-type"
+            value="general"
+    >
+
+
+    <!-- Message -->
+    <div class="field" style="margin-top:18px;">
+
+      <label>
+                <span id="feedback-message-label">
+                    Your Feedback
+                </span>
+
+        <span style="color:#C62828;">
+                    *
+                </span>
+      </label>
+
+      <textarea
+              id="feedback-message"
+              rows="6"
+              maxlength="2000"
+              placeholder="Write your feedback here..."
+              style="
+                    width:100%;
+                    resize:vertical;
+                    min-height:130px;
+                    padding:12px;
+                    border:1px solid var(--khadi-line);
+                    border-radius:12px;
+                    background:var(--khadi);
+                    color:var(--charcoal);
+                    font-family:inherit;
+                    font-size:.9rem;
+                    outline:none;
+                "
+      ></textarea>
+
+    </div>
+
+
+    <!-- Character Count -->
+    <div
+            style="
+                text-align:right;
+                color:var(--muted);
+                font-size:.7rem;
+                margin-top:4px;
+            "
+    >
+      <span id="feedback-char-count">0</span>/2000
+    </div>
+
+
+    <div class="sheet-actions">
+
+      <button
+              type="button"
+              class="btn secondary"
+              id="btn-feedback-cancel"
+              data-i18n="btn_cancel"
+      >
+        Cancel
+      </button>
+
+      <button
+              type="button"
+              class="btn primary"
+              id="btn-feedback-submit"
+              data-i18n="feedback_submit"
+      >
+        Send Feedback
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
+
+<!-- Rating Overlay -->
+<div class="overlay" id="ratingOverlay">
+
+  <div class="sheet">
+
+    <h3
+            style="
+                color:var(--indigo);
+                text-align:center;
+            "
+    >
+      ⭐
+      <span data-i18n="feedback_rate_title">
+                Enjoying Collection Book?
+            </span>
+    </h3>
+
+    <p
+            class="sheet-sub"
+            style="text-align:center;"
+            data-i18n="feedback_rate_subtitle"
+    >
+      A quick rating helps us improve and reach more businesses.
+    </p>
+
+
+    <div
+            id="rating-stars"
+            style="
+                display:flex;
+                justify-content:center;
+                gap:8px;
+                margin:25px 0;
+            "
+    >
+
+      <button
+              type="button"
+              class="rating-star"
+              data-rating="1"
+      >☆</button>
+
+      <button
+              type="button"
+              class="rating-star"
+              data-rating="2"
+      >☆</button>
+
+      <button
+              type="button"
+              class="rating-star"
+              data-rating="3"
+      >☆</button>
+
+      <button
+              type="button"
+              class="rating-star"
+              data-rating="4"
+      >☆</button>
+
+      <button
+              type="button"
+              class="rating-star"
+              data-rating="5"
+      >☆</button>
+
+    </div>
+
+
+    <div class="sheet-actions">
+
+      <button
+              type="button"
+              class="btn secondary"
+              id="btn-rating-later"
+              data-i18n="feedback_rate_later"
+      >
+        Maybe Later
+      </button>
+
+      <button
+              type="button"
+              class="btn primary"
+              id="btn-rating-submit"
+              disabled
+              data-i18n="feedback_rate_now"
+      >
+        Rate Now
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
 
 <!-- Employee Management Overlay -->
 <div class="overlay" id="employeeOverlay">
@@ -3547,7 +3872,12 @@ nav.tabs button .count {
     <p class="sheet-sub" data-i18n="sub_emp">Add employees and control their ledger access.</p>
     <div id="employeeList" style="margin-bottom: 20px; max-height:180px; overflow-y:auto; border:1px solid var(--khadi-line); border-radius:10px; padding:10px;"></div>
     <div class="divider-label" data-i18n="div_add_emp">Add New Employee</div>
-    <div class="field"><label data-i18n="lbl_emp_name">Employee Name</label><input id="emp-name" data-i18n-ph="ph_emp_name" placeholder="e.g. Rahul Kumar"></div>
+    <div class="field" style="position:relative;">
+      <label data-i18n="lbl_emp_name">Employee Name</label>
+      <input id="emp-name" data-i18n-ph="ph_emp_name" placeholder="e.g. Rahul Kumar" autocomplete="off">
+      <!-- NEW: Autocomplete dropdown list -->
+      <div class="autocomplete-list" id="emp-autocomplete" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:100;"></div>
+    </div>
     <div class="field"><label data-i18n="lbl_emp_phone">Phone Number (Login ID)</label><input id="emp-phone" type="tel" data-i18n-ph="ph_mobile" placeholder="Enter Mobile Number"></div>
     <div class="toggle-row">
       <input type="checkbox" id="emp-perm-add" checked>
@@ -4213,6 +4543,7 @@ nav.tabs button .count {
     var activeTab = 'dashboard';
     var entryType = 'debtor';
     var selectedCustomerId = null;
+    var currentFeedbackType = 'general';
     var manageTargetId = null;
     var collectTargetCustId = null, collectTargetType = null;
     var historyCustomerId = null;
@@ -4423,6 +4754,31 @@ help_title: "Help & Support",
 help_subtitle: "Need help with Collection Book? We're here to assist you.",
 help_email_label: "Email Support",
 help_email_hint: "Tap the email address to contact our support team.",emp_manage_contacts: 'Manage Contacts',
+feedback_title: "Feedback & Support",
+feedback_subtitle: "Tell us what you think. Your feedback helps us improve Collection Book.",
+
+feedback_bug: "Report a Bug",
+feedback_feature: "Suggest a Feature",
+feedback_general: "Give Feedback",
+feedback_rate: "Rate Collection Book",
+
+feedback_bug_title: "Report a Bug",
+feedback_feature_title: "Suggest a Feature",
+feedback_general_title: "Your Feedback",
+
+feedback_bug_hint: "Tell us what went wrong and what you were trying to do.",
+feedback_feature_hint: "Tell us what feature would make Collection Book better for you.",
+feedback_general_hint: "Tell us what you like, what you don't like, or what we can improve.",
+
+feedback_placeholder: "Write your feedback here...",
+feedback_submit: "Send Feedback",
+feedback_thanks: "Thanks! Your feedback has been received.",
+feedback_required: "Please enter some feedback.",
+
+feedback_rate_title: "Enjoying Collection Book?",
+feedback_rate_subtitle: "A quick rating helps us improve and reach more businesses.",
+feedback_rate_now: "Rate Now",
+feedback_rate_later: "Maybe Later",
 emp_manage_contacts_hint:
     'Allow employee to add, edit and remove business contacts.',
     notification_customer_new_entry:
@@ -4523,6 +4879,31 @@ help_title: "सहायता और समर्थन",
 help_subtitle: "Collection Book से संबंधित सहायता चाहिए? हम आपकी मदद के लिए यहाँ हैं।",
 help_email_label: "ईमेल सहायता",
 help_email_hint: "हमारी सहायता टीम से संपर्क करने के लिए ईमेल पते पर टैप करें।",emp_manage_contacts: 'संपर्क प्रबंधित करें',
+feedback_title: "प्रतिक्रिया और सहायता",
+feedback_subtitle: "हमें बताएं कि आप क्या सोचते हैं। आपकी प्रतिक्रिया हमें Collection Book को बेहतर बनाने में मदद करती है।",
+
+feedback_bug: "समस्या की रिपोर्ट करें",
+feedback_feature: "नई सुविधा का सुझाव दें",
+feedback_general: "प्रतिक्रिया दें",
+feedback_rate: "Collection Book को रेट करें",
+
+feedback_bug_title: "समस्या की रिपोर्ट करें",
+feedback_feature_title: "नई सुविधा का सुझाव दें",
+feedback_general_title: "आपकी प्रतिक्रिया",
+
+feedback_bug_hint: "हमें बताएं कि क्या समस्या हुई और आप क्या करने की कोशिश कर रहे थे।",
+feedback_feature_hint: "हमें बताएं कि कौन-सी सुविधा Collection Book को आपके लिए बेहतर बना सकती है।",
+feedback_general_hint: "हमें बताएं कि आपको क्या पसंद है, क्या पसंद नहीं है, या हम क्या बेहतर कर सकते हैं।",
+
+feedback_placeholder: "अपनी प्रतिक्रिया यहां लिखें...",
+feedback_submit: "प्रतिक्रिया भेजें",
+feedback_thanks: "धन्यवाद! आपकी प्रतिक्रिया प्राप्त हो गई है।",
+feedback_required: "कृपया अपनी प्रतिक्रिया दर्ज करें।",
+
+feedback_rate_title: "क्या आपको Collection Book पसंद आ रहा है?",
+feedback_rate_subtitle: "एक छोटी-सी रेटिंग हमें बेहतर बनने और अधिक व्यवसायों तक पहुंचने में मदद करती है।",
+feedback_rate_now: "अभी रेट करें",
+feedback_rate_later: "शायद बाद में",
 emp_manage_contacts_hint:
     'कर्मचारी को व्यावसायिक संपर्क जोड़ने, संपादित करने और हटाने की अनुमति दें।',
     notification_customer_new_entry:
@@ -4623,6 +5004,31 @@ help_title: "সহায়তা ও সাপোর্ট",
 help_subtitle: "Collection Book ব্যবহার করতে সাহায্য দরকার? আমরা আপনাকে সহায়তা করতে প্রস্তুত।",
 help_email_label: "ইমেল সাপোর্ট",
 help_email_hint: "আমাদের সাপোর্ট টিমের সাথে যোগাযোগ করতে ইমেল ঠিকানায় ট্যাপ করুন।",emp_manage_contacts: 'পরিচিতি পরিচালনা করুন',
+feedback_title: "মতামত ও সহায়তা",
+feedback_subtitle: "আপনার মতামত আমাদের জানান। আপনার মতামত Collection Book-কে আরও উন্নত করতে সাহায্য করে।",
+
+feedback_bug: "সমস্যার রিপোর্ট করুন",
+feedback_feature: "নতুন ফিচারের পরামর্শ দিন",
+feedback_general: "মতামত দিন",
+feedback_rate: "Collection Book-কে রেটিং দিন",
+
+feedback_bug_title: "সমস্যার রিপোর্ট করুন",
+feedback_feature_title: "নতুন ফিচারের পরামর্শ দিন",
+feedback_general_title: "আপনার মতামত",
+
+feedback_bug_hint: "কী সমস্যা হয়েছে এবং আপনি কী করার চেষ্টা করছিলেন তা আমাদের জানান।",
+feedback_feature_hint: "কোন ফিচারটি Collection Book-কে আপনার জন্য আরও ভালো করে তুলবে তা আমাদের জানান।",
+feedback_general_hint: "আপনার কী ভালো লাগে, কী ভালো লাগে না, অথবা আমরা কী উন্নত করতে পারি তা আমাদের জানান।",
+
+feedback_placeholder: "আপনার মতামত এখানে লিখুন...",
+feedback_submit: "মতামত পাঠান",
+feedback_thanks: "ধন্যবাদ! আপনার মতামত আমরা পেয়েছি।",
+feedback_required: "অনুগ্রহ করে আপনার মতামত লিখুন।",
+
+feedback_rate_title: "আপনার কি Collection Book ভালো লাগছে?",
+feedback_rate_subtitle: "একটি ছোট রেটিং আমাদের আরও উন্নতি করতে এবং আরও বেশি ব্যবসার কাছে পৌঁছাতে সাহায্য করে।",
+feedback_rate_now: "এখনই রেট করুন",
+feedback_rate_later: "হয়তো পরে",
 emp_manage_contacts_hint:
     'কর্মচারীকে ব্যবসায়িক পরিচিতি যোগ, সম্পাদনা এবং মুছে ফেলার অনুমতি দিন।',
     notification_customer_new_entry:
@@ -4689,6 +5095,117 @@ function isOwnerProfileSetup() {
         profile.name &&
         String(profile.name).trim()
     );
+}
+
+function openFeedbackForm(type) {
+
+    currentFeedbackType = type || 'general';
+
+    var icon = '💬';
+    var title = 'Your Feedback';
+    var subtitle =
+        'Tell us what you think.';
+    var label = 'Your Feedback';
+    var placeholder =
+        'Write your feedback here...';
+
+    if (currentFeedbackType === 'bug') {
+
+        icon = '🐛';
+
+        title = 'Report a Bug';
+
+        subtitle =
+            'Tell us what went wrong and what you were trying to do.';
+
+        label = 'What went wrong?';
+
+        placeholder =
+            'Describe the problem and what you were doing when it happened...';
+
+    } else if (currentFeedbackType === 'feature') {
+
+        icon = '💡';
+
+        title = 'Suggest a Feature';
+
+        subtitle =
+            'Tell us what feature would make Collection Book better for you.';
+
+        label = 'What feature would you like?';
+
+        placeholder =
+            'Tell us about the feature you would like to see...';
+
+    } else {
+
+        icon = '💬';
+
+        title = 'Your Feedback';
+
+        subtitle =
+            'Tell us what you think.';
+
+        label = 'Your Feedback';
+
+        placeholder =
+            'Write your feedback here...';
+    }
+
+
+    if ($('#feedback-form-icon')) {
+        $('#feedback-form-icon').textContent =
+            icon;
+    }
+
+    if ($('#feedback-form-title')) {
+        $('#feedback-form-title').textContent =
+            title;
+    }
+
+    if ($('#feedback-form-subtitle')) {
+        $('#feedback-form-subtitle').textContent =
+            subtitle;
+    }
+
+    if ($('#feedback-message-label')) {
+        $('#feedback-message-label').textContent =
+            label;
+    }
+
+    if ($('#feedback-message')) {
+        $('#feedback-message').value = '';
+
+        $('#feedback-message').placeholder =
+            placeholder;
+    }
+
+    if ($('#feedback-type')) {
+        $('#feedback-type').value =
+            currentFeedbackType;
+    }
+
+    if ($('#feedback-char-count')) {
+        $('#feedback-char-count').textContent =
+            '0';
+    }
+
+
+    closeOverlay('#helpSupportOverlay');
+
+    openOverlay(
+        '#feedbackOverlay',
+        true
+    );
+
+
+    setTimeout(function () {
+
+        if ($('#feedback-message')) {
+            $('#feedback-message').focus();
+        }
+
+    }, 200);
 }
 
 
@@ -9248,6 +9765,10 @@ if (
      function bindAllEvents(){
       safeBind('body', 'click', async function(e){
         var tNode = e.target;
+        // Hide employee autocomplete if clicking anywhere outside of it
+        if ($('#emp-autocomplete') && !closest(tNode, '#emp-autocomplete') && tNode.id !== 'emp-name') {
+            $('#emp-autocomplete').style.display = 'none';
+        }
       var notificationSelect =
     closest(
         tNode,
@@ -9923,6 +10444,24 @@ if ($('#en-due')) {
     }
 );
 safeBind(
+    '#feedback-message',
+    'input',
+    function () {
+
+        var value =
+            $('#feedback-message')
+                ? $('#feedback-message').value
+                : '';
+
+        if ($('#feedback-char-count')) {
+
+            $('#feedback-char-count')
+                .textContent =
+                String(value.length);
+        }
+    }
+);
+safeBind(
     '#notificationBtn',
     'click',
     function () {
@@ -10308,6 +10847,136 @@ if ($('#en-due')) {
     function () {
         closeOverlay('#settingsOverlay');
         openOverlay('#helpSupportOverlay');
+    }
+);
+
+safeBind(
+    '#btn-feedback-bug',
+    'click',
+    function () {
+
+        openFeedbackForm('bug');
+
+    }
+);
+
+
+safeBind(
+    '#btn-feedback-feature',
+    'click',
+    function () {
+
+        openFeedbackForm('feature');
+
+    }
+);
+
+
+safeBind(
+    '#btn-feedback-general',
+    'click',
+    function () {
+
+        openFeedbackForm('general');
+
+    }
+);
+safeBind(
+    '#btn-feedback-cancel',
+    'click',
+    function () {
+
+        closeOverlay('#feedbackOverlay');
+
+    }
+);
+
+safeBind(
+    '#btn-feedback-submit',
+    'click',
+    function () {
+
+        var message =
+            $('#feedback-message')
+                ? $('#feedback-message')
+                    .value
+                    .trim()
+                : '';
+
+        if (!message) {
+
+            showToast(
+                'Please enter some feedback.'
+            );
+
+            if ($('#feedback-message')) {
+                $('#feedback-message').focus();
+            }
+
+            return;
+        }
+
+
+        if (message.length < 5) {
+
+            showToast(
+                'Please provide a little more detail.'
+            );
+
+            if ($('#feedback-message')) {
+                $('#feedback-message').focus();
+            }
+
+            return;
+        }
+
+
+        var payload = {
+
+            type:
+                currentFeedbackType,
+
+            message:
+                message,
+
+            userUid:
+                getCurrentBusinessUid(),
+
+            createdAt:
+                new Date().toISOString()
+
+        };
+
+
+        if (
+            window.NativeBridge &&
+            typeof window.NativeBridge.postMessage ===
+                'function'
+        ) {
+
+            window.NativeBridge.postMessage(
+                'SUBMIT_FEEDBACK:' +
+                JSON.stringify(payload)
+            );
+
+        } else {
+
+            showToast(
+                'Feedback service is unavailable.'
+            );
+
+            return;
+        }
+
+
+        closeOverlay(
+            '#feedbackOverlay'
+        );
+
+        showToast(
+            'Thanks! Your feedback has been received.'
+        );
+
     }
 );
 
@@ -10822,6 +11491,48 @@ safeBind(
         });
       });
 
+      var selectedRating = 0;
+
+$$('.rating-star').forEach(
+    function (star) {
+
+        star.addEventListener(
+            'click',
+            function () {
+
+                selectedRating =
+                    Number(
+                        this.dataset.rating
+                    );
+
+                $$('.rating-star')
+                    .forEach(
+                        function (item) {
+
+                            var rating =
+                                Number(
+                                    item.dataset.rating
+                                );
+
+                            item.textContent =
+                                rating <= selectedRating
+                                    ? '★'
+                                    : '☆';
+                        }
+                    );
+
+                if ($('#btn-rating-submit')) {
+
+                    $('#btn-rating-submit')
+                        .disabled = false;
+                }
+
+            }
+        );
+
+    }
+);
+
       $$('.radio-opt').forEach(function(btn){ btn.addEventListener('click', function(){ entryType=this.dataset.type; $$('.radio-opt').forEach(function(r){ r.classList.remove('selected'); }); this.classList.add('selected'); }); });
 // NEW: Automatically request contacts when the user taps the search box
       safeBind('#en-customer-search', 'focus', function() {
@@ -10959,6 +11670,89 @@ if (note) {
         '</div>';
 }
         }
+      });
+
+
+// ==========================================
+      // NEW: EMPLOYEE AUTOFILL LOGIC
+      // ==========================================
+
+      safeBind('#emp-name', 'focus', function() {
+          if ((!window.deviceContacts || window.deviceContacts.length === 0) && !window.hasRequestedContacts) {
+              window.hasRequestedContacts = true;
+              if (window.NativeBridge && typeof window.NativeBridge.postMessage === 'function') {
+                  window.NativeBridge.postMessage('SYNC_CONTACTS');
+              }
+          }
+      });
+
+      safeBind('#emp-name', 'input', debounce(function(){
+          var q = this.value.toLowerCase().trim();
+          var list = $('#emp-autocomplete');
+          if(!list) return;
+
+          if ((!window.deviceContacts || window.deviceContacts.length === 0) && !window.hasRequestedContacts) {
+              window.hasRequestedContacts = true;
+              if (window.NativeBridge && typeof window.NativeBridge.postMessage === 'function') {
+                  window.NativeBridge.postMessage('SYNC_CONTACTS');
+              }
+          }
+
+          if(!q){
+              list.style.display = 'none';
+              return;
+          }
+
+          var matches = myCustomers.filter(function(c){ return c.name.toLowerCase().indexOf(q) > -1 || (c.phone || '').indexOf(q) > -1; });
+          var devMatches = window.deviceContacts ? window.deviceContacts.filter(function(c){ return (c.name && c.name.toLowerCase().indexOf(q) > -1) || (c.phone && c.phone.indexOf(q) > -1); }) : [];
+
+          var combined = [];
+          var seenPhones = new Set();
+
+          matches.forEach(function(c) {
+              var p = cleanPhone10(c.phone || '');
+              if(p && !seenPhones.has(p)) { combined.push({name: c.name, phone: c.phone}); seenPhones.add(p); }
+          });
+          devMatches.forEach(function(c) {
+              var p = cleanPhone10(c.phone || '');
+              if(p && !seenPhones.has(p)) { combined.push({name: c.name, phone: c.phone}); seenPhones.add(p); }
+          });
+
+          combined = combined.slice(0, 5); // Limit to top 5 results
+
+          var html = combined.map(function(c){
+              return '<div class="autocomplete-item emp-autocomplete-item" data-type="existing" data-name="' + escapeHTML(c.name) + '" data-phone="' + escapeHTML(c.phone) + '">' +
+                     '<span style="color:var(--charcoal); font-weight:900; font-size:1.15em;">' + escapeHTML(c.name) + '</span> ' +
+                     '<span style="color:var(--muted);">· ' + escapeHTML(c.phone) + '</span></div>';
+          }).join('');
+
+          // NEW: Always show the option to add manually at the bottom of the list
+          html += '<div class="autocomplete-item emp-autocomplete-item" data-type="new" data-name="' + escapeHTML(this.value) + '" style="color:var(--turmeric);font-weight:700;">+ Add "' + escapeHTML(this.value) + '" manually</div>';
+
+          list.style.display = 'block';
+          list.innerHTML = html;
+      }, 250));
+
+      safeBind('#emp-autocomplete', 'click', function(e){
+          var item = closest(e.target, '.emp-autocomplete-item');
+          if(!item) return;
+
+          if (item.dataset.type === 'new') {
+              // Manual entry selected: keep name, clear phone, focus phone field
+              $('#emp-name').value = item.dataset.name;
+              $('#emp-phone').value = '';
+              $('#emp-phone').disabled = false;
+              $('#emp-autocomplete').style.display = 'none';
+              $('#emp-phone').focus(); // Automatically jump to the phone field
+          } else {
+              // Existing contact selected: auto-fill name and phone
+              $('#emp-name').value = item.dataset.name;
+              $('#emp-phone').value = cleanPhone10(item.dataset.phone || '');
+              if ($('#emp-phone').disabled) {
+                  $('#emp-phone').disabled = false;
+              }
+              $('#emp-autocomplete').style.display = 'none';
+          }
       });
 
      safeBind('#en-save', 'click', async function(){
@@ -11399,6 +12193,29 @@ var ownerMessage =
         } else {
             showToast('Entry saved');
         }
+
+        // --- NEW: SHOW RATING POPUP AFTER VERY FIRST ENTRY ---
+        try {
+            var hasSeenRating = await window.storage.get('cb-first-entry-rated', false);
+            if (!hasSeenRating || hasSeenRating.value !== 'true') {
+                // Mark as seen so it never shows automatically again
+                await window.storage.set('cb-first-entry-rated', 'true', false);
+
+                // Wait 800ms to let the "Entry saved" toast appear and the sheet slide down
+                setTimeout(function() {
+                    // Reset star UI state
+                    selectedRating = 0;
+                    $$('.rating-star').forEach(function (star) { star.textContent = '☆'; });
+                    if ($('#btn-rating-submit')) $('#btn-rating-submit').disabled = true;
+
+                    // Open the existing rating overlay
+                    openOverlay('#ratingOverlay', true);
+                }, 800);
+            }
+        } catch (err) {
+            console.error("Failed to check/set first-entry rating flag", err);
+        }
+        // -----------------------------------------------------
       });
 
       safeBind('#col-save', 'click', async function(){
@@ -11813,6 +12630,103 @@ if (!tutorialDone) {
       safeBind('#mg-fraud', 'change', function(){ if($('#mg-fraud-report-box')) $('#mg-fraud-report-box').style.display = this.checked ? 'block':'none'; updateMgPreview(); });
       safeBind('#mg-rate-enable', 'change', function(){ if($('#mg-rating-block')) $('#mg-rating-block').style.display = this.checked ? 'block':'none'; });
       safeBind('#mg-report-fraud', 'change', function(){ if($('#mg-report-fields')) $('#mg-report-fields').style.display = this.checked ? 'block':'none'; });
+
+      safeBind(
+    '#btn-feedback-rate',
+    'click',
+    function () {
+
+        selectedRating = 0;
+
+        $$('.rating-star')
+            .forEach(function (star) {
+                star.textContent = '☆';
+            });
+
+        if ($('#btn-rating-submit')) {
+            $('#btn-rating-submit').disabled = true;
+        }
+
+        closeOverlay(
+            '#helpSupportOverlay'
+        );
+
+        openOverlay(
+            '#ratingOverlay',
+            true
+        );
+    }
+);
+
+safeBind(
+    '#btn-rating-later',
+    'click',
+    function () {
+
+        closeOverlay(
+            '#ratingOverlay'
+        );
+
+    }
+);
+
+safeBind(
+    '#btn-rating-submit',
+    'click',
+    function () {
+
+        if (!selectedRating) {
+            return;
+        }
+
+
+        if (selectedRating <= 3) {
+
+            closeOverlay(
+                '#ratingOverlay'
+            );
+
+            openFeedbackForm(
+                'general'
+            );
+
+            if ($('#feedback-form-title')) {
+
+                $('#feedback-form-title')
+                    .textContent =
+                    'How can we improve?';
+            }
+
+            if ($('#feedback-message')) {
+
+                $('#feedback-message')
+                    .placeholder =
+                    'Tell us what we can improve...';
+            }
+
+            return;
+        }
+
+
+        // 4 or 5 stars
+        if (
+            window.NativeBridge &&
+            typeof window.NativeBridge.postMessage ===
+                'function'
+        ) {
+
+            window.NativeBridge.postMessage(
+                'OPEN_PLAY_STORE_REVIEW:'
+            );
+
+        }
+
+        closeOverlay(
+            '#ratingOverlay'
+        );
+
+    }
+);
 
       safeBind('#mg-save', 'click', async function(){
       if (

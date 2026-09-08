@@ -16,6 +16,8 @@ import 'dart:convert';
 import 'dart:io';
 import '../services/meta_analytics_service.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:convert';
 
 import 'package:path_provider/path_provider.dart';
 
@@ -1118,6 +1120,47 @@ if (typeof updateRoleModeUI === 'function') {
               context,
             ).showSnackBar(SnackBar(content: Text(e.toString())));
           }
+        }else if (data == 'OPEN_PLAY_STORE_REVIEW:') {
+          debugPrint(
+            'OPEN_PLAY_STORE_REVIEW:',
+          );
+          final Uri marketUrl = Uri.parse(
+            'market://details?id=com.akash.collection_book',
+          );
+
+          final Uri webUrl = Uri.parse(
+            'https://play.google.com/store/apps/details?id=com.akash.collection_book',
+          );
+
+          if (await canLaunchUrl(marketUrl)) {
+            await launchUrl(
+              marketUrl,
+              mode: LaunchMode.externalApplication,
+            );
+          } else {
+            await launchUrl(
+              webUrl,
+              mode: LaunchMode.externalApplication,
+            );
+          }
+
+          return;
+        }else if (data.startsWith('SUBMIT_FEEDBACK:')) {
+          final jsonString =
+          data.substring('SUBMIT_FEEDBACK:'.length);
+
+          final decoded = jsonDecode(jsonString);
+
+          await FirebaseFirestore.instance
+              .collection('feedback')
+              .add({
+            'type': decoded['type'] ?? 'general',
+            'message': decoded['message'] ?? '',
+            'userUid': currentUser?.uid,
+            'createdAt': FieldValue.serverTimestamp(),
+          });
+
+          return;
         }
       },
     );
