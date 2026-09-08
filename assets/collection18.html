@@ -3340,9 +3340,7 @@ nav.tabs button .count {
         </svg>
     </span>
 
-          <span class="settings-row-label">
-        Take App Tour
-    </span>
+          <span class="settings-row-label" data-i18n="btn_take_tour">Take App Tour</span>
 
           <span class="settings-row-arrow">
         ›
@@ -4093,67 +4091,42 @@ nav.tabs button .count {
         <button type="button" class="radio-opt creditor" data-type="creditor"><span data-i18n="type_purch">Purchase (To Pay)</span></button>
       </div>
     </div>
-    <div class="field-row">
-      <div class="field">
-        <label data-i18n="lbl_inv_date">Invoice Date</label>
-
-        <div
-                class="cb-date-field"
-                id="en-idate-display"
-                data-date-target="en-idate"
-        >
-      <span class="cb-date-value">
-        Select date
-      </span>
-
-          <span class="cb-date-icon">▣</span>
-        </div>
-
-        <input
-                id="en-idate"
-                type="hidden"
-        >
-      </div>
-
-      <div class="field">
-        <label data-i18n="lbl_ref">Ref / Invoice No.</label>
-
-        <input
-                id="en-desc"
-                data-i18n-ph="ph_ref"
-                placeholder="e.g. Bill No. 994"
-        >
-      </div>
-    </div>
     <div class="field">
       <label data-i18n="lbl_gross_amt" style="font-size: .85rem; font-weight: 700; color: var(--indigo);">Gross Amount (₹)</label>
       <input id="en-amount" type="number" min="0" placeholder="0" style="font-size: 2.2rem; font-weight: 700; padding: 12px 16px; color: var(--indigo); text-align: center; border: 2px solid var(--indigo-tint);">
     </div>
-    <div class="field-row">
-      <div class="field"><label data-i18n="lbl_discount">Discount (₹)</label><input id="en-discount" type="number" min="0" placeholder="0"></div>
-      <div class="field">
-        <label data-i18n="lbl_due_date">Due Date (opt)</label>
 
-        <div
-                class="cb-date-field"
-                id="en-due-display"
-                data-date-target="en-due"
-        >
-    <span class="cb-date-value">
-      No due date
-    </span>
+    <!-- NEW TOGGLE BUTTON -->
+    <button type="button" id="btn-toggle-additional" data-i18n="btn_add_details" style="width: 100%; background: transparent; border: 1px dashed var(--khadi-line); border-radius: 10px; padding: 12px; margin: 6px 0 16px; font-size: .85rem; font-weight: 600; color: var(--muted); cursor: pointer; transition: all 0.2s;">+ Add additional details (Optional)</button>
 
-          <span class="cb-date-icon">▣</span>
+    <!-- HIDDEN ADDITIONAL DETAILS SECTION -->
+    <div id="en-additional-details" style="display:none; margin-bottom: 14px;">
+      <div class="field-row">
+        <div class="field">
+          <label data-i18n="lbl_inv_date">Invoice Date</label>
+          <div class="cb-date-field" id="en-idate-display" data-date-target="en-idate">
+            <span class="cb-date-value">Select date</span><span class="cb-date-icon">▣</span>
+          </div>
+          <input id="en-idate" type="hidden">
         </div>
-
-        <input
-                id="en-due"
-                type="hidden"
-        >
+        <div class="field">
+          <label data-i18n="lbl_ref">Ref / Invoice No.</label>
+          <input id="en-desc" data-i18n-ph="ph_ref" placeholder="e.g. Bill No. 994">
+        </div>
       </div>
-    </div>
-    <div id="en-new-customer-fields-bottom" style="display:none;">
-      <div class="field"><label data-i18n="lbl_priv_note">Private notes (only you see this)</label><textarea id="en-notes" data-i18n-ph="ph_priv_note" placeholder="Anything you don't want to share" rows="2"></textarea></div>
+      <div class="field-row">
+        <div class="field"><label data-i18n="lbl_discount">Discount (₹)</label><input id="en-discount" type="number" min="0" placeholder="0"></div>
+        <div class="field">
+          <label data-i18n="lbl_due_date">Due Date (opt)</label>
+          <div class="cb-date-field" id="en-due-display" data-date-target="en-due">
+            <span class="cb-date-value">No due date</span><span class="cb-date-icon">▣</span>
+          </div>
+          <input id="en-due" type="hidden">
+        </div>
+      </div>
+      <div id="en-new-customer-fields-bottom" style="display:none;">
+        <div class="field"><label data-i18n="lbl_priv_note">Private notes (only you see this)</label><textarea id="en-notes" data-i18n-ph="ph_priv_note" placeholder="Anything you don't want to share" rows="2"></textarea></div>
+      </div>
     </div>
     <div class="toggle-row">
       <input type="checkbox" id="en-confirmed" checked>
@@ -4439,16 +4412,9 @@ nav.tabs button .count {
 
     <div class="cb-tutorial-top">
 
-      <div class="cb-tutorial-badge">
-        ✨ QUICK TOUR
-      </div>
+      <div class="cb-tutorial-badge" data-i18n="tour_badge">✨ QUICK TOUR</div>
 
-      <button
-              type="button"
-              id="cbTutorialSkip"
-              class="cb-tutorial-skip">
-        Skip
-      </button>
+      <button type="button" id="cbTutorialSkip" class="cb-tutorial-skip" data-i18n="btn_tour_skip">Skip</button>
 
     </div>
 
@@ -4554,106 +4520,14 @@ nav.tabs button .count {
     var currentRoleMode = 'owner'; // 'owner' or 'employee'
 
     var cbTutorialSteps = [
-
-    {
-        target:
-            '#screen-dashboard .stats-grid',
-
-        icon:
-            '📊',
-
-        title:
-            'Your business at a glance',
-
-        text:
-            'See how much you need to collect, pay, and what needs your attention.'
-    },
-
-    {
-        target:
-            '#tabs button[data-tab="debtors"]',
-
-        icon:
-            '💰',
-
-        title:
-            'Know who owes you',
-
-        text:
-            'All pending customer collections are organized here.'
-    },
-
-    {
-        target:
-            '#tabs button[data-tab="creditors"]',
-
-        icon:
-            '🧾',
-
-        title:
-            'Track what you owe',
-
-        text:
-            'Keep supplier and purchase dues organised in one place.'
-    },
-
-    {
-        target:
-            '#tabs button[data-tab="mycustomers"]',
-
-        icon:
-            '👥',
-
-        title:
-            'Your customer book',
-
-        text:
-            'Open any contact to see their ledger, payments and history.'
-    },
-
-    {
-        target:
-            '#fabBtn',
-
-        icon:
-            '➕',
-
-        title:
-            'Create your first ledger',
-
-        text:
-            'Tap here to add a customer and record your first sale or purchase.'
-    },
-
-    {
-        target:
-            '#tabs button[data-tab="directory"]',
-
-        icon:
-            '🛡️',
-
-        title:
-            'Check fraud alerts',
-
-        text:
-            'See contacts reported by businesses before you transact.'
-    },
-
-    {
-        target:
-            '#brandMenuBtn',
-
-        icon:
-            '⚙️',
-
-        title:
-            'You are ready!',
-
-        text:
-            'Manage your profile, employees, language, security and more from here.'
-    }
-
-];
+    { target: '#screen-dashboard .stats-grid', icon: '📊', titleKey: 'tour_step1_title', textKey: 'tour_step1_text' },
+    { target: '#tabs button[data-tab="debtors"]', icon: '💰', titleKey: 'tour_step2_title', textKey: 'tour_step2_text' },
+    { target: '#tabs button[data-tab="creditors"]', icon: '🧾', titleKey: 'tour_step3_title', textKey: 'tour_step3_text' },
+    { target: '#tabs button[data-tab="mycustomers"]', icon: '👥', titleKey: 'tour_step4_title', textKey: 'tour_step4_text' },
+    { target: '#fabBtn', icon: '➕', titleKey: 'tour_step5_title', textKey: 'tour_step5_text' },
+    { target: '#tabs button[data-tab="directory"]', icon: '🛡️', titleKey: 'tour_step6_title', textKey: 'tour_step6_text' },
+    { target: '#brandMenuBtn', icon: '⚙️', titleKey: 'tour_step7_title', textKey: 'tour_step7_text' }
+    ];
 
     // Contact integration Global Scope for Flutter Bridge
     window.deviceContacts = [];
@@ -4826,6 +4700,9 @@ flow_sales_ahead:
 flow_balanced:
     'Sales and collections are balanced',txt_ledger_creator_only:
     'Only the ledger creator can add entries',
+    btn_add_details: "+ Add additional details (Optional)",
+btn_hide_details: "- Hide additional details",
+btn_take_tour: "Take App Tour", tour_badge: "✨ QUICK TOUR", btn_tour_skip: "Skip", btn_tour_next: "Next →", btn_tour_start: "Add my first entry →", msg_tour_skipped: "You can restart the tour from Help anytime.", tour_step1_title: "Your business at a glance", tour_step1_text: "See how much you need to collect, pay, and what needs your attention.", tour_step2_title: "Know who owes you", tour_step2_text: "All pending customer collections are organized here.", tour_step3_title: "Track what you owe", tour_step3_text: "Keep supplier and purchase dues organised in one place.", tour_step4_title: "Your customer book", tour_step4_text: "Open any contact to see their ledger, payments and history.", tour_step5_title: "Create your first ledger", tour_step5_text: "Tap here to add a customer and record your first sale or purchase.", tour_step6_title: "Check fraud alerts", tour_step6_text: "See contacts reported by businesses before you transact.", tour_step7_title: "You are ready!", tour_step7_text: "Manage your profile, employees, language, security and more from here."
       },
       hi: {
         app_sub: "क्रेडिट और लेजर प्रबंधन", btn_setup: "सेट अप", nav_dash: "डैशबोर्ड", nav_collect: "लेना है", nav_pay: "देना है", nav_cust: "संपर्क", nav_fraud: "धोखाधड़ी अलर्ट",
@@ -4951,7 +4828,10 @@ flow_sales_ahead:
 
 flow_balanced:
     'बिक्री और कलेक्शन बराबर हैं',txt_ledger_creator_only:
-    'केवल लेजर बनाने वाला व्यक्ति ही प्रविष्टियां जोड़ सकता है'
+    'केवल लेजर बनाने वाला व्यक्ति ही प्रविष्टियां जोड़ सकता है',
+    btn_add_details: "+ अतिरिक्त विवरण जोड़ें (वैकल्पिक)",
+btn_hide_details: "- अतिरिक्त विवरण छिपाएं",
+btn_take_tour: "ऐप टूर लें", tour_badge: "✨ त्वरित टूर", btn_tour_skip: "छोड़ें", btn_tour_next: "अगला →", btn_tour_start: "पहली प्रविष्टि जोड़ें →", msg_tour_skipped: "आप सहायता से कभी भी टूर फिर से शुरू कर सकते हैं।", tour_step1_title: "एक नज़र में आपका व्यवसाय", tour_step1_text: "देखें कि आपको कितना लेना है, देना है, और कहाँ ध्यान देने की आवश्यकता है।", tour_step2_title: "जानें कि कौन आपका कर्जदार है", tour_step2_text: "सभी लंबित ग्राहक संग्रहण यहाँ व्यवस्थित हैं।", tour_step3_title: "आप पर जो बकाया है उसे ट्रैक करें", tour_step3_text: "आपूर्तिकर्ता और खरीद के बकाये को एक ही स्थान पर व्यवस्थित रखें।", tour_step4_title: "आपकी ग्राहक पुस्तिका", tour_step4_text: "उनका लेजर, भुगतान और इतिहास देखने के लिए किसी भी संपर्क को खोलें।", tour_step5_title: "अपना पहला लेजर बनाएं", tour_step5_text: "ग्राहक जोड़ने और अपनी पहली बिक्री या खरीद दर्ज करने के लिए यहाँ टैप करें।", tour_step6_title: "धोखाधड़ी अलर्ट जांचें", tour_step6_text: "लेनदेन करने से पहले व्यवसायों द्वारा रिपोर्ट किए गए संपर्क देखें।", tour_step7_title: "आप तैयार हैं!", tour_step7_text: "यहाँ से अपनी प्रोफ़ाइल, कर्मचारी, भाषा, सुरक्षा और बहुत कुछ प्रबंधित करें।"
       },
       bn: {
         app_sub: "ক্রেডিট এবং লেজার ম্যানেজমেন্ট", btn_setup: "সেট আপ", nav_dash: "ড্যাশবোর্ড", nav_collect: "পাওনা", nav_pay: "দেনা", nav_cust: "পরিচিতি", nav_fraud: "জালিয়াতি সতর্কতা",
@@ -5076,7 +4956,10 @@ flow_sales_ahead:
 
 flow_balanced:
     'বিক্রয় এবং সংগ্রহ সমান',txt_ledger_creator_only:
-    'শুধুমাত্র লেজার নির্মাতা এন্ট্রি যোগ করতে পারবেন'
+    'শুধুমাত্র লেজার নির্মাতা এন্ট্রি যোগ করতে পারবেন',
+    btn_add_details: "+ অতিরিক্ত বিবরণ যোগ করুন (ঐচ্ছিক)",
+btn_hide_details: "- অতিরিক্ত বিবরণ লুকান",
+btn_take_tour: "অ্যাপ ট্যুর নিন", tour_badge: "✨ কুইক ট্যুর", btn_tour_skip: "এড়িয়ে যান", btn_tour_next: "পরবর্তী →", btn_tour_start: "আমার প্রথম এন্ট্রি যোগ করুন →", msg_tour_skipped: "আপনি যেকোনো সময় হেল্প থেকে ট্যুর পুনরায় শুরু করতে পারেন।", tour_step1_title: "এক নজরে আপনার ব্যবসা", tour_step1_text: "দেখুন আপনার কত পাওনা আছে, কত দিতে হবে এবং কোথায় মনোযোগ দেওয়া প্রয়োজন।", tour_step2_title: "জানুন কে আপনার কাছে ঋণী", tour_step2_text: "গ্রাহকদের সমস্ত বকেয়া সংগ্রহ এখানে সাজানো আছে।", tour_step3_title: "আপনার দেনা ট্র্যাক করুন", tour_step3_text: "সরবরাহকারী এবং ক্রয়ের বকেয়া এক জায়গায় গুছিয়ে রাখুন।", tour_step4_title: "আপনার গ্রাহক বই", tour_step4_text: "যেকোনো পরিচিতির লেজার, পেমেন্ট এবং ইতিহাস দেখতে সেটি খুলুন।", tour_step5_title: "আপনার প্রথম লেজার তৈরি করুন", tour_step5_text: "একটি পরিচিতি যোগ করতে এবং আপনার প্রথম বিক্রয় বা ক্রয় রেকর্ড করতে এখানে ট্যাপ করুন।", tour_step6_title: "জালিয়াতি সতর্কতা পরীক্ষা করুন", tour_step6_text: "লেনদেন করার আগে অন্যান্য ব্যবসার দ্বারা রিপোর্ট করা পরিচিতিগুলি দেখুন।", tour_step7_title: "আপনি প্রস্তুত!", tour_step7_text: "এখান থেকে আপনার প্রোফাইল, কর্মচারী, ভাষা, নিরাপত্তা এবং আরও অনেক কিছু পরিচালনা করুন।"
       }
     };
 
@@ -5301,15 +5184,8 @@ function cbPositionTutorial(
     ).textContent =
         step.icon;
 
-    document.getElementById(
-        'cbTutorialTitle'
-    ).textContent =
-        step.title;
-
-    document.getElementById(
-        'cbTutorialText'
-    ).textContent =
-        step.text;
+  document.getElementById('cbTutorialTitle').textContent = t(step.titleKey);
+    document.getElementById('cbTutorialText').textContent = t(step.textKey);
 
        var nextButton =
     document.getElementById(
@@ -5322,10 +5198,7 @@ if (nextButton) {
         cbTutorialIndex ===
         cbTutorialSteps.length - 1;
 
-    nextButton.textContent =
-        isLastStep
-            ? 'Add my first entry →'
-            : 'Next →';
+   nextButton.textContent = isLastStep ? t('btn_tour_start') : t('btn_tour_next');
 }
 
     cbRenderTutorialProgress();
@@ -10312,6 +10185,8 @@ if (manageBtn) {
         var txnBtn = closest(tNode, '[data-action="new-txn-for"]');
         if(txnBtn){
           selectedCustomerId = txnBtn.dataset.id; var cc = myCustById(selectedCustomerId);
+          if($('#en-additional-details')) $('#en-additional-details').style.display='none';
+         if($('#btn-toggle-additional')) $('#btn-toggle-additional').textContent = t('btn_add_details');
          if ($('#en-customer-search')) {
     $('#en-customer-search').value = cc ? cc.name : '';
     $('#en-customer-search').disabled = true;
@@ -10554,9 +10429,7 @@ safeBind(
 
         await cbCompleteTutorial();
 
-        showToast(
-            'You can restart the tour from Help anytime.'
-        );
+       showToast(t('msg_tour_skipped'));
     }
 );
 
@@ -10782,6 +10655,8 @@ safeBind(
         if ($('#en-customer-search')) {
     $('#en-customer-search').disabled = false;
 }
+if($('#en-additional-details')) $('#en-additional-details').style.display='none';
+        if($('#btn-toggle-additional')) $('#btn-toggle-additional').textContent = t('btn_add_details');
         if($('#en-customer-search')) $('#en-customer-search').value=''; if($('#en-autocomplete')) $('#en-autocomplete').style.display='none';
         if($('#en-new-customer-fields')) $('#en-new-customer-fields').style.display='none';
         if($('#en-new-customer-fields-bottom')) $('#en-new-customer-fields-bottom').style.display='none';
@@ -10807,6 +10682,17 @@ if ($('#en-due')) {
         if($('#en-desc')) $('#en-desc').value=''; if($('#en-confirmed')) $('#en-confirmed').checked = true;
         entryType='debtor'; $$('.radio-opt').forEach(function(r){ r.classList.remove('selected'); });
         var rD = $('.radio-opt.debtor'); if(rD) rD.classList.add('selected'); openOverlay('#entryOverlay');
+      });
+
+      safeBind('#btn-toggle-additional', 'click', function() {
+          var details = $('#en-additional-details');
+          if (details.style.display === 'none') {
+              details.style.display = 'block';
+             this.textContent = t('btn_hide_details');
+          } else {
+              details.style.display = 'none';
+            this.textContent = t('btn_add_details');
+          }
       });
 
       safeBind('#en-cancel', 'click', function () {
