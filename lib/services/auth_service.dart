@@ -64,24 +64,30 @@ class AuthService {
 
   }
 
-  Future<void> saveDeviceToken(String phoneNumber, String role) async {
-    await FirebaseMessaging.instance.requestPermission();
-    String? fcmToken = await FirebaseMessaging.instance.getToken();
+  Future<void> saveDeviceToken() async {
+    final user = _firebaseAuth.currentUser;
+    if (user == null) return;
 
-    if (fcmToken != null) {
-      // Determine the correct collection based on the user's role
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(phoneNumber)
-          .set(
-        {
-          'fcmToken': fcmToken,
-        },
-        SetOptions(
-          merge: true,
-        ),
-      );
+    await FirebaseMessaging.instance.requestPermission();
+
+    final fcmToken =
+    await FirebaseMessaging.instance.getToken();
+
+    if (fcmToken == null || fcmToken.isEmpty) {
+      return;
     }
+
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .set(
+      {
+        'fcmToken': fcmToken,
+        'fcmUpdatedAt': FieldValue.serverTimestamp(),
+        'accountPhone': user.phoneNumber,
+      },
+      SetOptions(merge: true),
+    );
   }
 
 

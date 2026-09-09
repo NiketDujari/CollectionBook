@@ -121,28 +121,17 @@ class NotificationService {
       return;
     }
 
-    // Firebase Auth phone number should already be:
-    // +918124204482
-    final normalizedPhone = phone.trim();
+    // Use UID as the document ID for consolidated user profile.
+    final uid = user.uid;
 
     await FirebaseFirestore.instance
         .collection('users')
-        .doc(normalizedPhone)
+        .doc(uid)
         .set(
       {
         'fcmToken': token,
-
-        'fcmUpdatedAt':
-        FieldValue.serverTimestamp(),
-
-        /*
-     * Do not overwrite an existing preference
-     * here later when you introduce a Settings
-     * toggle.
-     *
-     * For the initial version this defaults
-     * notifications to enabled.
-     */
+        'fcmUpdatedAt': FieldValue.serverTimestamp(),
+        'accountPhone': phone.trim(),
       },
       SetOptions(
         merge: true,

@@ -153,6 +153,109 @@ class SessionService {
       ownRef,
     );
 
+    /*
+ * -------------------------------------------------
+ * ONE-TIME DATA CONSOLIDATION (MIGRATION)
+ * -------------------------------------------------
+ *
+ * Migrate data from the legacy phone-keyed user document
+ * into the canonical UID-keyed document.
+ *
+ * IMPORTANT:
+ * - UID document is canonical.
+ * - Existing UID values are never overwritten by legacy values.
+ * - Legacy document is retained for backward compatibility.
+ * - Legacy notifications are copied, not deleted.
+ */
+
+    final legacyRef = firestore.collection('users').doc(phone);
+    final legacyDoc = await legacyRef.get();
+
+    if (legacyDoc.exists && legacyDoc.id != user.uid) {
+      final legacyData = legacyDoc.data() ?? {};
+      final ownData = (await ownRef.get()).data() ?? {};
+
+      final migrationData = <String, dynamic>{
+        'accountPhone': phone,
+        'userDataVersion': 2,
+      };
+
+      final fieldsToMigrate = [
+        'fcmToken',
+        'fcmUpdatedAt',
+        'legalAcceptedAt',
+        'privacyPolicyAcknowledgedVersion',
+        'termsAcceptedVersion',
+        'lastEngagementNotificationAt',
+        'lastEngagementNotificationTitle',
+        'engagementNotificationsEnabled',
+      ];
+
+      // Only migrate fields that don't already exist
+      // in the canonical UID document.
+      for (final field in fieldsToMigrate) {
+        if (!ownData.containsKey(field) && legacyData.containsKey(field)) {
+          migrationData[field] = legacyData[field];
+        }
+      }
+
+      await ownRef.set(
+        migrationData,
+        SetOptions(merge: true),
+      );
+
+      // -------------------------------------------------
+      // MIGRATE NOTIFICATIONS
+      // -------------------------------------------------
+
+      try {
+        final legacyNotifications =
+        await legacyRef.collection('notifications').get();
+
+        if (legacyNotifications.docs.isNotEmpty) {
+          final batch = firestore.batch();
+
+          for (final notificationDoc in legacyNotifications.docs) {
+            final newNotificationRef =
+            ownRef.collection('notifications').doc(notificationDoc.id);
+
+            // set(..., merge: true) avoids overwriting an
+            // already migrated notification.
+            batch.set(
+              newNotificationRef,
+              notificationDoc.data(),
+              SetOptions(merge: true),
+            );
+          }
+
+          await batch.commit();
+
+          print(
+            'Migrated ${legacyNotifications.docs.length} notifications '
+                'for ${user.uid}',
+          );
+        }
+      } catch (e) {
+        print('Error migrating notifications: $e');
+      }
+
+      // -------------------------------------------------
+      // MARK LEGACY DOCUMENT AS MIGRATED
+      // -------------------------------------------------
+
+      await legacyRef.set(
+        {
+          'migratedToUid': user.uid,
+          'migratedAt': FieldValue.serverTimestamp(),
+        },
+        SetOptions(merge: true),
+      );
+
+      print(
+        'Consolidated user data from $phone to ${user.uid}',
+      );
+    }
+
     final ownData =
     ownDoc.data();
 
@@ -480,10 +583,7 @@ class SessionService {
     final authService =
     AuthService();
 
-    await authService.saveDeviceToken(
-      phone,
-      activeMode,
-    );
+    await authService.saveDeviceToken();
   }
 
   static Future<void> switchMode(

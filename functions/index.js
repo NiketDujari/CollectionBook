@@ -412,40 +412,62 @@ const notificationParams =
 
       try {
         /*
-         * Check whether Customer B is registered.
+         * ------------------------------------------------
+         * RESOLVE RECEIVER (UID-BASED PREFERRED)
+         * ------------------------------------------------
+         *
+         * Find the registered user either by:
+         * 1. Querying accountPhone field (New consolidated structure)
+         * 2. Checking document ID (Legacy structure)
          */
-        const receiverSnapshot =
-          await admin
-            .firestore()
+        const db = admin.firestore();
+        let receiverUid = null;
+        let receiverData = null;
+
+        // 1. Try UID document lookup via accountPhone query
+        const uidQuerySnapshot = await db
+          .collection("users")
+          .where("accountPhone", "==", targetPhone)
+          .limit(1)
+          .get();
+
+        if (!uidQuerySnapshot.empty) {
+          const doc = uidQuerySnapshot.docs[0];
+          receiverUid = doc.id;
+          receiverData = doc.data();
+        } else {
+          // 2. Fallback to Legacy Phone-keyed document
+          const legacyDoc = await db
             .collection("users")
             .doc(targetPhone)
             .get();
+
+          if (legacyDoc.exists) {
+            receiverUid = targetPhone;
+            receiverData = legacyDoc.data();
+          }
+        }
 
         /*
          * Customer B is registered:
          * send the normal FCM notification.
          */
-       if (receiverSnapshot.exists) {
-         const receiver =
-           receiverSnapshot.data();
-
+       if (receiverUid && receiverData) {
          const fcmToken =
-           receiver.fcmToken;
+           receiverData.fcmToken;
 
          /*
           * ------------------------------------------------
           * SAVE NOTIFICATION FOR IN-APP NOTIFICATION SCREEN
           * ------------------------------------------------
           *
-          * Notifications belong to the PERSON,
-          * therefore they are stored using the
-          * authenticated phone number.
+          * Notifications are stored in the receiver's
+          * primary document (UID or Phone-legacy).
           */
          const notificationRef =
-           admin
-             .firestore()
+           db
              .collection("users")
-             .doc(targetPhone)
+             .doc(receiverUid)
              .collection("notifications")
              .doc(event.params.requestId);
 
@@ -940,6 +962,24 @@ async function sendEngagementNotifications() {
       userDocument.data();
 
     /*
+     * Avoid double-notifying if both legacy (phone-keyed)
+     * and consolidated (UID-keyed) documents exist.
+     */
+    const isLegacy = userDocument.id.startsWith("+");
+    if (isLegacy) {
+      const consolidatedSnapshot = await db
+        .collection("users")
+        .where("accountPhone", "==", userDocument.id)
+        .limit(1)
+        .get();
+
+      if (!consolidatedSnapshot.empty) {
+        skippedCount++;
+        continue;
+      }
+    }
+
+    /*
      * Explicit opt-out.
      *
      * Missing field currently means enabled.
@@ -1145,33 +1185,24 @@ exports.sendDailyEngagementNotification =
    * Helper to check if a user has created any ledger entries.
    * Connects the phone-number document to the UID document where the ledger subcollection lives.
    */
-  async function userHasLedgerEntries(db, phoneNumber) {
+  async function userHasLedgerEntries(db, uid) {
     try {
-      const uidDocsSnapshot = await db
+      const ledgerSnapshot = await db
         .collection("users")
-        .where("accountPhone", "==", phoneNumber)
+        .doc(uid)
+        .collection("ledger")
+        .limit(1)
         .get();
 
-      if (uidDocsSnapshot.empty) {
-        return false; // No UID doc found, definitely no ledger entries
-      }
-
-      for (const uidDoc of uidDocsSnapshot.docs) {
-        const ledgerSnapshot = await db
-          .collection("users")
-          .doc(uidDoc.id)
-          .collection("ledger")
-          .limit(1)
-          .get();
-
-        if (!ledgerSnapshot.empty) {
-          return true; // Found at least one ledger entry
-        }
-      }
-      return false;
+      return !ledgerSnapshot.empty;
     } catch (error) {
-      console.error("Error checking ledger entries for phone:", phoneNumber, error);
-      return false; // Fail safe: don't block notifications if check fails
+      console.error(
+        "Error checking ledger entries for UID:",
+        uid,
+        error,
+      );
+
+      return false;
     }
   }
 
@@ -1212,15 +1243,29 @@ exports.sendDailyEngagementNotification =
       for (const userDoc of usersSnapshot.docs) {
         const user = userDoc.data();
         const fcmToken = user.fcmToken;
-        const phoneNumber = userDoc.id; // Phone-number doc key
+        const phoneNumber = user.accountPhone || userDoc.id;
 
         if (!fcmToken || typeof fcmToken !== "string") {
           skippedCount++;
           continue;
         }
 
+        const isLegacy =
+          /^\+91\d{10}$/.test(
+            userDoc.id,
+          );
+
+        if (isLegacy) {
+          skippedCount++;
+          continue;
+        }
+
         // Check if they have already added a ledger entry
-        const hasLedger = await userHasLedgerEntries(db, phoneNumber);
+      const hasLedger =
+        await userHasLedgerEntries(
+          db,
+          userDoc.id,
+        );
         if (hasLedger) {
           skippedCount++;
           continue;
@@ -1340,14 +1385,28 @@ exports.sendDailyEngagementNotification =
         for (const userDoc of usersSnapshot.docs) {
           const user = userDoc.data();
           const fcmToken = user.fcmToken;
-          const phoneNumber = userDoc.id;
+          const phoneNumber = user.accountPhone || userDoc.id;
 
           if (!fcmToken || typeof fcmToken !== "string") {
             skippedCount++;
             continue;
           }
 
-          const hasLedger = await userHasLedgerEntries(db, phoneNumber);
+          const isLegacy =
+            /^\+91\d{10}$/.test(
+              userDoc.id,
+            );
+
+          if (isLegacy) {
+            skippedCount++;
+            continue;
+          }
+
+          const hasLedger =
+            await userHasLedgerEntries(
+              db,
+              userDoc.id,
+            );
           if (hasLedger) {
             skippedCount++;
             continue;

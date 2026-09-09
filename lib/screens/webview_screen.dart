@@ -912,9 +912,9 @@ if (typeof updateRoleModeUI === 'function') {
               return;
             }
 
-            final phone = FirebaseAuth.instance.currentUser?.phoneNumber;
+            final uid = FirebaseAuth.instance.currentUser?.uid;
 
-            if (phone == null || phone.isEmpty) {
+            if (uid == null || uid.isEmpty) {
               return;
             }
 
@@ -925,7 +925,7 @@ if (typeof updateRoleModeUI === 'function') {
             for (final id in ids) {
               final ref = firestore
                   .collection('users')
-                  .doc(phone)
+                  .doc(uid)
                   .collection('notifications')
                   .doc(id);
 
@@ -958,23 +958,23 @@ if (typeof updateRoleModeUI === 'function') {
         } else if (data == 'LOAD_NOTIFICATIONS') {
           final user = FirebaseAuth.instance.currentUser;
 
-          final phone = user?.phoneNumber;
+          final uid = user?.uid;
 
-          if (phone == null || phone.isEmpty) {
+          if (uid == null || uid.isEmpty) {
             return;
           }
 
           try {
             final snapshot = await FirebaseFirestore.instance
                 .collection('users')
-                .doc(phone)
+                .doc(uid)
                 .collection('notifications')
                 .orderBy('createdAt', descending: true)
                 .limit(100)
                 .get();
             debugPrint(
               'NOTIFICATION PATH = '
-              'users/$phone/notifications',
+              'users/$uid/notifications',
             );
 
             debugPrint(
@@ -1067,16 +1067,16 @@ if (typeof updateRoleModeUI === 'function') {
             debugPrint('LOAD_NOTIFICATIONS error: $e');
           }
         } else if (data == 'LOAD_NOTIFICATION_COUNT') {
-          final phone = FirebaseAuth.instance.currentUser?.phoneNumber;
+          final uid = FirebaseAuth.instance.currentUser?.uid;
 
-          if (phone == null) {
+          if (uid == null) {
             return;
           }
 
           try {
             final snapshot = await FirebaseFirestore.instance
                 .collection('users')
-                .doc(phone)
+                .doc(uid)
                 .collection('notifications')
                 .where('read', isEqualTo: false)
                 .get();
@@ -1307,12 +1307,12 @@ if (typeof updateRoleModeUI === 'function') {
   }
 
   void _startNotificationListener() {
-    final phone = FirebaseAuth.instance.currentUser?.phoneNumber;
+    final uid = FirebaseAuth.instance.currentUser?.uid;
 
-    if (phone == null || phone.isEmpty) {
+    if (uid == null || uid.isEmpty) {
       debugPrint(
         'Notification listener not started: '
-        'phone unavailable',
+        'uid unavailable',
       );
 
       return;
@@ -1322,12 +1322,12 @@ if (typeof updateRoleModeUI === 'function') {
 
     debugPrint(
       'Starting realtime notification listener: '
-      'users/$phone/notifications',
+      'users/$uid/notifications',
     );
 
     _notificationSubscription = FirebaseFirestore.instance
         .collection('users')
-        .doc(phone)
+        .doc(uid)
         .collection('notifications')
         .where('read', isEqualTo: false)
         .snapshots()

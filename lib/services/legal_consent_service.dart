@@ -39,16 +39,17 @@ class LegalConsentService {
     final user =
         FirebaseAuth.instance.currentUser;
 
-    if (user == null ||
-        user.phoneNumber == null) {
+    if (user == null) {
       return;
     }
 
     await FirebaseFirestore.instance
         .collection('users')
-        .doc(user.phoneNumber)
+        .doc(user.uid)
         .set(
       {
+        'accountPhone': user.phoneNumber,
+
         'termsAcceptedVersion':
         LegalConsentService
             .currentVersion,
