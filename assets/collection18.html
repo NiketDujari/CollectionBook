@@ -607,8 +607,47 @@
     .quality-line b{color:var(--indigo);}
     .meta-line{font-size:.72rem;color:var(--muted);margin-top:8px;}
 
-    .empty{text-align:center;padding:40px 16px;color:var(--muted);background:var(--paper);border:1px dashed var(--khadi-line);border-radius:var(--radius);}
-    .empty .display{font-size:1.3rem;color:var(--indigo);margin-bottom:6px;}
+    .empty {
+        text-align: center;
+        padding: 40px 24px;
+        color: var(--muted);
+        background: var(--paper);
+        border: 1px dashed var(--khadi-line);
+        border-radius: var(--radius);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .empty-illustration {
+        width: 80px;
+        height: 80px;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--khadi);
+        border-radius: 50%;
+        color: var(--turmeric);
+    }
+
+    .empty-illustration svg {
+        width: 42px;
+        height: 42px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.5;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+
+    .empty .display {
+        font-family: 'Rozha One', serif;
+        font-size: 1.35rem;
+        color: var(--indigo);
+        margin: 0;
+    }
 
     .search-bar{display:flex;gap:8px;margin-bottom:14px;}
     .search-bar input{flex:1;border:1px solid var(--khadi-line);border-radius:12px;padding:12px 14px;font-size:.9rem;background:var(--paper);}
@@ -697,6 +736,15 @@
     .toast{position:fixed;left:50%;bottom:100px;transform:translateX(-50%);background:var(--indigo-deep);color:var(--on-accent);padding:14px 22px;border-radius:999px;font-size:.9rem;font-weight:500;box-shadow:0 6px 20px rgba(0,0,0,.25);opacity:0;pointer-events:none;transition:opacity .25s ease, bottom .25s ease;z-index:3000;max-width:88vw;text-align:center;}
     .toast.show{opacity:1;bottom:110px;}
     .loading{text-align:center;padding:40px;color:var(--muted);font-size:.95rem;font-weight:500;}
+
+    /* Success Popup Styling */
+    .success-popup-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 10000; padding: 20px; }
+    .success-popup-overlay.open { display: flex; }
+    .success-popup-box { background: var(--paper); width: 90%; max-width: 320px; border-radius: 28px; padding: 32px 24px; box-shadow: 0 20px 60px rgba(0,0,0,0.4); text-align: center; animation: cbSuccessPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); position: relative; overflow: hidden; }
+    @keyframes cbSuccessPop { from { opacity: 0; transform: scale(0.8) translateY(30px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+    .success-popup-icon { width: 72px; height: 72px; background: var(--sage); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; margin: 0 auto 20px; box-shadow: 0 8px 20px rgba(92, 122, 94, 0.3); }
+    .success-popup-title { font-family: 'Rozha One', serif; font-size: 1.7rem; color: var(--indigo); margin-bottom: 8px; }
+    .success-popup-text { font-size: 1rem; color: var(--muted); margin-bottom: 24px; line-height: 1.4; padding: 0 10px; }
 
     .sticky-banner {
       position: sticky; top: 0; z-index: 100; background: var(--turmeric); color: var(--on-accent);
@@ -2278,24 +2326,11 @@ nav.tabs button .count {
     .quality-line { line-height:1.4; }
 
     .empty {
-      padding:28px 18px;
+      padding:40px 24px;
       border-style:dashed;
     }
 
-    .empty::before {
-      content:'';
-      display:block;
-      width:34px;
-      height:34px;
-      margin:0 auto 10px;
-      border:2px solid var(--khadi-line);
-      border-radius:50%;
-      background:
-        radial-gradient(circle at center, var(--turmeric) 0 3px, transparent 4px),
-        var(--khadi);
-    }
-
-    .empty .display { font-size:1.15rem; }
+    .empty .display { font-size:1.25rem; }
 
     .field input,
     .field select,
@@ -2671,15 +2706,11 @@ nav.tabs button .count {
     .rating-card .rating-star.active { color: var(--turmeric); transform: scale(1.2); filter: drop-shadow(0 0 15px rgba(201, 138, 45, 0.4)); }
 
     /* Enhanced Feedback Modal Styling */
-    .feedback-card { background: var(--paper); width: 100%; max-width: 480px; border-radius: 28px; padding: 32px 24px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); position: relative; animation: cbFeedbackPop 0.3s ease-out; }
-    @keyframes cbFeedbackPop { from { opacity: 0; transform: scale(0.95) translateY(20px); } to { opacity: 1; transform: scale(1) translateY(0); } }
     .feedback-header { text-align: center; margin-bottom: 24px; }
     .feedback-icon-circle { width: 68px; height: 64px; background: var(--khadi); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2.2rem; margin: 0 auto 16px; transition: all 0.3s ease; }
-    .feedback-card[data-type="bug"] .feedback-icon-circle { background: var(--madder-tint); color: var(--madder); }
-    .feedback-card[data-type="feature"] .feedback-icon-circle { background: var(--turmeric-tint); color: var(--turmeric); }
-    .feedback-card[data-type="general"] .feedback-icon-circle { background: var(--indigo-tint); color: var(--indigo); }
-    .feedback-card h3 { font-size: 1.55rem; margin: 0 0 8px; color: var(--indigo); }
-    .feedback-card .sheet-sub { margin: 0; font-size: 0.95rem; line-height: 1.4; color: var(--muted); }
+    .sheet[data-type="bug"] .feedback-icon-circle { background: var(--madder-tint); color: var(--madder); }
+    .sheet[data-type="feature"] .feedback-icon-circle { background: var(--turmeric-tint); color: var(--turmeric); }
+    .sheet[data-type="general"] .feedback-icon-circle { background: var(--indigo-tint); color: var(--indigo); }
     .feedback-textarea { width: 100%; border: 2px solid var(--khadi-line); border-radius: 18px; padding: 16px; font-size: 1rem; background: var(--khadi); color: var(--charcoal); transition: all 0.2s ease; min-height: 150px; line-height: 1.5; margin-top: 20px; }
     .feedback-textarea:focus { border-color: var(--indigo); background: var(--paper); box-shadow: 0 0 0 4px rgba(43, 58, 103, 0.1); outline: none; }
     .feedback-footer { display: flex; justify-content: flex-end; margin-top: 10px; }
@@ -3690,9 +3721,9 @@ nav.tabs button .count {
   </div>
 </div>
 <!-- Feedback Form Overlay -->
-<div class="overlay centered" id="feedbackOverlay">
+<div class="overlay" id="feedbackOverlay">
 
-  <div class="feedback-card" id="feedbackCard">
+  <div class="sheet" id="feedbackCard">
 
     <div class="feedback-header">
       <div class="feedback-icon-circle" id="feedback-form-icon">💬</div>
@@ -4409,6 +4440,14 @@ nav.tabs button .count {
   </div>
 
 </div>
+<div class="success-popup-overlay" id="successPopup">
+  <div class="success-popup-box">
+    <div class="success-popup-icon">✓</div>
+    <div class="success-popup-title">Success!</div>
+    <div class="success-popup-text" id="successPopupText">Action completed successfully.</div>
+    <button class="btn primary" id="btn-success-close" style="width: 100%;" data-i18n="btn_great">Great</button>
+  </div>
+</div>
 <script src="js/bridge.js"></script>
 <script type="module">
   const firebaseConfig = {
@@ -4564,10 +4603,11 @@ nav.tabs button .count {
         notice_priv: "🔒 Your private contact book. This data is stored only under your account and is never shared — except a fraud report, which shares only the minimum needed to warn others, anonymously.",
         notice_pub: "⚠️ Fraud alerts reported anonymously by traders in your market. No trader's name, shop or contact details are ever shown — only the flagged contact's details.",
         ph_search_my: "Search contact name or phone…", ph_search_dir: "Search reported name or phone…", txt_all_clear: "All Clear", txt_no_rem: "No pending reminders.",
-        txt_nothing: "Nothing Here", txt_add_col: "Tap + Add Contact to record outstanding amounts.", txt_add_pay: "Tap + Add Contact to log suppliers you owe.",
-        txt_no_cust: "No contacts yet", txt_tap_first: "Tap + Add Contact to add your first contact.", txt_no_fraud: "No fraud reports",
+        txt_nothing: "Nothing Here", txt_add_col: "Tap + Add Entry to record outstanding amounts.", txt_add_pay: "Tap + Add Entry to log suppliers you owe.",
+        txt_no_cust: "No contacts yet", txt_tap_first: "Tap + Add Entry to add your first contact.", txt_no_fraud: "No fraud reports",
         txt_when_fraud: "When a trader reports a confirmed fraud, it appears here — anonymously.", txt_tot_col: "Total to collect", txt_tot_pay: "Total to pay",
         txt_all_set: "All settled", txt_no_bal_now: "No outstanding balances right now.", txt_no_txn: "No transactions", txt_not_rec: "Nothing recorded for this contact yet.",
+        txt_no_notifications: "No notifications", txt_notification_hint: "Your Collection Book activity will appear here.", txt_no_pending: "No pending entries right now.",
         txt_closing: "Closing balance", txt_txns: "Transactions", txt_view: "view →", txt_whatsapp: "WhatsApp Reminder", txt_call: "Call", txt_new_ent: "New Entry", txt_mng: "Manage", txt_v_rep: "View / Edit Report",
         lbl_fraud: "fraud", lbl_risk: "risk", lbl_trusted: "trusted", lbl_watch: "watch", lbl_unrated: "unrated", tag_unc: "Unconfirmed", tag_paid: "Fully Paid", tag_part: "Partially Paid", tag_no_due: "No due date",
         head_emp: "Manage Employees", sub_emp: "Add employees and control their ledger access.", div_add_emp: "Add New Employee",
@@ -4663,7 +4703,8 @@ flow_balanced:
     'Only the ledger creator can add entries',
     btn_add_details: "+ Add additional details (Optional)",
 btn_hide_details: "- Hide additional details",
-btn_take_tour: "Take App Tour", tour_badge: "✨ QUICK TOUR", btn_tour_skip: "Skip", btn_tour_next: "Next →", btn_tour_start: "Add my first entry →", msg_tour_skipped: "You can restart the tour from Help anytime.", tour_step1_title: "Your business at a glance", tour_step1_text: "See how much you need to collect, pay, and what needs your attention.", tour_step2_title: "Know who owes you", tour_step2_text: "All pending customer collections are organized here.", tour_step3_title: "Track what you owe", tour_step3_text: "Keep supplier and purchase dues organised in one place.", tour_step4_title: "Your customer book", tour_step4_text: "Open any contact to see their ledger, payments and history.", tour_step5_title: "Create your first ledger", tour_step5_text: "Tap here to add a customer and record your first sale or purchase.", tour_step6_title: "Check fraud alerts", tour_step6_text: "See contacts reported by businesses before you transact.", tour_step7_title: "You are ready!", tour_step7_text: "Manage your profile, employees, language, security and more from here."
+btn_take_tour: "Take App Tour", tour_badge: "✨ QUICK TOUR", btn_tour_skip: "Skip", btn_tour_next: "Next →", btn_tour_start: "Add my first entry →", msg_tour_skipped: "You can restart the tour from Help anytime.", tour_step1_title: "Your business at a glance", tour_step1_text: "See how much you need to collect, pay, and what needs your attention.", tour_step2_title: "Know who owes you", tour_step2_text: "All pending customer collections are organized here.", tour_step3_title: "Track what you owe", tour_step3_text: "Keep supplier and purchase dues organised in one place.", tour_step4_title: "Your customer book", tour_step4_text: "Open any contact to see their ledger, payments and history.", tour_step5_title: "Create your first ledger", tour_step5_text: "Tap here to add a customer and record your first sale or purchase.", tour_step6_title: "Check fraud alerts", tour_step6_text: "See contacts reported by businesses before you transact.", tour_step7_title: "You are ready!", tour_step7_text: "Manage your profile, employees, language, security and more from here.",
+        msg_entry_success: "Entry added successfully", msg_pay_success: "Payment added successfully", btn_great: "Great"
       },
       hi: {
         app_sub: "क्रेडिट और लेजर प्रबंधन", btn_setup: "सेट अप", nav_dash: "डैशबोर्ड", nav_collect: "लेना है", nav_pay: "देना है", nav_cust: "संपर्क", nav_fraud: "धोखाधड़ी अलर्ट",
@@ -4674,7 +4715,7 @@ btn_take_tour: "Take App Tour", tour_badge: "✨ QUICK TOUR", btn_tour_skip: "Sk
         sale: "बिक्री", purchase: "खरीद", payment: "भुगतान", btn_confirm: "कन्फर्म", btn_del: "डिलीट", txt_loading: "आपकी कलेक्शन बुक खुल रही है…",
         setup_sub: "यह लेबल निजी तौर पर सहेजा गया है और किसी के साथ साझा नहीं किया जाता है।", lbl_name: "आपका नाम", ph_name: "उदा. रमेश भाई",
         lbl_biz: "व्यवसाय का नाम", ph_biz: "उदा. शर्मा ट्रेडर्स", lbl_gst: "जीएसटी नंबर (वैकल्पिक)", ph_gst: "उदा. 29ABCDE1234F1Z5",
-        lbl_area: "शहर / बाजार क्षेत्र (वैकल्पिक)", ph_area: "उदा. मुख्य बाजार, दिल्ली", btn_skip: "रद्द करें", btn_save_prof: "प्रोफ़ाइल सहेजें", btn_add_cust: "+ नई प्रविष्ं",
+        lbl_area: "शहर / बाजार क्षेत्र (वैकल्पिक)", ph_area: "उदा. मुख्य बाजार, दिल्ली", btn_skip: "रद्द करें", btn_save_prof: "प्रोफ़ाइल सहेजें", btn_add_cust: "+ नई प्रविष्टि",
         btn_reset: "इस डिवाइस पर मेरा डेटा रीसेट करें", lbl_cust_party: "संपर्क / पार्टी", ph_search_cust: "मौजूदा खोजें या नया जोड़ें…", lbl_phone: "फ़ोन",
         lbl_txn_type: "लेनदेन का प्रकार", lbl_gross_amt: "कुल राशि (₹)", lbl_discount: "छूट (₹)", lbl_inv_date: "चालान की तारीख",
         lbl_due_date: "देय तिथि (वैकल्पिक)", lbl_ref: "संदर्भ / चालान संख्या", ph_ref: "उदा. बिल संख्या 994", lbl_cust_conf: "संपर्क ने इस लेनदेन की पुष्टि की",
@@ -4692,10 +4733,11 @@ btn_take_tour: "Take App Tour", tour_badge: "✨ QUICK TOUR", btn_tour_skip: "Sk
         notice_priv: "🔒 आपकी निजी संपर्क बुक। यह डेटा केवल आपके खाते में संग्रहीत है और कभी साझा नहीं किया जाता है — सिवाय धोखाधड़ी रिपोर्ट के, जो दूसरों को चेतावनी देने के लिए केवल न्यूनतम साझा करता है, गुमनाम रूप से।",
         notice_pub: "⚠️ आपके बाजार में व्यापारियों द्वारा गुमनाम रूप से रिपोर्ट किए गए धोखाधड़ी अलर्ट। किसी व्यापारी का नाम, दुकान या संपर्क विवरण कभी नहीं दिखाया जाता है — केवल चिह्नित संपर्क का विवरण।",
         ph_search_my: "संपर्क का नाम या फोन खोजें…", ph_search_dir: "रिपोर्ट किया गया नाम या फोन खोजें…", txt_all_clear: "सब साफ़", txt_no_rem: "कोई लंबित अनुस्मारक नहीं।",
-        txt_nothing: "यहाँ कुछ नहीं", txt_add_col: "बकाया राशि रिकॉर्ड करने के लिए + संपर्क जोड़ें टैप करें।", txt_add_pay: "जिन आपूर्तिकर्ताओं को आपको देना है, उन्हें लॉग करने के लिए + संपर्क जोड़ें टैप करें।",
-        txt_no_cust: "अभी तक कोई संपर्क नहीं", txt_tap_first: "अपना पहला संपर्क जोड़ने के लिए + संपर्क जोड़ें टैप करें।", txt_no_fraud: "कोई धोखाधड़ी रिपोर्ट नहीं",
+        txt_nothing: "यहाँ कुछ नहीं", txt_add_col: "बकाया राशि रिकॉर्ड करने के लिए + नई प्रविष्टि टैप करें।", txt_add_pay: "जिन आपूर्तिकर्ताओं को आपको देना है, उन्हें लॉग करने के लिए + नई प्रविष्टि टैप करें।",
+        txt_no_cust: "अभी तक कोई संपर्क नहीं", txt_tap_first: "अपना पहला संपर्क जोड़ने के लिए + नई प्रविष्टि टैप करें।", txt_no_fraud: "कोई धोखाधड़ी रिपोर्ट नहीं",
         txt_when_fraud: "जब कोई व्यापारी कन्फर्म धोखाधड़ी की रिपोर्ट करता है, तो यह यहाँ दिखाई देता है — गुमनाम रूप से।", txt_tot_col: "कुल लेना है", txt_tot_pay: "कुल देना है",
         txt_all_set: "सब तय", txt_no_bal_now: "अभी कोई बकाया बैलेंस नहीं है।", txt_no_txn: "कोई लेनदेन नहीं", txt_not_rec: "अभी तक इस संपर्क के लिए कुछ भी दर्ज नहीं किया गया है।",
+        txt_no_notifications: "कोई सूचना नहीं", txt_notification_hint: "आपकी कलेक्शन बुक की गतिविधियाँ यहाँ दिखाई देंगी।", txt_no_pending: "अभी कोई लंबित प्रविष्टि नहीं है।",
         txt_closing: "क्लोजिंग बैलेंस", txt_txns: "लेनदेन", txt_view: "देखें →", txt_whatsapp: "व्हाट्सएप रिमांडर", txt_call: "कॉल करें", txt_new_ent: "नई प्रविष्टि", txt_mng: "प्रबंधित करें", txt_v_rep: "रिपोर्ट देखें / संपादित करें",
         lbl_fraud: "धोखाधड़ी", lbl_risk: "जोखिम", lbl_trusted: "विश्वसनीय", lbl_watch: "देखें", lbl_unrated: "अनरेटेड", tag_unc: "अपुष्ट", tag_paid: "पूरी तरह से भुगतान किया", tag_part: "आंशिक भुगतान", tag_no_due: "कोई देय तिथि नहीं",
         head_emp: "कर्मचारी प्रबंधित करें", sub_emp: "कर्मचारी जोड़ें और उनके लेजर एक्सेस को नियंत्रित करें।", div_add_emp: "नया कर्मचारी जोड़ें",
@@ -4792,7 +4834,8 @@ flow_balanced:
     'केवल लेजर बनाने वाला व्यक्ति ही प्रविष्टियां जोड़ सकता है',
     btn_add_details: "+ अतिरिक्त विवरण जोड़ें (वैकल्पिक)",
 btn_hide_details: "- अतिरिक्त विवरण छिपाएं",
-btn_take_tour: "ऐप टूर लें", tour_badge: "✨ त्वरित टूर", btn_tour_skip: "छोड़ें", btn_tour_next: "अगला →", btn_tour_start: "पहली प्रविष्टि जोड़ें →", msg_tour_skipped: "आप सहायता से कभी भी टूर फिर से शुरू कर सकते हैं।", tour_step1_title: "एक नज़र में आपका व्यवसाय", tour_step1_text: "देखें कि आपको कितना लेना है, देना है, और कहाँ ध्यान देने की आवश्यकता है।", tour_step2_title: "जानें कि कौन आपका कर्जदार है", tour_step2_text: "सभी लंबित ग्राहक संग्रहण यहाँ व्यवस्थित हैं।", tour_step3_title: "आप पर जो बकाया है उसे ट्रैक करें", tour_step3_text: "आपूर्तिकर्ता और खरीद के बकाये को एक ही स्थान पर व्यवस्थित रखें।", tour_step4_title: "आपकी ग्राहक पुस्तिका", tour_step4_text: "उनका लेजर, भुगतान और इतिहास देखने के लिए किसी भी संपर्क को खोलें।", tour_step5_title: "अपना पहला लेजर बनाएं", tour_step5_text: "ग्राहक जोड़ने और अपनी पहली बिक्री या खरीद दर्ज करने के लिए यहाँ टैप करें।", tour_step6_title: "धोखाधड़ी अलर्ट जांचें", tour_step6_text: "लेनदेन करने से पहले व्यवसायों द्वारा रिपोर्ट किए गए संपर्क देखें।", tour_step7_title: "आप तैयार हैं!", tour_step7_text: "यहाँ से अपनी प्रोफ़ाइल, कर्मचारी, भाषा, सुरक्षा और बहुत कुछ प्रबंधित करें।"
+btn_take_tour: "ऐप टूर लें", tour_badge: "✨ त्वरित टूर", btn_tour_skip: "छोड़ें", btn_tour_next: "अगला →", btn_tour_start: "पहली प्रविष्टि जोड़ें →", msg_tour_skipped: "आप सहायता से कभी भी टूर फिर से शुरू कर सकते हैं।", tour_step1_title: "एक नज़र में आपका व्यवसाय", tour_step1_text: "देखें कि आपको कितना लेना है, देना है, और कहाँ ध्यान देने की आवश्यकता है।", tour_step2_title: "जानें कि कौन आपका कर्जदार है", tour_step2_text: "सभी लंबित ग्राहक संग्रहण यहाँ व्यवस्थित हैं।", tour_step3_title: "आप पर जो बकाया है उसे ट्रैक करें", tour_step3_text: "आपूर्तिकर्ता और खरीद के बकाये को एक ही स्थान पर व्यवस्थित रखें।", tour_step4_title: "आपकी ग्राहक पुस्तिका", tour_step4_text: "उनका लेजर, भुगतान और इतिहास देखने के लिए किसी भी संपर्क को खोलें।", tour_step5_title: "अपना पहला लेजर बनाएं", tour_step5_text: "ग्राहक जोड़ने और अपनी पहली बिक्री या खरीद दर्ज करने के लिए यहाँ टैप करें।", tour_step6_title: "धोखाधड़ी अलर्ट जांचें", tour_step6_text: "लेनदेन करने से पहले व्यवसायों द्वारा रिपोर्ट किए गए संपर्क देखें।", tour_step7_title: "आप तैयार हैं!", tour_step7_text: "यहाँ से अपनी प्रोफ़ाइल, कर्मचारी, भाषा, सुरक्षा और बहुत कुछ प्रबंधित करें।",
+        msg_entry_success: "प्रविष्टि सफलतापूर्वक जोड़ी गई", msg_pay_success: "भुगतान सफलतापूर्वक जोड़ा गया", btn_great: "बढ़िया"
       },
       bn: {
         app_sub: "ক্রেডিট এবং লেজার ম্যানেজমেন্ট", btn_setup: "সেট আপ", nav_dash: "ড্যাশবোর্ড", nav_collect: "পাওনা", nav_pay: "দেনা", nav_cust: "পরিচিতি", nav_fraud: "জালিয়াতি সতর্কতা",
@@ -4803,7 +4846,7 @@ btn_take_tour: "ऐप टूर लें", tour_badge: "✨ त्वरित
         sale: "বিক্রয়", purchase: "ক্রয়", payment: "পেমেন্ট", btn_confirm: "নিশ্চিত করুন", btn_del: "মুছুন", txt_loading: "আপনার কালেকশন বুক খুলছে…",
         setup_sub: "এই লেবেলটি ব্যক্তিগতভাবে সংরক্ষিত এবং কারো সাথে ভাগ করা হয় আদি।", lbl_name: "আপনার নাম", ph_name: "উদাঃ রমেশ ভাই",
         lbl_biz: "ব্যবসার নাম", ph_biz: "উদাঃ শর্মা ট্রেডার্স", lbl_gst: "জিএসটি নম্বর (ঐচ্ছিক)", ph_gst: "উদাঃ 29ABCDE1234F1Z5",
-        lbl_area: "শহর / বাজার এলাকা (ঐচ্ছিক)", ph_area: "উদাঃ মেইন মার্কেট, দিল্লি", btn_skip: "বাতিল করুন", btn_save_prof: "প্রোফাইল সংরক্ষণ করুন", btn_add_cust: "+ নতুন এন্",
+        lbl_area: "শহর / বাজার এলাকা (ঐচ্ছিক)", ph_area: "উদাঃ মেইন মার্কেট, দিল্লি", btn_skip: "বাতিল করুন", btn_save_prof: "প্রোফাইল সংরক্ষণ করুন", btn_add_cust: "+ নতুন এন্ট্রি",
         btn_reset: "এই ডিভাইসে আমার ডেটা রিসেট করুন", lbl_cust_party: "পরিচিতি / পার্টি", ph_search_cust: "বিদ্যমান খুঁজুন বা নতুন যোগ করুন…", lbl_phone: "ফোন",
         lbl_txn_type: "লেনদেনের ধরন", lbl_gross_amt: "মোট পরিমাণ (₹)", lbl_discount: "ছাড় (₹)", lbl_inv_date: "ইনভয়েস তারিখ",
         lbl_due_date: "দেয় তারিখ (ঐচ্ছিক)", lbl_ref: "রেফারেন্স / ইনভয়েস নং", ph_ref: "উদাঃ বিল নং 994", lbl_cust_conf: "পরিচিতি এই লেনদেন নিশ্চিত করেছেন",
@@ -4821,10 +4864,11 @@ btn_take_tour: "ऐप टूर लें", tour_badge: "✨ त्वरित
         notice_priv: "🔒 আপনার ব্যক্তিগত পরিচিতি বই। এই ডেটা শুধুমাত্র আপনার অ্যাকাউন্টে সংরক্ষিত এবং কখনোই শেয়ার করা হয় না — জালিয়াতি রিপোর্ট ছাড়া, যা শুধুমাত্র অন্যদের সতর্ক করার জন্য বেনামে ন্যূনতম শেয়ার করে।",
         notice_pub: "⚠️ আপনার বাজারে ব্যবসায়ীদের দ্বারা বেনামে রিপোর্ট করা জালিয়াতি সতর্কতা। কোনো ব্যবসায়ীর নাম, দোকান বা যোগাযোগের বিবরণ কখনোই দেখানো হয় পরিচয় — শুধুমাত্র চিহ্নিত পরিচিতির বিবরণ।",
         ph_search_my: "পরিচিতির নাম বা ফোন খুঁজুন…", ph_search_dir: "রিপোর্ট করা নাম বা ফোন খুঁজুন…", txt_all_clear: "সব পরিষ্কার", txt_no_rem: "কোনো পেন্ডিং রিমাইন্ডার নেই।",
-        txt_nothing: "এখানে কিছু নেই", txt_add_col: "বকেয়া পরিমাণ রেকর্ড করতে + পরিচিতি যোগ করুন ট্যাপ করুন।", txt_add_pay: "যে সরবরাহকারীদের আপনার পেমেন্ট করতে হবে তাদের লগ করতে + পরিচিতি যোগ করুন ট্যাপ করুন।",
-        txt_no_cust: "এখনও কোনো পরিচিতি নেই", txt_tap_first: "আপনার প্রথম পরিচিতি যোগ করতে + পরিচিতি যোগ করুন ট্যাপ করুন।", txt_no_fraud: "কোনো জালিয়াতি রিপোর্ট নেই",
+        txt_nothing: "এখানে কিছু নেই", txt_add_col: "বকেয়া পরিমাণ রেকর্ড করতে + নতুন এন্ট্রি ট্যাপ করুন।", txt_add_pay: "যে সরবরাহকারীদের আপনার পেমেন্ট করতে হবে তাদের লগ করতে + নতুন এন্ট্রি ট্যাপ করুন।",
+        txt_no_cust: "এখনও কোনো পরিচিতি নেই", txt_tap_first: "আপনার প্রথম পরিচিতি যোগ করতে + নতুন এন্ট্রি ট্যাপ করুন।", txt_no_fraud: "কোনো জালিয়াতি রিপোর্ট নেই",
         txt_when_fraud: "যখন কোনো ব্যবসায়ী নিশ্চিত জালিয়াতির রিপোর্ট করেন, তখন এটি এখানে বেনামে প্রদর্শিত হয়।", txt_tot_col: "মোট পাওনা", txt_tot_pay: "মোট দেনা",
         txt_all_set: "সব ঠিক আছে", txt_no_bal_now: "এখন কোনো বকেয়া ব্যালেন্স নেই।", txt_no_txn: "কোনো লেনদেন নেই", txt_not_rec: "এই পরিচিতির জন্য এখনও কিছু রেকর্ড করা হয়নি।",
+        txt_no_notifications: "কোনো বিজ্ঞপ্তি নেই", txt_notification_hint: "আপনার কালেকশন বুক অ্যাক্টিভিটি এখানে প্রদর্শিত হবে।", txt_no_pending: "এখন কোনো পেন্ডিং এন্ট্রি নেই।",
         txt_closing: "ক্লোজিং ব্যালেন্স", txt_txns: "লেনদেন", txt_view: "দেখুন →", txt_whatsapp: "হোয়াটসঅ্যাপ রিমাইন্ডার", txt_call: "কল করুন", txt_new_ent: "নতুন এন্ট্রি", txt_mng: "পরিচালনা করুন", txt_v_rep: "রিপোর্ট দেখুন / সম্পাদনা করুন",
         lbl_fraud: "জালিয়াতি", lbl_risk: "ঝুঁকি", lbl_trusted: "বিশ্বস্ত", lbl_watch: "নজর রাখুন", lbl_unrated: "আনরেটেড", tag_unc: "অনিশ্চিত", tag_paid: "সম্পূর্ণ পেমেন্ট করা হয়েছে", tag_part: "আংশিক পেমেন্ট", tag_no_due: "কোনো দেয় তারিখ নেই",
         head_emp: "कर्मচারী পরিচালনা করুন", sub_emp: "कर्मচারী যোগ করুন এবং তাদের লেজার অ্যাক্সেস নিয়ন্ত্রণ করুন।", div_add_emp: "নতুন কর্মচারী যোগ করুন",
@@ -4920,7 +4964,8 @@ flow_balanced:
     'শুধুমাত্র লেজার নির্মাতা এন্ট্রি যোগ করতে পারবেন',
     btn_add_details: "+ অতিরিক্ত বিবরণ যোগ করুন (ঐচ্ছিক)",
 btn_hide_details: "- অতিরিক্ত বিবরণ লুকান",
-btn_take_tour: "অ্যাপ ট্যুর নিন", tour_badge: "✨ কুইক ট্যুর", btn_tour_skip: "এড়িয়ে যান", btn_tour_next: "পরবর্তী →", btn_tour_start: "আমার প্রথম এন্ট্রি যোগ করুন →", msg_tour_skipped: "আপনি যেকোনো সময় হেল্প থেকে ট্যুর পুনরায় শুরু করতে পারেন।", tour_step1_title: "এক নজরে আপনার ব্যবসা", tour_step1_text: "দেখুন আপনার কত পাওনা আছে, কত দিতে হবে এবং কোথায় মনোযোগ দেওয়া প্রয়োজন।", tour_step2_title: "জানুন কে আপনার কাছে ঋণী", tour_step2_text: "গ্রাহকদের সমস্ত বকেয়া সংগ্রহ এখানে সাজানো আছে।", tour_step3_title: "আপনার দেনা ট্র্যাক করুন", tour_step3_text: "সরবরাহকারী এবং ক্রয়ের বকেয়া এক জায়গায় গুছিয়ে রাখুন।", tour_step4_title: "আপনার গ্রাহক বই", tour_step4_text: "যেকোনো পরিচিতির লেজার, পেমেন্ট এবং ইতিহাস দেখতে সেটি খুলুন।", tour_step5_title: "আপনার প্রথম লেজার তৈরি করুন", tour_step5_text: "একটি পরিচিতি যোগ করতে এবং আপনার প্রথম বিক্রয় বা ক্রয় রেকর্ড করতে এখানে ট্যাপ করুন।", tour_step6_title: "জালিয়াতি সতর্কতা পরীক্ষা করুন", tour_step6_text: "লেনদেন করার আগে অন্যান্য ব্যবসার দ্বারা রিপোর্ট করা পরিচিতিগুলি দেখুন।", tour_step7_title: "আপনি প্রস্তুত!", tour_step7_text: "এখান থেকে আপনার প্রোফাইল, কর্মচারী, ভাষা, নিরাপত্তা এবং আরও অনেক কিছু পরিচালনা করুন।"
+btn_take_tour: "অ্যাপ ট্যুর নিন", tour_badge: "✨ কুইক ট্যুর", btn_tour_skip: "এড়িয়ে যান", btn_tour_next: "পরবর্তী →", btn_tour_start: "আমার প্রথম এন্ট্রি যোগ করুন →", msg_tour_skipped: "আপনি যেকোনো সময় হেল্প থেকে ট্যুর পুনরায় শুরু করতে পারেন।", tour_step1_title: "এক নজরে আপনার ব্যবসা", tour_step1_text: "দেখুন আপনার কত পাওনা আছে, কত দিতে হবে और কোথায় মনোযোগ দেওয়া প্রয়োজন।", tour_step2_title: "জানুন কে আপনার কাছে ঋণী", tour_step2_text: "গ্রাহকদের সমস্ত বকেয়া সংগ্রহ এখানে সাজানো আছে।", tour_step3_title: "আপনার দেনা ট্র্যাক করুন", tour_step3_text: "সরবরাহকারী এবং ক্রয়ের বকেয়া এক জায়গায় গুছিয়ে রাখুন।", tour_step4_title: "আপনার গ্রাহক বই", tour_step4_text: "যেকোনো পরিচিতির লেজার, পেমেন্ট এবং ইতিহাস দেখতে সেটি খুলুন।", tour_step5_title: "আপনার প্রথম লেজার তৈরি করুন", tour_step5_text: "একটি পরিচিতি যোগ করতে এবং আপনার প্রথম বিক্রয় বা ক্রয় রেকর্ড করতে এখানে ট্যাপ করুন।", tour_step6_title: "জালিয়াতি সতর্কতা পরীক্ষা করুন", tour_step6_text: "লেনদেন করার আগে অন্যান্য ব্যবসার দ্বারা রিপোর্ট করা পরিচিতিগুলি দেখুন।", tour_step7_title: "আপনি প্রস্তুত!", tour_step7_text: "এখান থেকে আপনার প্রোফাইল, কর্মচারী, ভাষা, নিরাপত্তা এবং আরও অনেক কিছু পরিচালনা করুন।",
+        msg_entry_success: "এন্ট্রি সফলভাবে যোগ করা হয়েছে", msg_pay_success: "পেমেন্ট সফলভাবে যোগ করা হয়েছে", btn_great: "চমৎকার"
       }
     };
 
@@ -4932,6 +4977,30 @@ btn_take_tour: "অ্যাপ ট্যুর নিন", tour_badge: "✨ ক
         if(!styleEl) { styleEl = document.createElement('style'); styleEl.id = styleId; document.head.appendChild(styleEl); }
         styleEl.textContent = ".stat-tile.clickable:after { content: '" + t('txt_view') + "'; }";
     }
+
+function getEmptyIllustration(key) {
+    var paths = {
+        reminders: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/>',
+        debtors: '<circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 18V6"/>',
+        creditors: '<path d="M16 2H8a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/><path d="M12 18h.01"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/>',
+        contacts: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+        fraud: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="M12 8v4"/><path d="M12 16h.01"/>',
+        notifications: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
+        history: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>',
+        balance: '<path d="M16 16 21 7M5 7l5 9M2 7h6M16 7h6M12 2v20M7 22h10"/>'
+    };
+    return '<div class="empty-illustration"><svg viewBox="0 0 24 24">' + (paths[key] || '') + '</svg></div>';
+}
+
+function emptyStateHTML(key, titleKey, messageKey) {
+    return (
+        '<div class="empty">' +
+            getEmptyIllustration(key) +
+            '<div class="display">' + t(titleKey) + '</div>' +
+            '<div>' + t(messageKey) + '</div>' +
+        '</div>'
+    );
+}
 function isOwnerProfileSetup() {
 
     return Boolean(
@@ -4954,16 +5023,16 @@ function openFeedbackForm(type) {
         icon = '🐛';
         titleKey = 'feedback_bug_title';
         subKey = 'feedback_bug_hint';
-        phKey = 'feedback_placeholder'; // Generic placeholder used for all
     } else if (currentFeedbackType === 'feature') {
         icon = '💡';
         titleKey = 'feedback_feature_title';
         subKey = 'feedback_feature_hint';
-        phKey = 'feedback_placeholder';
     }
 
     var card = $('#feedbackCard');
-    if (card) card.dataset.type = currentFeedbackType;
+    if (card) {
+        card.dataset.type = currentFeedbackType;
+    }
 
     if ($('#feedback-form-icon')) $('#feedback-form-icon').textContent = icon;
     if ($('#feedback-form-title')) $('#feedback-form-title').textContent = t(titleKey);
@@ -4978,11 +5047,11 @@ function openFeedbackForm(type) {
     if ($('#feedback-char-count')) $('#feedback-char-count').textContent = '0';
 
     closeOverlay('#helpSupportOverlay');
-    openOverlay('#feedbackOverlay', true);
+    openOverlay('#feedbackOverlay'); // No forceOpen here, just use standard bottom sheet
 
     setTimeout(function () {
         if ($('#feedback-message')) $('#feedback-message').focus();
-    }, 200);
+    }, 300);
 }
 
 
@@ -6262,14 +6331,7 @@ function(ids) {
         )
     ) {
 
-        list.innerHTML =
-            '<div class="empty">' +
-                '<div class="display">' +
-                    'No notifications' +
-                '</div>' +
-                'Your Collection Book activity ' +
-                'will appear here.' +
-            '</div>';
+        list.innerHTML = emptyStateHTML('notifications', 'txt_no_notifications', 'txt_notification_hint');
     }
 
     showToast(
@@ -6432,13 +6494,7 @@ function(notifications) {
         notifications.length === 0
     ) {
 
-        list.innerHTML =
-            '<div class="empty">' +
-                '<div class="display">' +
-                    'No notifications' +
-                '</div>' +
-                'Your Collection Book activity will appear here.' +
-            '</div>';
+        list.innerHTML = emptyStateHTML('notifications', 'txt_no_notifications', 'txt_notification_hint');
 
         return;
     }
@@ -6618,6 +6674,12 @@ function updateNotificationSelectionUI() {
     function showToast(msg){
       var tt = $('#toast'); if(!tt) return; tt.textContent = msg; tt.classList.add('show');
       clearTimeout(tt._timer); tt._timer = setTimeout(function(){ tt.classList.remove('show'); }, 2800);
+    }
+    function triggerSuccess(msgKey) {
+      if($('#successPopupText')) $('#successPopupText').textContent = t(msgKey || 'msg_entry_success');
+      openOverlay('#successPopup');
+      clearTimeout(window._successTimer);
+      window._successTimer = setTimeout(function(){ closeOverlay('#successPopup'); }, 3000);
     }
     function openOverlay(sel, forceOpen){
       var el = $(sel);
@@ -7708,7 +7770,7 @@ function stampHTML(rec, big) {
       }
       pendingItems.sort(function(a,b){ return new Date(b.date) - new Date(a.date); });
       var pendingHtml = '';
-      if(pendingItems.length === 0) { pendingHtml = '<div class="empty">No pending entries right now.</div>'; }
+      if(pendingItems.length === 0) { pendingHtml = emptyStateHTML('notifications', 'txt_nothing', 'txt_no_pending'); }
       else {
         for(var k=0; k<pendingItems.length; k++) {
          var pi = pendingItems[k];
@@ -8744,8 +8806,8 @@ function ledgerCreatorHelperHTML(
 }
 
 
-      function genGroupedHtml(dataList, isRcv, emptyMsg) {
-        if(!dataList.length) return '<div class="empty"><div class="display">'+t('txt_nothing')+'</div>'+emptyMsg+'</div>';
+      function genGroupedHtml(dataList, isRcv) {
+        if(!dataList.length) return emptyStateHTML(isRcv ? 'debtors' : 'creditors', 'txt_nothing', isRcv ? 'txt_add_col' : 'txt_add_pay');
         var h=''; var bName = profile && profile.shop ? profile.shop : 'Us';
 
         for(var j=0;j<dataList.length;j++){
@@ -8882,15 +8944,15 @@ var addEntryBtn =
       }
 
       function genRemindersHtml(arr) {
-        if(!arr.length) return '<div class="empty"><div class="display">'+t('txt_all_clear')+'</div>'+t('txt_no_rem')+'</div>';
+        if(!arr.length) return emptyStateHTML('reminders', 'txt_all_clear', 'txt_no_rem');
         var h='';
         for(var j=0;j<arr.length;j++){
           var e=arr[j]; var c=myCustById(e.customerId); var s=calculateEntryState(e); var pct = e.originalAmount ? Math.min(100, Math.round((s.paid/e.originalAmount)*100)) : 0;
           h += '<div class="card"><div class="row-top"><div style="display:flex;gap:12px;align-items:center;">'+stampHTML(c,false)+'<div><div class="cust-name">'+escapeHTML(e.customerName)+'</div>'+dueTag(e)+'</div></div><div><div class="amount owe-me">₹'+fmtMoney(s.bal)+'</div><div class="amount-sub">of ₹'+fmtMoney(e.originalAmount)+'</div></div></div><div class="progress-track"><div class="progress-fill" style="width:'+pct+'%;"></div></div><div class="quality-line"><b>'+escapeHTML(e.description||t('sale'))+'</b></div><div class="card-actions"><button class="mini-btn ghost" data-action="view-history" data-id="'+e.customerId+'">'+t('btn_ledger')+'</button></div></div>';
         } return h;
       }
-      if($('#debtorList')) $('#debtorList').innerHTML = genGroupedHtml(dList, true, t('txt_add_col'));
-      if($('#creditorList')) $('#creditorList').innerHTML = genGroupedHtml(cList, false, t('txt_add_pay'));
+      if($('#debtorList')) $('#debtorList').innerHTML = genGroupedHtml(dList, true);
+      if($('#creditorList')) $('#creditorList').innerHTML = genGroupedHtml(cList, false);
       if($('#reminderList')) $('#reminderList').innerHTML = genRemindersHtml(rList);
     }
 
@@ -8939,7 +9001,7 @@ var manageBtn =
 
         html += '<div class="card"><div class="row-top"><div style="display:flex;gap:12px;align-items:center;">'+stampHTML(mc,false)+'<div><div class="cust-name">'+escapeHTML(mc.name)+(mc.fraudReported?'<span class="badge-public">Reported</span>':'')+'</div><div class="cust-area">'+escapeHTML(mc.area||'')+(mc.phone?' · '+escapeHTML(mc.phone):'')+'</div></div></div><div style="text-align:right;">'+balHtml+'</div></div>'+(mc.privateNotes ? '<div class="quality-line"><b>'+t('lbl_priv_note').split(' (')[0]+':</b> '+escapeHTML(mc.privateNotes)+'</div>' : '')+'<div class="card-actions">' + manageBtn + '<button class="mini-btn accent" data-action="view-history" data-id="'+mc.id+'">'+t('btn_ledger')+'</button>'+(mc.phone ? '<button class="mini-btn call" onclick="NativeBridge.postMessage(\'CALL:'+escapeHTML(mc.phone)+'\')">'+t('txt_call')+'</button>' : '') + newTxnBtn + '</div></div>';
       }
-      if($('#myCustomerList')) $('#myCustomerList').innerHTML = html || '<div class="empty"><div class="display">'+t('txt_no_cust')+'</div>'+t('txt_tap_first')+'</div>';
+      if($('#myCustomerList')) $('#myCustomerList').innerHTML = html || emptyStateHTML('contacts', 'txt_no_cust', 'txt_tap_first');
     }
 
     function renderDirectory() {
@@ -9014,14 +9076,7 @@ var manageBtn =
     if (!element) return;
 
     if (items.length === 0) {
-        element.innerHTML =
-            '<div class="empty">' +
-                '<div class="display">' +
-                    t('txt_no_fraud') +
-                '</div>' +
-                'No known contacts have been reported by 3 or more people.' +
-            '</div>';
-
+        element.innerHTML = emptyStateHTML('fraud', 'txt_no_fraud', 'txt_when_fraud');
         return;
     }
 
@@ -9252,7 +9307,7 @@ createdByRole:
       if($('#historySummaryBar')) $('#historySummaryBar').innerHTML = '<div><span class="label">'+t('txt_txns')+'</span>'+rows.length+'</div><div style="text-align:right;"><span class="label">'+t('txt_closing')+'</span>'+closingText+'</div>';
 
       var el = $('#historyList'); if(!el) return;
-      if(rows.length===0){ el.innerHTML = '<div class="empty"><div class="display">'+t('txt_no_txn')+'</div>'+t('txt_not_rec')+'</div>'; return; }
+      if(rows.length===0){ el.innerHTML = emptyStateHTML('history', 'txt_no_txn', 'txt_not_rec'); return; }
 
       var isCreator = (!c || !c.creatorUid || c.creatorUid === currentUid);
       var displayRows = rows.slice();
@@ -9453,7 +9508,7 @@ if (
       if(type === 'recv' || type === 'all') html += '<div><span class="label">'+t('txt_tot_col')+'</span>₹'+fmtMoney(totalRecv)+'</div>';
       if(type === 'pay' || type === 'all') html += '<div style="text-align:right;"><span class="label">'+t('txt_tot_pay')+'</span>₹'+fmtMoney(totalPay)+'</div>';
       html += '</div>';
-      if(filteredData.length===0){ html += '<div class="empty"><div class="display">'+t('txt_all_set')+'</div>'+t('txt_no_bal_now')+'</div>'; }
+      if(filteredData.length===0){ html += emptyStateHTML('balance', 'txt_all_set', 'txt_no_bal_now'); }
       else {
         for(var i=0;i<filteredData.length;i++){
           var d = filteredData[i];
@@ -11973,10 +12028,13 @@ var ownerMessage =
 
         if (isRestoring) {
             showToast('Contact restored & entry saved');
+            triggerSuccess('msg_entry_success');
         } else if (!isConf && finalCustomerPhone) {
             showToast("Entry saved. Notification sent to " + (c ? c.name : searchVal) + ".");
+            triggerSuccess('msg_entry_success');
         } else {
             showToast('Entry saved');
+            triggerSuccess('msg_entry_success');
         }
 
         // --- NEW: SHOW RATING POPUP AFTER VERY FIRST ENTRY ---
@@ -12298,6 +12356,7 @@ if (
 }
 
         showToast('Payment Saved');
+        triggerSuccess('msg_pay_success');
       });
 
      safeBind(
@@ -13128,6 +13187,8 @@ safeBind(
         }
     );
 });
+
+      safeBind('#btn-success-close', 'click', function(){ closeOverlay('#successPopup'); });
 
       $$('.overlay').forEach(function (overlay) {
           overlay.addEventListener('click', function (e) {
