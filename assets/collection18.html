@@ -3065,6 +3065,15 @@ nav.tabs button .count {
         </div>
       </div>
     </div>
+    <section class="block" id="newUserGuide" style="display:none;">
+      <div class="card" style="background: var(--turmeric-tint); border: 2px dashed var(--turmeric); text-align: center; padding: 28px 20px; box-shadow: 0 4px 15px rgba(201, 138, 45, 0.15);">
+        <div style="font-size: 2.5rem; margin-bottom: 12px;">📈</div>
+        <h2 style="margin: 0 0 8px; color: var(--indigo-deep); font-size: 1.5rem;" data-i18n="guide_title">Start Your Ledger</h2>
+        <p style="margin: 0 0 20px; color: var(--muted); font-size: 1rem; line-height: 1.4;" data-i18n="guide_text">Your collection book is empty. Tap the button below to add your first customer and record a transaction.</p>
+        <button class="btn primary" onclick="document.getElementById('fabBtn').click()" style="width: 100%; max-width: 260px; background: var(--indigo); font-weight: 700;" data-i18n="guide_btn">+ Add Entry to begin</button>
+      </div>
+    </section>
+
     <section class="block">
       <div class="block-head"><h2 data-i18n="rem_head">Payment Reminders</h2><span class="sub" data-i18n="rem_sub">Overdue &amp; due within 7 days</span></div>
       <div id="reminderList"></div>
@@ -4577,6 +4586,7 @@ nav.tabs button .count {
 
     const i18n = {
       en: {
+        guide_title: "Start Your Ledger", guide_text: "Your collection book is empty. Tap the button below to add your first customer and record a transaction.", guide_btn: "+ Add Entry to begin",
         app_sub: "Credit & Ledger Management", btn_setup: "Set up", nav_dash: "Dashboard", nav_collect: "To Collect", nav_pay: "To Pay", nav_cust: "Contacts", nav_fraud: "Fraud Alerts",
         stat_rcv: "Total Receivables", stat_pay: "Total Payables", stat_ovd: "Overdue Entries", stat_cust: "Total Contacts",
         rem_head: "Payment Reminders", rem_sub: "Overdue & due within 7 days", col_head: "To Collect", col_sub: "Contacts who need to pay you",
@@ -4707,6 +4717,7 @@ btn_take_tour: "Take App Tour", tour_badge: "✨ QUICK TOUR", btn_tour_skip: "Sk
         msg_entry_success: "Entry added successfully", msg_pay_success: "Payment added successfully", btn_great: "Great"
       },
       hi: {
+        guide_title: "अपना लेजर शुरू करें", guide_text: "आपकी कलेक्शन बुक खाली है। अपना पहला ग्राहक जोड़ने और लेनदेन रिकॉर्ड करने के लिए नीचे दिए गए बटन पर टैপ करें।", guide_btn: "+ एंट्री जोड़ें",
         app_sub: "क्रेडिट और लेजर प्रबंधन", btn_setup: "सेट अप", nav_dash: "डैशबोर्ड", nav_collect: "लेना है", nav_pay: "देना है", nav_cust: "संपर्क", nav_fraud: "धोखाधड़ी अलर्ट",
         stat_rcv: "कुल प्राप्य राशि", stat_pay: "कुल देय राशि", stat_ovd: "बकाया प्रविष्टियां", stat_cust: "कुल संपर्क",
         rem_head: "भुगतान अनुस्मारक", rem_sub: "बकाया और 7 दिनों के भीतर देय", col_head: "लेना है", col_sub: "संपर्क जिन्हें आपको भुगतान करना है",
@@ -4838,6 +4849,7 @@ btn_take_tour: "ऐप टूर लें", tour_badge: "✨ त्वरित
         msg_entry_success: "प्रविष्टि सफलतापूर्वक जोड़ी गई", msg_pay_success: "भुगतान सफलतापूर्वक जोड़ा गया", btn_great: "बढ़िया"
       },
       bn: {
+        guide_title: "আপনার লেজার শুরু করুন", guide_text: "আপনার কালেকশন বুক খালি আছে। আপনার প্রথম কাস্টমার যোগ করতে এবং লেনদেন রেকর্ড করতে নিচের বোতামটি ট্যাপ করুন।", guide_btn: "+ এন্ট্রি যোগ করুন",
         app_sub: "ক্রেডিট এবং লেজার ম্যানেজমেন্ট", btn_setup: "সেট আপ", nav_dash: "ড্যাশবোর্ড", nav_collect: "পাওনা", nav_pay: "দেনা", nav_cust: "পরিচিতি", nav_fraud: "জালিয়াতি সতর্কতা",
         stat_rcv: "মোট প্রাপ্য", stat_pay: "নমোট প্রদেয়", stat_ovd: "বকেয়া এন্ট্রি", stat_cust: "মোট পরিচিতি",
         rem_head: "পেমেন্ট রিমাইন্ডার", rem_sub: "বকেয়া এবং 7 দিনের মধ্যে দেয়", col_head: "পাওনা", col_sub: "পরিচিতি যারা আপনাকে পেমেন্ট করবে",
@@ -8317,6 +8329,11 @@ var overdue = 0;
 var activeD = 0;
 var activeC = 0;
 var totalCustCount = 0;
+
+var guide = $('#newUserGuide');
+if (guide) {
+    guide.style.display = (myCustomers.length === 0) ? 'block' : 'none';
+}
 
 /*
  * Current calendar-month totals.

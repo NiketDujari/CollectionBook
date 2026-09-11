@@ -97,7 +97,7 @@ class AuthWrapper extends StatelessWidget {
             ConnectionState.waiting
         ) {
           log("waiting");
-          return const SplashScreen();
+          return const SplashScreen(canNavigate: false,);
         }
 
         if (snapshot.hasData) {
@@ -271,7 +271,7 @@ class _StartupLoaderState extends State<StartupLoader> {
       builder: (context, snapshot) {
 
         if (snapshot.connectionState != ConnectionState.done) {
-          return const SplashScreen();
+          return const SplashScreen(canNavigate: false,);
         }
 
         if (snapshot.hasError) {
