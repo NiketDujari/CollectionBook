@@ -261,7 +261,7 @@ class _StartupLoaderState extends State<StartupLoader> {
     stopwatch.stop();
 
     const minDuration =
-    Duration(seconds: 3);
+    Duration(milliseconds: 100);
 
     if (
     stopwatch.elapsed <
