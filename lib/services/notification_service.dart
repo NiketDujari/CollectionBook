@@ -58,52 +58,64 @@ class NotificationService {
     enableVibration: true,
   );
 
+  static bool _initializing = false;
+
   static Future<void> initialize() async {
-    final messaging =
-        FirebaseMessaging.instance;
-
-    await initializeLocalNotifications();
-
-    final settings =
-    await messaging.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
-
-    debugPrint(
-      'Notification permission: ${settings.authorizationStatus}',
-    );
-
-    // Get this device's FCM token.
-    final token = await messaging.getToken();
-
-    if (token != null) {
-      await _saveToken(token);
+    if (_initializing) {
+      debugPrint('NotificationService: initialization already in progress, skipping...');
+      return;
     }
+    _initializing = true;
 
-    // FCM tokens can change, so always update Firestore.
-    messaging.onTokenRefresh.listen((newToken) async {
-      await _saveToken(newToken);
-    });
+    try {
+      final messaging =
+          FirebaseMessaging.instance;
 
-    /*
-     * Firebase does NOT automatically display
-     * notification messages while the app
-     * is in foreground.
-     */
-    FirebaseMessaging.onMessage.listen(
-          (RemoteMessage message) async {
-        debugPrint(
-          'Foreground FCM received: '
-              '${message.data}',
-        );
+      await initializeLocalNotifications();
 
-        await showRemoteNotification(
-          message,
-        );
-      },
-    );
+      final settings =
+      await messaging.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+
+      debugPrint(
+        'Notification permission: ${settings.authorizationStatus}',
+      );
+
+      // Get this device's FCM token.
+      final token = await messaging.getToken();
+
+      if (token != null) {
+        await _saveToken(token);
+      }
+
+      // FCM tokens can change, so always update Firestore.
+      messaging.onTokenRefresh.listen((newToken) async {
+        await _saveToken(newToken);
+      });
+
+      /*
+       * Firebase does NOT automatically display
+       * notification messages while the app
+       * is in foreground.
+       */
+      FirebaseMessaging.onMessage.listen(
+            (RemoteMessage message) async {
+          debugPrint(
+            'Foreground FCM received: '
+                '${message.data}',
+          );
+
+          await showRemoteNotification(
+            message,
+          );
+        },
+      );
+    } finally {
+      _initializing = false;
+    }
   }
 
   static Future<void> _saveToken(String token) async {

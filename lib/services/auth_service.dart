@@ -2,6 +2,7 @@ import 'package:collection_book/services/session_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/cupertino.dart';
 
 
 class AuthService {
@@ -68,7 +69,11 @@ class AuthService {
     final user = _firebaseAuth.currentUser;
     if (user == null) return;
 
-    await FirebaseMessaging.instance.requestPermission();
+    try {
+      await FirebaseMessaging.instance.requestPermission();
+    } catch (e) {
+      debugPrint('AuthService: Notification permission request failed: $e');
+    }
 
     final fcmToken =
     await FirebaseMessaging.instance.getToken();

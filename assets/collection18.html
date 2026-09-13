@@ -1474,6 +1474,10 @@ body.no-delete-access
 
     margin-right: 6px;
 }
+
+.notification-selection-mode .notification-item {
+    cursor: pointer;
+}
   
 
     /* ========================================
@@ -4062,7 +4066,10 @@ nav.tabs button .count {
   <div class="sheet">
     <h3 id="entryTitle" data-i18n="btn_add_entry">New Ledger Entry</h3>
     <div class="field">
-      <label data-i18n="lbl_cust_party">Contact / Party</label>
+      <div style="display: flex; justify-content: space-between; align-items: baseline;">
+        <label data-i18n="lbl_cust_party">Contact / Party</label>
+        <span id="sync-contacts-btn" style="color: var(--indigo); font-size: 0.7rem; font-weight: 700; cursor: pointer; display: none; text-transform: uppercase; letter-spacing: 0.5px;">+ SYNC PHONE CONTACTS</span>
+      </div>
       <input id="en-customer-search" data-i18n-ph="ph_search_cust" placeholder="Search existing or add new…" autocomplete="off">
       <div class="autocomplete-list" id="en-autocomplete" style="display:none;"></div>
     </div>
@@ -4540,11 +4547,28 @@ nav.tabs button .count {
 
     // Contact integration Global Scope for Flutter Bridge
     window.deviceContacts = [];
-    // Contact integration Global Scope for Flutter Bridge
-    window.deviceContacts = [];
+    window.contactsDenied = false;
+
+    window.updateSyncContactsButton = function() {
+        var btn = document.getElementById('sync-contacts-btn');
+        if (!btn) return;
+        if (window.contactsDenied && (!window.deviceContacts || window.deviceContacts.length === 0)) {
+            btn.style.display = 'inline';
+        } else {
+            btn.style.display = 'none';
+        }
+    };
+
+    window.contactsPermissionDenied = function() {
+        window.contactsDenied = true;
+        window.updateSyncContactsButton();
+    };
+
     window.receiveAllDeviceContacts = function(jsonStr) {
         try {
             window.deviceContacts = (typeof jsonStr === 'string') ? JSON.parse(jsonStr) : jsonStr;
+            window.contactsDenied = false;
+            window.updateSyncContactsButton();
 
             // --- SYNC LOCAL CUSTOMERS WITH PHONE CONTACT NAMES ---
             var updatedAny = false;
@@ -9608,16 +9632,16 @@ if (
         if ($('#emp-autocomplete') && !closest(tNode, '#emp-autocomplete') && tNode.id !== 'emp-name') {
             $('#emp-autocomplete').style.display = 'none';
         }
-      var notificationSelect =
+      var notificationItem =
     closest(
         tNode,
-        '[data-action="select-notification"]'
+        '.notification-item'
     );
 
-if (notificationSelect) {
+if (notificationItem && notificationSelectionMode) {
 
     var notificationId =
-        notificationSelect.dataset.id;
+        notificationItem.dataset.notificationId;
 
     if (!notificationId) {
         return;
@@ -10157,6 +10181,9 @@ if (manageBtn) {
     $('#en-customer-search').value = cc ? cc.name : '';
     $('#en-customer-search').disabled = true;
 }
+if ($('#en-phone') && cc) {
+    $('#en-phone').value = cleanPhone10(cc.phone || '');
+}
 /*
  * Show the same selected-contact card when
  * Add Entry is opened directly from a card.
@@ -10214,6 +10241,7 @@ if (
 }
           if($('#en-new-customer-fields')) $('#en-new-customer-fields').style.display='none';
           if($('#en-new-customer-fields-bottom')) $('#en-new-customer-fields-bottom').style.display='none';
+          if($('#en-autocomplete')) $('#en-autocomplete').style.display='none';
           /*
  * Use the type supplied by the card:
  *
@@ -10266,6 +10294,7 @@ if ($('#en-due')) {
     );
 }
           if($('#en-desc')) $('#en-desc').value=''; if($('#en-confirmed')) $('#en-confirmed').checked = true;
+          if(window.updateSyncContactsButton) window.updateSyncContactsButton();
           openOverlay('#entryOverlay'); return;
         }
         var dirRateBtn = closest(tNode, '[data-action="dir-rate"]'); if(dirRateBtn){ openDirRateModal(dirRateBtn.dataset.id); return; }
@@ -10616,6 +10645,12 @@ safeBind(
       safeBind('#downloadBalancePdfBtn', 'click', printBalanceSummary);
       safeBind('#sendPdfBtn', 'click', sendPdfToCustomer);
 
+      safeBind('#sync-contacts-btn', 'click', function() {
+          if (window.NativeBridge && typeof window.NativeBridge.postMessage === 'function') {
+              window.NativeBridge.postMessage('SYNC_CONTACTS');
+          }
+      });
+
       safeBind('#fabBtn', 'click', function(){
         selectedCustomerId = null;
         if ($('#en-customer-search')) {
@@ -10646,6 +10681,7 @@ if ($('#en-due')) {
     );
 }
         if($('#en-desc')) $('#en-desc').value=''; if($('#en-confirmed')) $('#en-confirmed').checked = true;
+        if(window.updateSyncContactsButton) window.updateSyncContactsButton();
         entryType='debtor'; $$('.radio-opt').forEach(function(r){ r.classList.remove('selected'); });
         var rD = $('.radio-opt.debtor'); if(rD) rD.classList.add('selected'); openOverlay('#entryOverlay');
       });
@@ -10664,6 +10700,10 @@ if ($('#en-due')) {
       safeBind('#en-cancel', 'click', function () {
     if ($('#en-customer-search')) {
         $('#en-customer-search').disabled = false;
+    }
+
+    if ($('#en-autocomplete')) {
+        $('#en-autocomplete').style.display = 'none';
     }
 
     closeOverlay('#entryOverlay');
@@ -11623,16 +11663,24 @@ if (note) {
 var actor =
     getCurrentActor();
         var rawPhone = $('#en-phone') ? cleanPhone10($('#en-phone').value) : '';
+        var checkCustId = selectedCustomerId;
+
+        // If it's an existing customer, and the field is empty, try to get it from the record
+        if (checkCustId && (!rawPhone || rawPhone.length !== 10)) {
+            var existingCust = myCustById(checkCustId);
+            if (existingCust && existingCust.phone) {
+                rawPhone = cleanPhone10(existingCust.phone);
+            }
+        }
 
         if (!rawPhone || rawPhone.length !== 10) {
-    showToast('Customer phone number is required');
-    if ($('#en-phone')) {
-        $('#en-phone').focus();
-    }
-    return;
-}
+            showToast('Customer phone number is required');
+            if ($('#en-phone')) {
+                $('#en-phone').focus();
+            }
+            return;
+        }
 
-        var checkCustId = selectedCustomerId;
         if(!checkCustId && rawPhone) {
             var existingByPhone = myCustomers.find(function(cust){ return cust.phone && cleanPhone10(cust.phone) === rawPhone; });
             if(existingByPhone) { checkCustId = existingByPhone.id; }
@@ -11711,6 +11759,10 @@ if (sharedEntry) {
         await saveCustomers();
 
         renderAll();
+
+        if ($('#en-autocomplete')) {
+            $('#en-autocomplete').style.display = 'none';
+        }
 
         closeOverlay(
             '#entryOverlay'
@@ -11900,8 +11952,13 @@ sendMetaEvent(
     'LEDGER_ENTRY_CREATED'
 );
         if ($('#en-customer-search')) {
-    $('#en-customer-search').disabled = false;
-}
+            $('#en-customer-search').disabled = false;
+        }
+
+        if ($('#en-autocomplete')) {
+            $('#en-autocomplete').style.display = 'none';
+        }
+
         closeOverlay('#entryOverlay');
         renderAll();
 

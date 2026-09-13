@@ -122,6 +122,17 @@ class SessionService {
     authUid = user.uid;
     authPhone = user.phoneNumber;
 
+    /*
+     * If the restored session or custom-token login
+     * doesn't immediately include a phone number,
+     * try a quick reload.
+     */
+    if (authPhone == null || authPhone!.isEmpty) {
+      await user.reload();
+      final updatedUser = FirebaseAuth.instance.currentUser;
+      authPhone = updatedUser?.phoneNumber;
+    }
+
     if (
     authPhone == null ||
         authPhone!.isEmpty
@@ -577,13 +588,9 @@ class SessionService {
     );
 
     /*
-     * FCM belongs to the PERSON/device,
-     * not the selected role.
+     * FCM registration is handled by NotificationService
+     * during app initialization to avoid race conditions.
      */
-    final authService =
-    AuthService();
-
-    await authService.saveDeviceToken();
   }
 
   static Future<void> switchMode(

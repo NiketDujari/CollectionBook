@@ -223,7 +223,17 @@ class _StartupLoaderState extends State<StartupLoader> {
    *
    * Keep the splash visible and retry silently.
    */
-    await _resolveBusinessWithRetry();
+    try {
+      await _resolveBusinessWithRetry();
+    } catch (e) {
+      debugPrint('Business resolution failed: $e');
+      // If it's a messaging error, we can ignore it and proceed.
+      if (e.toString().contains('firebase_messaging')) {
+        debugPrint('Ignoring messaging error during business resolution.');
+      } else {
+        rethrow;
+      }
+    }
 
     try {
       await NotificationService.initialize();
@@ -241,8 +251,12 @@ class _StartupLoaderState extends State<StartupLoader> {
    * appearing just to determine whether
    * a PIN exists.
    */
-    final bool hasAppLock =
-    await AppLockService.hasPin();
+    bool hasAppLock = false;
+    try {
+      hasAppLock = await AppLockService.hasPin();
+    } catch (e) {
+      debugPrint('AppLock initialization failed: $e');
+    }
 
     stopwatch.stop();
 
@@ -322,6 +336,20 @@ class _StartupLoaderState extends State<StartupLoader> {
                       textAlign:
                       TextAlign.center,
                     ),
+
+                    if (snapshot.error != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 12),
+                        child: Text(
+                          snapshot.error.toString(),
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.red.shade800,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ),
 
                     const SizedBox(
                       height: 22,
