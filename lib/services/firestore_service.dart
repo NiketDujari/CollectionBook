@@ -4,6 +4,7 @@ import 'dart:ui';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:collection_book/services/session_service.dart';
+import 'package:collection_book/services/storage_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:webview_flutter/webview_flutter.dart';
@@ -39,6 +40,12 @@ class FirestoreService {
     String key, {
     WebViewController? webViewController,
   }) async {
+    // 0. Check local storage for global device-level settings first
+    if (key == 'cb-lang' || key == 'cb-lang-prompted') {
+      final localValue = StorageService.get(key);
+      if (localValue != null) return localValue.toString();
+    }
+
     if (
     key == 'cb-ledger-v1' &&
         SessionService.isEmployee &&
@@ -226,6 +233,12 @@ class FirestoreService {
 
   static Future<void> set(String key, dynamic value) async {
     print("SET KEY: $key");
+
+    // 0. Always save global device-level settings to local storage
+    if (key == 'cb-lang' || key == 'cb-lang-prompted') {
+      await StorageService.set(key, value.toString());
+    }
+
     if (key == 'cb-ledger-v1') {
       if (
       SessionService.isEmployee &&
@@ -506,6 +519,11 @@ class FirestoreService {
   }
 
   static Future<void> remove(String key) async {
+    // 0. Clean up local storage if applicable
+    if (key == 'cb-lang' || key == 'cb-lang-prompted') {
+      await StorageService.remove(key);
+    }
+
     final docRef = _doc;
     if (docRef != null) {
       await docRef.update({key: FieldValue.delete()});
@@ -513,6 +531,8 @@ class FirestoreService {
   }
 
   static Future<void> clear() async {
+    await StorageService.clear();
+
     final docRef = _doc;
     if (docRef != null) {
       await docRef.delete();

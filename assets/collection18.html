@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta
           name="viewport"
-          content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no"
+          content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover"
   />
   <title>Collection Book</title>
   <meta name="color-scheme" content="light dark">
@@ -3202,7 +3202,47 @@ nav.tabs button .count {
     </div>
     <section class="block" id="newUserGuide" style="display:none;">
       <div class="card" style="background: var(--turmeric-tint); border: 2px dashed var(--turmeric); text-align: center; padding: 28px 20px; box-shadow: 0 4px 15px rgba(201, 138, 45, 0.15);">
-        <div style="font-size: 2.5rem; margin-bottom: 12px;">📈</div>
+        <div style="margin-bottom: 24px; display: flex; justify-content: center;">
+            <!-- HD Illustrated Ledger & Pen SVG -->
+            <svg width="140" height="140" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <!-- Soft Background Cloud -->
+                <path d="M15 55C15 45 25 40 35 40C40 30 55 25 70 30C85 35 90 50 85 65C85 75 75 85 60 85C50 85 40 82 30 75C20 75 15 65 15 55Z" fill="#E3F2FD" opacity="0.8"/>
+
+                <!-- Green Banknote behind -->
+                <rect x="54" y="22" width="26" height="48" rx="4" fill="#4CAF50"/>
+                <rect x="58" y="26" width="18" height="40" rx="2" fill="#81C784" fill-opacity="0.5"/>
+                <circle cx="67" cy="46" r="5" fill="#2E7D32" fill-opacity="0.2"/>
+
+                <!-- Ledger Book Shadow/Depth -->
+                <rect x="23" y="38" width="46" height="52" rx="6" fill="#F57F17"/>
+                <!-- Ledger Book Cover -->
+                <rect x="21" y="34" width="46" height="52" rx="6" fill="#FFB300"/>
+                <!-- Ledger Book Pages Top -->
+                <path d="M21 40C21 36.6863 23.6863 34 27 34H67V44H27C23.6863 44 21 41.3137 21 38V40Z" fill="#FFFFFF"/>
+
+                <!-- White Currency Symbol ($) -->
+                <path d="M48 54.5C48 51.5 45.5 50 43 50C40.5 50 38 51.5 38 54.5C38 57.5 40.5 59 43 59C45.5 59 48 60.5 48 63.5C48 66.5 45.5 68 43 68C40.5 68 38 66.5 38 63.5" stroke="white" stroke-width="3" stroke-linecap="round"/>
+                <line x1="43" y1="46" x2="43" y2="72" stroke="white" stroke-width="3" stroke-linecap="round"/>
+
+                <!-- Red Pen with HD details -->
+                <rect x="71" y="45" width="5" height="42" rx="2.5" fill="#D32F2F"/>
+                <rect x="71" y="45" width="2" height="42" rx="1" fill="#FF5252" fill-opacity="0.3"/> <!-- Shine -->
+                <path d="M71 83L73.5 91L76 83H71Z" fill="#CFD8DC"/> <!-- Nib Base -->
+                <path d="M73 89L73.5 91L74 89H73Z" fill="#37474F"/> <!-- Actual point -->
+                <rect x="71" y="58" width="5" height="1.5" fill="#FFD600"/> <!-- Gold ring -->
+                <rect x="74" y="50" width="1.5" height="8" rx="0.5" fill="#FFD600"/> <!-- Clip -->
+
+                <!-- Decorative UI Elements -->
+                <!-- Top Left Blue Plus -->
+                <path d="M20 12V22M16 17H24" stroke="#03A9F4" stroke-width="2.5" stroke-linecap="round"/>
+                <!-- Bottom Right Blue Plus -->
+                <path d="M86 80V90M81 85H91" stroke="#03A9F4" stroke-width="2.5" stroke-linecap="round"/>
+                <!-- Small Blue Dot -->
+                <circle cx="36" cy="24" r="1.5" fill="#03A9F4"/>
+                <!-- Small Red Ring -->
+                <circle cx="12" cy="28" r="3" stroke="#E91E63" stroke-width="2"/>
+            </svg>
+        </div>
         <h2 style="margin: 0 0 8px; color: var(--indigo-deep); font-size: 1.5rem;" data-i18n="guide_title">Start Your Ledger</h2>
         <p style="margin: 0 0 20px; color: var(--muted); font-size: 1rem; line-height: 1.4;" data-i18n="guide_text">Your collection book is empty. Choose an action below to record your first transaction.</p>
         <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">

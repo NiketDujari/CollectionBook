@@ -288,82 +288,85 @@ class _StartupLoaderState extends State<StartupLoader> {
             backgroundColor:
             const Color(0xFFEFE7D6),
 
-            body: Center(
-              child: Padding(
-                padding:
-                const EdgeInsets.all(32),
+            body: SafeArea(
+              top: false,
+              child: Center(
+                child: Padding(
+                  padding:
+                  const EdgeInsets.all(32),
 
-                child: Column(
-                  mainAxisSize:
-                  MainAxisSize.min,
+                  child: Column(
+                    mainAxisSize:
+                    MainAxisSize.min,
 
-                  children: [
+                    children: [
 
-                    const Icon(
-                      Icons.cloud_off_rounded,
-                      size: 48,
-                      color:
-                      Color(0xFF2B3A67),
-                    ),
-
-                    const SizedBox(
-                      height: 18,
-                    ),
-
-                    const Text(
-                      'Unable to connect',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight:
-                        FontWeight.w700,
+                      const Icon(
+                        Icons.cloud_off_rounded,
+                        size: 48,
                         color:
-                        Color(0xFF182449),
+                        Color(0xFF2B3A67),
                       ),
-                    ),
 
-                    const SizedBox(
-                      height: 8,
-                    ),
+                      const SizedBox(
+                        height: 18,
+                      ),
 
-                    const Text(
-                      'Please check your internet '
-                          'connection and try again.',
-                      textAlign:
-                      TextAlign.center,
-                    ),
-
-                    if (snapshot.error != null)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 12),
-                        child: Text(
-                          snapshot.error.toString(),
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.red.shade800,
-                            fontStyle: FontStyle.italic,
-                          ),
+                      const Text(
+                        'Unable to connect',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight:
+                          FontWeight.w700,
+                          color:
+                          Color(0xFF182449),
                         ),
                       ),
 
-                    const SizedBox(
-                      height: 22,
-                    ),
-
-                    ElevatedButton(
-                      onPressed: () {
-                        setState(() {
-                          _future =
-                              _initialize();
-                        });
-                      },
-
-                      child:
-                      const Text(
-                        'Retry',
+                      const SizedBox(
+                        height: 8,
                       ),
-                    ),
-                  ],
+
+                      const Text(
+                        'Please check your internet '
+                            'connection and try again.',
+                        textAlign:
+                        TextAlign.center,
+                      ),
+
+                      if (snapshot.error != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 12),
+                          child: Text(
+                            snapshot.error.toString(),
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.red.shade800,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                        ),
+
+                      const SizedBox(
+                        height: 22,
+                      ),
+
+                      ElevatedButton(
+                        onPressed: () {
+                          setState(() {
+                            _future =
+                                _initialize();
+                          });
+                        },
+
+                        child:
+                        const Text(
+                          'Retry',
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),

@@ -1548,6 +1548,7 @@ if (typeof updateRoleModeUI === 'function') {
     await box.delete('cb-employees-v1');
     await box.delete('cb-role-mode-v1');
     await box.delete('cb-lang');
+    await box.delete('cb-lang-prompted');
     await box.delete(
       'cb-active-role-v2-${user.uid}',
     );
@@ -1637,31 +1638,34 @@ if (typeof updateRoleModeUI === 'function') {
         child: Scaffold(
           backgroundColor: const Color(0xFFEFE7D6),
 
-          body: Stack(
-            children: [
-              /*
-     * WebView loads underneath.
-     */
-              Positioned.fill(child: WebViewWidget(controller: controller)),
+          body: SafeArea(
+            top: false,
+            child: Stack(
+              children: [
+                /*
+       * WebView loads underneath.
+       */
+                Positioned.fill(child: WebViewWidget(controller: controller)),
 
-              /*
-     * Splash remains on top until
-     * WebView startup is complete.
-     */
-              Positioned.fill(
-                child: IgnorePointer(
-                  ignoring: !_showStartupSplash,
+                /*
+       * Splash remains on top until
+       * WebView startup is complete.
+       */
+                Positioned.fill(
+                  child: IgnorePointer(
+                    ignoring: !_showStartupSplash,
 
-                  child: AnimatedOpacity(
-                    opacity: _showStartupSplash ? 1.0 : 0.0,
+                    child: AnimatedOpacity(
+                      opacity: _showStartupSplash ? 1.0 : 0.0,
 
-                    duration: const Duration(milliseconds: 180),
+                      duration: const Duration(milliseconds: 180),
 
-                    child: SplashContent(),
+                      child: SplashContent(),
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
