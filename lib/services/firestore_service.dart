@@ -16,17 +16,20 @@ class FirestoreService {
   static StreamSubscription<QuerySnapshot>? _sharedLedgerSubscription;
 
   static Future<void> syncLatestData() async {
+    final String? businessUid = SessionService.businessUid;
+    if (businessUid == null || businessUid.isEmpty) return;
+
     final doc = await FirebaseFirestore.instance
         .collection("users")
-        .doc(SessionService.businessUid!)
+        .doc(businessUid)
         .get();
   }
 
-  static DocumentReference<Map<String, dynamic>> get _doc {
+  static DocumentReference<Map<String, dynamic>>? get _doc {
     final String? businessUid = SessionService.businessUid;
 
     if (businessUid == null || businessUid.isEmpty) {
-      throw StateError('Business session not resolved.');
+      return null;
     }
 
     return _db.collection('users').doc(businessUid);
@@ -203,7 +206,10 @@ class FirestoreService {
     }
 
     // Standard read for all other keys (cb-profile-v1, cb-customers-v1, etc.)
-    final snap = await _doc.get();
+    final docRef = _doc;
+    if (docRef == null) return "[]";
+
+    final snap = await docRef.get();
 
     if (!snap.exists) return "[]";
 
@@ -321,7 +327,10 @@ class FirestoreService {
      * Keep your existing storage behavior
      * for profile/customers/employees/etc.
      */
-      await _doc.set({key: value.toString()}, SetOptions(merge: true));
+      final docRef = _doc;
+      if (docRef != null) {
+        await docRef.set({key: value.toString()}, SetOptions(merge: true));
+      }
     }
 
     /*
@@ -497,11 +506,17 @@ class FirestoreService {
   }
 
   static Future<void> remove(String key) async {
-    await _doc.update({key: FieldValue.delete()});
+    final docRef = _doc;
+    if (docRef != null) {
+      await docRef.update({key: FieldValue.delete()});
+    }
   }
 
   static Future<void> clear() async {
-    await _doc.delete();
+    final docRef = _doc;
+    if (docRef != null) {
+      await docRef.delete();
+    }
   }
 
   static Future<void> startRealtimeSync({

@@ -19,10 +19,16 @@ class WebViewBridge {
 
       switch (method) {
         case "get":
-          final value = await FirestoreService.get(payload["key"],webViewController: controller,);
-
-          await _resolve(id, value);
-
+          try {
+            final value = await FirestoreService.get(
+              payload["key"],
+              webViewController: controller,
+            );
+            await _resolve(id, value);
+          } catch (error) {
+            print("Bridge GET error for key ${payload['key']}: $error");
+            await _resolve(id, "[]");
+          }
           break;
 
         case "set":

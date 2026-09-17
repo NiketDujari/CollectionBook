@@ -100,13 +100,8 @@ class AuthWrapper extends StatelessWidget {
           return const SplashScreen(canNavigate: false,);
         }
 
-        if (snapshot.hasData) {
-          log("has data");
-          return const StartupLoader();
-          // Replace HomeScreen with your existing dashboard widget name
-        }
-
-        return const LoginScreen();
+        // Take everyone to StartupLoader, authenticated or not.
+        return const StartupLoader();
       },
     );
   }

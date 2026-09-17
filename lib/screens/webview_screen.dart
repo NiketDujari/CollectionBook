@@ -64,6 +64,9 @@ class _WebViewScreenState extends State<WebViewScreen> {
             window.currentUserPhone = "${currentUser?.phoneNumber ?? ''}";
            
             window.flutterSession = {
+    isAuthenticated:
+        ${currentUser != null},
+
     mode:
         "${SessionService.activeMode}",
 
@@ -361,7 +364,7 @@ if (typeof updateRoleModeUI === 'function') {
               );
             }
           }
-        } else if (data == "LOGOUT") {
+        } else if (data == "LOGOUT" || data == "GOTO_LOGIN") {
           await FirebaseAuth.instance.signOut();
 
           if (!mounted) return;
@@ -1192,9 +1195,11 @@ if (typeof updateRoleModeUI === 'function') {
           return;
         }
 
-        await controller.runJavaScript(
-          'window.refreshFromFlutter();',
-        );
+        await controller.runJavaScript('''
+          if (typeof window.refreshFromFlutter === 'function') {
+            window.refreshFromFlutter();
+          }
+        ''');
       },
     );
   }
@@ -1374,11 +1379,11 @@ if (typeof updateRoleModeUI === 'function') {
   Future<void> _refreshData() async {
     await FirestoreService.syncLatestData();
 
-    await controller.runJavaScript("""
-
-window.refreshFromFlutter();
-
-""");
+    await controller.runJavaScript('''
+      if (typeof window.refreshFromFlutter === 'function') {
+        window.refreshFromFlutter();
+      }
+    ''');
   }
 
   Future<void> fetchAndSendContacts(WebViewController controller) async {
@@ -1565,6 +1570,28 @@ window.refreshFromFlutter();
     await FirebaseAuth.instance.signOut();
   }
 
+  DateTime? _lastBackPressTime;
+
+  void _handleDoubleBackToExit() {
+    final now = DateTime.now();
+    if (_lastBackPressTime == null ||
+        now.difference(_lastBackPressTime!) > const Duration(seconds: 2)) {
+      _lastBackPressTime = now;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Press back again to exit'),
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      );
+    } else {
+      SystemNavigator.pop();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return PopScope(
@@ -1586,14 +1613,11 @@ window.refreshFromFlutter();
           final backResult = jsResult.toString().replaceAll('"', '').trim();
 
           if (backResult == 'exit') {
-            // Close the Android app instead of popping the Flutter route.
-            await SystemNavigator.pop();
+            _handleDoubleBackToExit();
           }
         } catch (e) {
           debugPrint('Back handling error: $e');
-
-          // If JavaScript back handling fails, close the app safely.
-          await SystemNavigator.pop();
+          _handleDoubleBackToExit();
         }
       },
       child: AnnotatedRegion<SystemUiOverlayStyle>(

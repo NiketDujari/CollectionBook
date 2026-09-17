@@ -114,9 +114,25 @@ class SessionService {
         FirebaseAuth.instance.currentUser;
 
     if (user == null) {
-      throw StateError(
-        'Firebase user not logged in.',
-      );
+      // Unauthenticated / Guest state
+      authUid = null;
+      authPhone = null;
+      businessUid = null;
+      activeMode = 'owner';
+      hasOwnerBusiness = false;
+      hasEmployment = false;
+      businessName = null;
+      businessOwnerName = null;
+      businessOwnerPhone = null;
+      businessArea = null;
+      businessGst = null;
+      permissions = {
+        'add': false, // Can't add in guest mode
+        'view': true,
+        'manageContacts': false,
+        'del': false,
+      };
+      return;
     }
 
     authUid = user.uid;
@@ -137,9 +153,17 @@ class SessionService {
     authPhone == null ||
         authPhone!.isEmpty
     ) {
-      throw StateError(
-        'Authenticated user has no phone number.',
-      );
+       // Should not happen for authenticated users in your app
+       // but handle it as a guest if it does.
+       businessUid = user.uid;
+       activeMode = 'owner';
+       permissions = {
+         'add': true,
+         'view': true,
+         'manageContacts': true,
+         'del': true,
+       };
+       return;
     }
 
     final firestore =

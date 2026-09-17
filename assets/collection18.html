@@ -512,7 +512,11 @@
 .card-actions.ledger-card-actions .mini-btn {
     width: 100%;
     min-width: 0;
+    height: 44px;
+    min-height: 44px;
+    max-height: 44px;
     margin: 0;
+    padding: 4px 6px;
 
     /*
      * Override the general card-action
@@ -523,13 +527,14 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    box-sizing: border-box;
 
-    padding: 11px 8px;
-    font-size: .82rem;
-    line-height: 1.2;
+    font-size: clamp(0.7rem, 3.1vw, 0.8rem);
+    line-height: 1.15;
     text-align: center;
 
     white-space: normal;
+    overflow: hidden;
 }
     .mini-btn{border:1px solid var(--khadi-line);background:var(--paper);border-radius:10px;padding:10px 16px;font-size:.85rem;font-weight:600;color:var(--charcoal);}
     .mini-btn.primary{background:var(--indigo);border-color:var(--indigo);color:var(--on-accent);}
@@ -537,6 +542,7 @@
     .mini-btn.danger{background:var(--madder-tint);border-color:var(--madder);color:var(--madder);}
     .mini-btn.success{background:var(--sage-tint);border-color:var(--sage);color:var(--sage);}
     .mini-btn.whatsapp{background:#25D366;border-color:#25D366;color:#fff;}
+    .mini-btn.call{background:var(--sage-tint);border-color:var(--sage);color:var(--sage);font-weight:700;}
     .mini-btn.ghost{background:transparent;}
     .mini-btn.lg{padding:14px 22px;font-size:.95rem;font-weight:700;border-radius:12px;box-shadow:0 4px 10px rgba(43,58,103,.15);}
 
@@ -690,11 +696,69 @@
     .directory-notice{background:var(--madder-tint);border:1px solid var(--madder);border-radius:12px;padding:14px;font-size:.8rem;color:var(--madder);margin-bottom:16px;line-height:1.45;font-weight:500;}
     .directory-notice.private{background:var(--indigo-tint);border-color:var(--indigo);color:var(--indigo-deep);}
 
-    .fab{position:fixed;right:22px;bottom:24px;z-index:20;height:56px;padding:0 24px;border-radius:28px;background:var(--turmeric);color:var(--on-accent);border:none;font-size:1.1rem;font-weight:700;box-shadow:0 4px 14px rgba(201,138,45,.45);display:flex;align-items:center;justify-content:center;}
+    .fab{display:none;}
+    .dashboard-actions-row {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 100%;
+        max-width: 760px;
+        display: flex;
+        gap: 12px;
+        padding: 0 14px;
+        z-index: 10;
+    }
+    .dashboard-actions-row .btn {
+        box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+    }
+    .btn-sale { background: var(--turmeric) !important; color: var(--on-accent); }
+    .btn-purch { background: var(--indigo) !important; color: var(--on-accent); }
 
     .overlay{position:fixed;inset:0;background:rgba(42,38,34,.6);display:none;align-items:flex-end;justify-content:center;z-index:1000;}
     .overlay.open{display:flex;}
     .sheet{background:var(--paper);width:100%;max-width:650px;border-radius:20px 20px 0 0;padding:22px 20px 26px;max-height:92vh;overflow-y:auto;animation:slideup .25s ease;}
+    .entry-header-simple {
+        margin-bottom: 20px;
+    }
+    .entry-header-simple h3 {
+        margin: 0 0 1px;
+        font-size: 1.4rem;
+        line-height: 1.1;
+        color: var(--indigo-deep);
+        font-family: 'Rozha One', serif;
+    }
+    .entry-header-simple p {
+        margin: 1px 0 0;
+        font-size: 0.85rem;
+        color: var(--muted);
+        line-height: 1.25;
+    }
+    .selected-contact-remove {
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        border: 1px solid var(--khadi-line);
+        background: var(--paper);
+        color: var(--muted);
+        font-size: 1.2rem;
+        line-height: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        padding: 0;
+        transition: all 0.2s ease;
+    }
+    .selected-contact-remove:active {
+        background: var(--khadi);
+        color: var(--madder);
+        border-color: var(--madder);
+    }
     @media(min-width:600px){.overlay{align-items:center;}.sheet{border-radius:18px;}}
     @media (max-width: 420px) {
     .card-actions {
@@ -1645,6 +1709,18 @@ body.no-delete-access
       color:#fff;
     }
 
+    html.dark-mode .card .card-actions [data-action="view-history"] {
+      background:#232A42;
+      border-color:#667CC7;
+      color:#C9D3FF;
+    }
+
+    html.dark-mode .card .card-actions .mini-btn.call {
+      background: #26362A;
+      border-color: #5C7A5E;
+      color: #8AB98D;
+    }
+
     html.dark-mode .autocomplete-item:hover {
       background:#292E36;
     }
@@ -2303,19 +2379,38 @@ nav.tabs button .count {
     .card .card-actions .mini-btn {
       width:100%;
       min-width:0;
-      min-height:42px;
+      height: 44px;
+      min-height:44px;
+      max-height: 44px;
       margin:0;
-      padding:9px 7px;
+      padding:4px 6px;
       display:flex;
       align-items:center;
       justify-content:center;
       flex:none;
-      white-space:normal;
+      box-sizing: border-box;
+      font-size: clamp(0.7rem, 3.1vw, 0.8rem);
+      line-height:1.15;
       text-align:center;
-      line-height:1.2;
+      white-space:normal;
+      overflow: hidden;
     }
 
     .card .card-actions .mini-btn:only-child { grid-column:1 / -1; }
+
+    .card .card-actions [data-action="view-history"] {
+      background: var(--indigo-tint);
+      border-color: var(--indigo);
+      color: var(--indigo);
+      font-weight: 700;
+    }
+
+    .card .card-actions .mini-btn.call {
+      background: var(--sage-tint);
+      border-color: var(--sage);
+      color: var(--sage);
+      font-weight: 700;
+    }
 
     .card .card-actions [data-action="new-txn-for"]::before,
 .card .card-actions [data-action="collect-payment-cust"]::before,
@@ -2943,6 +3038,7 @@ nav.tabs button .count {
 
 <main id="app" style="display:none;">
   <section class="screen active" id="screen-dashboard">
+    <div id="profileReminder"></div>
     <div class="stats-grid">
       <button
               class="stat-tile receivable clickable"
@@ -3108,8 +3204,11 @@ nav.tabs button .count {
       <div class="card" style="background: var(--turmeric-tint); border: 2px dashed var(--turmeric); text-align: center; padding: 28px 20px; box-shadow: 0 4px 15px rgba(201, 138, 45, 0.15);">
         <div style="font-size: 2.5rem; margin-bottom: 12px;">📈</div>
         <h2 style="margin: 0 0 8px; color: var(--indigo-deep); font-size: 1.5rem;" data-i18n="guide_title">Start Your Ledger</h2>
-        <p style="margin: 0 0 20px; color: var(--muted); font-size: 1rem; line-height: 1.4;" data-i18n="guide_text">Your collection book is empty. Tap the button below to add your first customer and record a transaction.</p>
-        <button class="btn primary" onclick="document.getElementById('fabBtn').click()" style="width: 100%; max-width: 260px; background: var(--indigo); font-weight: 700;" data-i18n="guide_btn">+ Add Entry to begin</button>
+        <p style="margin: 0 0 20px; color: var(--muted); font-size: 1rem; line-height: 1.4;" data-i18n="guide_text">Your collection book is empty. Choose an action below to record your first transaction.</p>
+        <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+            <button class="btn primary" onclick="if(window.checkAuth()) window.openNewEntryWith('creditor')" style="flex: 1; min-width: 140px; background: var(--indigo); font-weight: 700;" data-i18n="guide_btn_purch">- Add Purchase</button>
+            <button class="btn primary" onclick="if(window.checkAuth()) window.openNewEntryWith('debtor')" style="flex: 1; min-width: 140px; background: var(--turmeric); font-weight: 700;" data-i18n="guide_btn_sale">+ Add Sale</button>
+        </div>
       </div>
     </section>
 
@@ -3117,6 +3216,11 @@ nav.tabs button .count {
       <div class="block-head"><h2 data-i18n="rem_head">Payment Reminders</h2><span class="sub" data-i18n="rem_sub">Overdue &amp; due within 7 days</span></div>
       <div id="reminderList"></div>
     </section>
+
+    <div class="dashboard-actions-row" id="dashboardActions">
+        <button class="btn primary btn-purch" onclick="if(window.checkAuth()) window.openNewEntryWith('creditor')" data-i18n="guide_btn_purch">- Add Purchase</button>
+        <button class="btn primary btn-sale" onclick="if(window.checkAuth()) window.openNewEntryWith('debtor')" data-i18n="guide_btn_sale">+ Add Sale</button>
+    </div>
   </section>
 
   <section class="screen" id="screen-debtors">
@@ -3600,9 +3704,11 @@ nav.tabs button .count {
       <a
               href="#"
               onclick="
-    NativeBridge.postMessage(
-      'EMAIL_SUPPORT:alpineglobal01@gmail.com'
-    );
+    if (window.checkAuth()) {
+      NativeBridge.postMessage(
+        'EMAIL_SUPPORT:alpineglobal01@gmail.com'
+      );
+    }
     return false;
   "
               style="
@@ -4099,10 +4205,13 @@ nav.tabs button .count {
 
 <div class="overlay" id="entryOverlay">
   <div class="sheet">
-    <h3 id="entryTitle" data-i18n="btn_add_entry">New Ledger Entry</h3>
-    <div class="field">
+    <div class="entry-header-simple">
+      <h3 id="entryTitle" data-i18n="entry_title_gen">New Ledger Entry</h3>
+      <p id="entrySubtitle" class="sheet-sub" data-i18n="entry_sub_gen">Record a transaction to update your ledger</p>
+    </div>
+    <div class="field" id="en-search-container">
       <div style="display: flex; justify-content: space-between; align-items: baseline;">
-        <label data-i18n="lbl_cust_party">Contact / Party</label>
+        <label data-i18n="lbl_cust_party">Contact / Party Name</label>
         <span id="sync-contacts-btn" style="color: var(--indigo); font-size: 0.7rem; font-weight: 700; cursor: pointer; display: none; text-transform: uppercase; letter-spacing: 0.5px;">+ SYNC PHONE CONTACTS</span>
       </div>
       <input id="en-customer-search" data-i18n-ph="ph_search_cust" placeholder="Search existing or add new…" autocomplete="off">
@@ -4127,7 +4236,7 @@ nav.tabs button .count {
       </div>
     </div>
     <div class="field" id="en-selected-note" style="display:none;"></div>
-    <div class="field">
+    <div class="field" id="en-type-field">
       <label data-i18n="lbl_txn_type">Transaction Type</label>
       <div class="radio-group">
         <button type="button" class="radio-opt debtor selected" data-type="debtor"><span data-i18n="type_sale">Sale (To Collect)</span></button>
@@ -4330,6 +4439,18 @@ nav.tabs button .count {
   </div>
 </div>
 
+<!-- Login Required Overlay -->
+<div class="custom-modal-overlay" id="loginPromptOverlay">
+  <div class="custom-modal-box">
+    <div class="custom-modal-title" data-i18n="login_req_title">Login Required</div>
+    <div class="custom-modal-text" data-i18n="login_req_text">Please login to perform this action and sync your data securely.</div>
+    <div class="custom-modal-actions">
+      <button class="btn secondary" id="btn-login-cancel" data-i18n="btn_later">Later</button>
+      <button class="btn primary" id="btn-login-now" data-i18n="btn_login_now">Login Now</button>
+    </div>
+  </div>
+</div>
+
 <!-- Custom Styled Confirmation Modal -->
 <div class="custom-modal-overlay" id="customConfirmModal">
   <div class="custom-modal-box">
@@ -4509,6 +4630,7 @@ nav.tabs button .count {
 </html>
 
 <script>
+  window.refreshFromFlutter = window.refreshFromFlutter || function() {};
   (function(){
     /*
      * Disable two-finger pinch zoom while preserving
@@ -4645,7 +4767,7 @@ nav.tabs button .count {
 
     const i18n = {
       en: {
-        guide_title: "Start Your Ledger", guide_text: "Your collection book is empty. Tap the button below to add your first customer and record a transaction.", guide_btn: "+ Add Entry to begin",
+        guide_title: "Start Your Ledger", guide_text: "Your collection book is empty. Choose an action below to record your first transaction.", guide_btn_sale: "+ Add Sale", guide_btn_purch: "- Add Purchase",
         app_sub: "Credit & Ledger Management", btn_setup: "Set up", nav_dash: "Dashboard", nav_collect: "To Collect", nav_pay: "To Pay", nav_cust: "Contacts", nav_fraud: "Fraud Alerts",
         stat_rcv: "Total Receivables", stat_pay: "Total Payables", stat_ovd: "Overdue Entries", stat_cust: "Total Contacts",
         rem_head: "Payment Reminders", rem_sub: "Overdue & due within 7 days", col_head: "To Collect", col_sub: "Contacts who need to pay you",
@@ -4655,7 +4777,7 @@ nav.tabs button .count {
         setup_sub: "This label is stored privately and is never shared with anyone.", lbl_name: "Your Name", ph_name: "e.g. Ramesh Bhai",
         lbl_biz: "Business Name", ph_biz: "e.g. Sharma Traders", lbl_gst: "GST Number (Optional)", ph_gst: "e.g. 29ABCDE1234F1Z5",
         lbl_area: "City / Market Area (Optional)", ph_area: "e.g. Main Market, Delhi", btn_skip: "Cancel", btn_save_prof: "Save Profile", btn_add_cust: "+ Add Entry",
-        btn_reset: "Reset my data on this device", lbl_cust_party: "Contact / Party", ph_search_cust: "Search existing or add new…", lbl_phone: "Phone",
+        btn_reset: "Reset my data on this device", lbl_cust_party: "Contact / Party Name", ph_search_cust: "Search existing or add new…", lbl_phone: "Phone",
         lbl_txn_type: "Transaction Type", lbl_gross_amt: "Gross Amount (₹)", lbl_discount: "Discount (₹)", lbl_inv_date: "Invoice Date",
         lbl_due_date: "Due Date (opt)", lbl_ref: "Ref / Invoice No.", ph_ref: "e.g. Bill No. 994", lbl_cust_conf: "Contact confirmed this transaction",
         hint_cust_conf: "Uncheck if waiting for their approval.", btn_cancel: "Cancel", btn_save_entry: "Save Entry", lbl_amt: "Amount (₹)",
@@ -4672,12 +4794,12 @@ nav.tabs button .count {
         notice_priv: "🔒 Your private contact book. This data is stored only under your account and is never shared — except a fraud report, which shares only the minimum needed to warn others, anonymously.",
         notice_pub: "⚠️ Fraud alerts reported anonymously by traders in your market. No trader's name, shop or contact details are ever shown — only the flagged contact's details.",
         ph_search_my: "Search contact name or phone…", ph_search_dir: "Search reported name or phone…", txt_all_clear: "All Clear", txt_no_rem: "No pending reminders.",
-        txt_nothing: "Nothing Here", txt_add_col: "Tap + Add Entry to record outstanding amounts.", txt_add_pay: "Tap + Add Entry to log suppliers you owe.",
-        txt_no_cust: "No contacts yet", txt_tap_first: "Tap + Add Entry to add your first contact.", txt_no_fraud: "No fraud reports",
+        txt_nothing: "Nothing Here", txt_add_col: "Add a sale from the Dashboard to see pending collections here.", txt_add_pay: "Add a purchase from the Dashboard to see pending payables here.",
+        txt_no_cust: "No contacts yet", txt_tap_first: "Your contact list is empty. Add your first entry from the Dashboard.", txt_no_fraud: "No fraud reports",
         txt_when_fraud: "When a trader reports a confirmed fraud, it appears here — anonymously.", txt_tot_col: "Total to collect", txt_tot_pay: "Total to pay",
         txt_all_set: "All settled", txt_no_bal_now: "No outstanding balances right now.", txt_no_txn: "No transactions", txt_not_rec: "Nothing recorded for this contact yet.",
         txt_no_notifications: "No notifications", txt_notification_hint: "Your Collection Book activity will appear here.", txt_no_pending: "No pending entries right now.",
-        txt_closing: "Closing balance", txt_txns: "Transactions", txt_view: "view →", txt_whatsapp: "WhatsApp Reminder", txt_call: "Call", txt_new_ent: "New Entry", txt_mng: "Manage", txt_v_rep: "View / Edit Report",
+        txt_closing: "Closing balance", txt_txns: "Transactions", txt_view: "view →", txt_whatsapp: "WhatsApp Reminder", txt_call: "Call", txt_new_ent: "Add Sale/Purchase", txt_mng: "Manage", txt_v_rep: "View / Edit Report",
         lbl_fraud: "fraud", lbl_risk: "risk", lbl_trusted: "trusted", lbl_watch: "watch", lbl_unrated: "unrated", tag_unc: "Unconfirmed", tag_paid: "Fully Paid", tag_part: "Partially Paid", tag_no_due: "No due date",
         head_emp: "Manage Employees", sub_emp: "Add employees and control their ledger access.", div_add_emp: "Add New Employee",
         lbl_emp_name: "Employee Name", ph_emp_name: "e.g. Rahul Kumar", lbl_emp_phone: "Phone Number (Login ID)",
@@ -4773,10 +4895,22 @@ flow_balanced:
     btn_add_details: "+ Add additional details (Optional)",
 btn_hide_details: "- Hide additional details",
 btn_take_tour: "Take App Tour", tour_badge: "✨ QUICK TOUR", btn_tour_skip: "Skip", btn_tour_next: "Next →", btn_tour_start: "Add my first entry →", msg_tour_skipped: "You can restart the tour from Help anytime.", tour_step1_title: "Your business at a glance", tour_step1_text: "See how much you need to collect, pay, and what needs your attention.", tour_step2_title: "Know who owes you", tour_step2_text: "All pending customer collections are organized here.", tour_step3_title: "Track what you owe", tour_step3_text: "Keep supplier and purchase dues organised in one place.", tour_step4_title: "Your customer book", tour_step4_text: "Open any contact to see their ledger, payments and history.", tour_step5_title: "Create your first ledger", tour_step5_text: "Tap here to add a customer and record your first sale or purchase.", tour_step6_title: "Check fraud alerts", tour_step6_text: "See contacts reported by businesses before you transact.", tour_step7_title: "You are ready!", tour_step7_text: "Manage your profile, employees, language, security and more from here.",
-        msg_entry_success: "Entry added successfully", msg_pay_success: "Payment added successfully", btn_great: "Great"
+        msg_entry_success: "Entry added successfully", msg_pay_success: "Payment added successfully", btn_great: "Great",
+        login_req_title: "Login Required", login_req_text: "Please login to perform this action and sync your data securely.", btn_later: "Later", btn_login_now: "Login Now",
+        msg_pending_one: "1 entry waiting for confirmation", msg_pending_multi: "entries waiting for confirmation",
+        head_success: "Success!", msg_action_success: "Action completed successfully.",
+        entry_sub_sale: "Record a sale to collect payment from a contact",
+        entry_sub_purch: "Record a purchase to log payment owed to a supplier",
+        entry_sub_gen: "Record a transaction to update your ledger",
+        entry_title_sale: "Record Sale",
+        entry_title_purch: "Record Purchase",
+        entry_title_gen: "New Ledger Entry",
+        entry_cat_sale: "SALES ENTRY (TO COLLECT)",
+        entry_cat_purch: "PURCHASE ENTRY (TO PAY)",
+        entry_cat_gen: "LEDGER TRANSACTION"
       },
       hi: {
-        guide_title: "अपना लेजर शुरू करें", guide_text: "आपकी कलेक्शन बुक खाली है। अपना पहला ग्राहक जोड़ने और लेनदेन रिकॉर्ड करने के लिए नीचे दिए गए बटन पर टैপ करें।", guide_btn: "+ एंट्री जोड़ें",
+        guide_title: "अपना लेजर शुरू करें", guide_text: "आपकी कलेक्शन बुक खाली है। अपना पहला ग्राहक जोड़ने और लेनदेन रिकॉर्ड करने के लिए नीचे दिए गए बटन पर टैপ करें।", guide_btn_sale: "+ बिक्री जोड़ें", guide_btn_purch: "- खरीद जोड़ें",
         app_sub: "क्रेडिट और लेजर प्रबंधन", btn_setup: "सेट अप", nav_dash: "डैशबोर्ड", nav_collect: "लेना है", nav_pay: "देना है", nav_cust: "संपर्क", nav_fraud: "धोखाधड़ी अलर्ट",
         stat_rcv: "कुल प्राप्य राशि", stat_pay: "कुल देय राशि", stat_ovd: "बकाया प्रविष्टियां", stat_cust: "कुल संपर्क",
         rem_head: "भुगतान अनुस्मारक", rem_sub: "बकाया और 7 दिनों के भीतर देय", col_head: "लेना है", col_sub: "संपर्क जिन्हें आपको भुगतान करना है",
@@ -4803,20 +4937,19 @@ btn_take_tour: "Take App Tour", tour_badge: "✨ QUICK TOUR", btn_tour_skip: "Sk
         notice_priv: "🔒 आपकी निजी संपर्क बुक। यह डेटा केवल आपके खाते में संग्रहीत है और कभी साझा नहीं किया जाता है — सिवाय धोखाधड़ी रिपोर्ट के, जो दूसरों को चेतावनी देने के लिए केवल न्यूनतम साझा करता है, गुमनाम रूप से।",
         notice_pub: "⚠️ आपके बाजार में व्यापारियों द्वारा गुमनाम रूप से रिपोर्ट किए गए धोखाधड़ी अलर्ट। किसी व्यापारी का नाम, दुकान या संपर्क विवरण कभी नहीं दिखाया जाता है — केवल चिह्नित संपर्क का विवरण।",
         ph_search_my: "संपर्क का नाम या फोन खोजें…", ph_search_dir: "रिपोर्ट किया गया नाम या फोन खोजें…", txt_all_clear: "सब साफ़", txt_no_rem: "कोई लंबित अनुस्मारक नहीं।",
-        txt_nothing: "यहाँ कुछ नहीं", txt_add_col: "बकाया राशि रिकॉर्ड करने के लिए + नई प्रविष्टि टैप करें।", txt_add_pay: "जिन आपूर्तिकर्ताओं को आपको देना है, उन्हें लॉग करने के लिए + नई प्रविष्टि टैप करें।",
-        txt_no_cust: "अभी तक कोई संपर्क नहीं", txt_tap_first: "अपना पहला संपर्क जोड़ने के लिए + नई प्रविष्टि टैप करें।", txt_no_fraud: "कोई धोखाधड़ी रिपोर्ट नहीं",
+        txt_nothing: "यहाँ कुछ नहीं", txt_add_col: "बकाया राशि देखने के लिए डैशबोर्ड से बिक्री (Sale) जोड़ें।", txt_add_pay: "देय राशि देखने के लिए डैशबोर्ड से खरीद (Purchase) जोड़ें।",
+        txt_no_cust: "अभी तक कोई संपर्क नहीं", txt_tap_first: "आपकी संपर्क सूची खाली है। डैशबोर्ड से अपनी पहली प्रविष्टि जोड़ें।", txt_no_fraud: "कोई धोखाधड़ी रिपोर्ट नहीं",
         txt_when_fraud: "जब कोई व्यापारी कन्फर्म धोखाधड़ी की रिपोर्ट करता है, तो यह यहाँ दिखाई देता है — गुमनाम रूप से।", txt_tot_col: "कुल लेना है", txt_tot_pay: "कुल देना है",
         txt_all_set: "सब तय", txt_no_bal_now: "अभी कोई बकाया बैलेंस नहीं है।", txt_no_txn: "कोई लेनदेन नहीं", txt_not_rec: "अभी तक इस संपर्क के लिए कुछ भी दर्ज नहीं किया गया है।",
         txt_no_notifications: "कोई सूचना नहीं", txt_notification_hint: "आपकी कलेक्शन बुक की गतिविधियाँ यहाँ दिखाई देंगी।", txt_no_pending: "अभी कोई लंबित प्रविष्टि नहीं है।",
-        txt_closing: "क्लोजिंग बैलेंस", txt_txns: "लेनदेन", txt_view: "देखें →", txt_whatsapp: "व्हाट्सएप रिमांडर", txt_call: "कॉल करें", txt_new_ent: "नई प्रविष्टि", txt_mng: "प्रबंधित करें", txt_v_rep: "रिपोर्ट देखें / संपादित करें",
+        txt_closing: "क्लोजिंग बैलेंस", txt_txns: "लेनदेन", txt_view: "देखें →", txt_whatsapp: "व्हाट्सएप रिमांडर", txt_call: "कॉल करें", txt_new_ent: "बिक्री/खरीद जोड़ें",       btn_save_emp: "कर्मचारी सहेजें", txt_no_emp: "अभी तक कोई कर्मचारी नहीं जोड़ा गया।", btn_remove_emp: "कर्मचारी हटाएँ",
+        btn_profile: "मेरी प्रोफ़ाइल", btn_lang: "भाषा", btn_dark_mode: "डार्क मोड", btn_mng_emp: "कर्मचारी प्रबंधित करें", btn_privacy: "गोपनीयता नीति",txt_mng: "प्रबंधित करें", txt_v_rep: "रिपोर्ट देखें / संपादित करें",
         lbl_fraud: "धोखाधड़ी", lbl_risk: "जोखिम", lbl_trusted: "विश्वसनीय", lbl_watch: "देखें", lbl_unrated: "अनरेटेड", tag_unc: "अपुष्ट", tag_paid: "पूरी तरह से भुगतान किया", tag_part: "आंशिक भुगतान", tag_no_due: "कोई देय तिथि नहीं",
         head_emp: "कर्मचारी प्रबंधित करें", sub_emp: "कर्मचारी जोड़ें और उनके लेजर एक्सेस को नियंत्रित करें।", div_add_emp: "नया कर्मचारी जोड़ें",
         lbl_emp_name: "कर्मचारी का नाम", ph_emp_name: "उदा. राहुल कुमार", lbl_emp_phone: "फ़ोन नंबर (लॉगिन आईडी)",
         lbl_perm_add: "प्रविष्टियां जोड़ सकते हैं", hint_perm_add: "कर्मचारी को नए लेनदेन रिकॉर्ड करने की अनुमति दें।",
         lbl_perm_view: "पूरा लेजर देख सकते हैं", hint_perm_view: "कर्मचारी को पूरा संपर्क इतिहास देखने की अनुमति दें।",
         lbl_perm_del: "प्रविष्टियां हटा सकते हैं", hint_perm_del: "कर्मचारी को स्थायी रूप से रिकॉर्ड हटाने की अनुमति दें।",
-        btn_save_emp: "कर्मचारी सहेजें", txt_no_emp: "अभी तक कोई कर्मचारी नहीं जोड़ा गया।", btn_remove_emp: "कर्मचारी हटाएँ",
-        btn_profile: "मेरी प्रोफ़ाइल", btn_lang: "भाषा", btn_dark_mode: "डार्क मोड", btn_mng_emp: "कर्मचारी प्रबंधित करें", btn_privacy: "गोपनीयता नीति",
 btn_terms: "नियम एवं शर्तें",
 lbl_legal: "कानूनी",btn_logout: "लॉग आउट", head_settings: "सेटिंग्स",settings_account: "खाता",
 settings_preferences: "प्राथमिकताएँ",
@@ -4905,10 +5038,22 @@ flow_balanced:
     btn_add_details: "+ अतिरिक्त विवरण जोड़ें (वैकल्पिक)",
 btn_hide_details: "- अतिरिक्त विवरण छिपाएं",
 btn_take_tour: "ऐप टूर लें", tour_badge: "✨ त्वरित टूर", btn_tour_skip: "छोड़ें", btn_tour_next: "अगला →", btn_tour_start: "पहली प्रविष्टि जोड़ें →", msg_tour_skipped: "आप सहायता से कभी भी टूर फिर से शुरू कर सकते हैं।", tour_step1_title: "एक नज़र में आपका व्यवसाय", tour_step1_text: "देखें कि आपको कितना लेना है, देना है, और कहाँ ध्यान देने की आवश्यकता है।", tour_step2_title: "जानें कि कौन आपका कर्जदार है", tour_step2_text: "सभी लंबित ग्राहक संग्रहण यहाँ व्यवस्थित हैं।", tour_step3_title: "आप पर जो बकाया है उसे ट्रैक करें", tour_step3_text: "आपूर्तिकर्ता और खरीद के बकाये को एक ही स्थान पर व्यवस्थित रखें।", tour_step4_title: "आपकी ग्राहक पुस्तिका", tour_step4_text: "उनका लेजर, भुगतान और इतिहास देखने के लिए किसी भी संपर्क को खोलें।", tour_step5_title: "अपना पहला लेजर बनाएं", tour_step5_text: "ग्राहक जोड़ने और अपनी पहली बिक्री या खरीद दर्ज करने के लिए यहाँ टैप करें।", tour_step6_title: "धोखाधड़ी अलर्ट जांचें", tour_step6_text: "लेनदेन करने से पहले व्यवसायों द्वारा रिपोर्ट किए गए संपर्क देखें।", tour_step7_title: "आप तैयार हैं!", tour_step7_text: "यहाँ से अपनी प्रोफ़ाइल, कर्मचारी, भाषा, सुरक्षा और बहुत कुछ प्रबंधित करें।",
-        msg_entry_success: "प्रविष्टि सफलतापूर्वक जोड़ी गई", msg_pay_success: "भुगतान सफलतापूर्वक जोड़ा गया", btn_great: "बढ़िया"
+        msg_entry_success: "प्रविष्टि सफलतापूर्वक जोड़ी गई", msg_pay_success: "भुगतान सफलतापूर्वक जोड़ा गया", btn_great: "बढ़िया",
+        login_req_title: "लॉगिन आवश्यक है", login_req_text: "कृपया इस क्रिया को करने और अपने डेटा को सुरक्षित रूप से सिंक करने के लिए लॉगिन करें।", btn_later: "बाद में", btn_login_now: "अभी लॉगिन करें",
+        msg_pending_one: "1 प्रविष्टि पुष्टि की प्रतीक्षा में है", msg_pending_multi: "प्रविष्टियां पुष्टि की प्रतीक्षा में हैं",
+        head_success: "सफलता!", msg_action_success: "कार्रवाई सफलतापूर्वक पूरी हुई।",
+        entry_sub_sale: "ग्राहक से भुगतान लेने के लिए बिक्री रिकॉर्ड करें",
+        entry_sub_purch: "आपूर्तिकर्ता का बकाया दर्ज करने के लिए खरीद रिकॉर्ड करें",
+        entry_sub_gen: "अपना लेजर अपडेट करने के लिए एक लेनदेन दर्ज करें",
+        entry_title_sale: "बिक्री प्रविष्टि",
+        entry_title_purch: "खरीद प्रविष्टि",
+        entry_title_gen: "नई प्रविष्टि",
+        entry_cat_sale: "बिक्री का रिकॉर्ड (प्राप्य)",
+        entry_cat_purch: "खरीद का रिकॉर्ड (देय)",
+        entry_cat_gen: "लेजर लेनदेन"
       },
       bn: {
-        guide_title: "আপনার লেজার শুরু করুন", guide_text: "আপনার কালেকশন বুক খালি আছে। আপনার প্রথম কাস্টমার যোগ করতে এবং লেনদেন রেকর্ড করতে নিচের বোতামটি ট্যাপ করুন।", guide_btn: "+ এন্ট্রি যোগ করুন",
+        guide_title: "আপনার লেজার শুরু করুন", guide_text: "আপনার কালেকশন বুক খালি আছে। লেনদেন রেকর্ড করতে নিচের একটি বোতাম ট্যাপ করুন।", guide_btn_sale: "+ বিক্রয় যোগ করুন", guide_btn_purch: "- ক্রয় যোগ করুন",
         app_sub: "ক্রেডিট এবং লেজার ম্যানেজমেন্ট", btn_setup: "সেট আপ", nav_dash: "ড্যাশবোর্ড", nav_collect: "পাওনা", nav_pay: "দেনা", nav_cust: "পরিচিতি", nav_fraud: "জালিয়াতি সতর্কতা",
         stat_rcv: "মোট প্রাপ্য", stat_pay: "নমোট প্রদেয়", stat_ovd: "বকেয়া এন্ট্রি", stat_cust: "মোট পরিচিতি",
         rem_head: "পেমেন্ট রিমাইন্ডার", rem_sub: "বকেয়া এবং 7 দিনের মধ্যে দেয়", col_head: "পাওনা", col_sub: "পরিচিতি যারা আপনাকে পেমেন্ট করবে",
@@ -4935,12 +5080,12 @@ btn_take_tour: "ऐप टूर लें", tour_badge: "✨ त्वरित
         notice_priv: "🔒 আপনার ব্যক্তিগত পরিচিতি বই। এই ডেটা শুধুমাত্র আপনার অ্যাকাউন্টে সংরক্ষিত এবং কখনোই শেয়ার করা হয় না — জালিয়াতি রিপোর্ট ছাড়া, যা শুধুমাত্র অন্যদের সতর্ক করার জন্য বেনামে ন্যূনতম শেয়ার করে।",
         notice_pub: "⚠️ আপনার বাজারে ব্যবসায়ীদের দ্বারা বেনামে রিপোর্ট করা জালিয়াতি সতর্কতা। কোনো ব্যবসায়ীর নাম, দোকান বা যোগাযোগের বিবরণ কখনোই দেখানো হয় পরিচয় — শুধুমাত্র চিহ্নিত পরিচিতির বিবরণ।",
         ph_search_my: "পরিচিতির নাম বা ফোন খুঁজুন…", ph_search_dir: "রিপোর্ট করা নাম বা ফোন খুঁজুন…", txt_all_clear: "সব পরিষ্কার", txt_no_rem: "কোনো পেন্ডিং রিমাইন্ডার নেই।",
-        txt_nothing: "এখানে কিছু নেই", txt_add_col: "বকেয়া পরিমাণ রেকর্ড করতে + নতুন এন্ট্রি ট্যাপ করুন।", txt_add_pay: "যে সরবরাহকারীদের আপনার পেমেন্ট করতে হবে তাদের লগ করতে + নতুন এন্ট্রি ট্যাপ করুন।",
-        txt_no_cust: "এখনও কোনো পরিচিতি নেই", txt_tap_first: "আপনার প্রথম পরিচিতি যোগ করতে + নতুন এন্ট্রি ট্যাপ করুন।", txt_no_fraud: "কোনো জালিয়াতি রিপোর্ট নেই",
+        txt_nothing: "এখানে কিছু নেই", txt_add_col: "বকেয়া পাওনা দেখতে ড্যাশবোর্ড থেকে একটি বিক্রয় যোগ করুন।", txt_add_pay: "বকেয়া দেনা দেখতে ড্যাশবোর্ড থেকে একটি ক্রয় যোগ করুন।",
+        txt_no_cust: "এখনও কোনো পরিচিতি নেই", txt_tap_first: "আপনার পরিচিতি তালিকা খালি। ড্যাশবোর্ড থেকে আপনার প্রথম এন্ট্রি যোগ করুন।", txt_no_fraud: "কোনো জালিয়াতি রিপোর্ট নেই",
         txt_when_fraud: "যখন কোনো ব্যবসায়ী নিশ্চিত জালিয়াতির রিপোর্ট করেন, তখন এটি এখানে বেনামে প্রদর্শিত হয়।", txt_tot_col: "মোট পাওনা", txt_tot_pay: "মোট দেনা",
         txt_all_set: "সব ঠিক আছে", txt_no_bal_now: "এখন কোনো বকেয়া ব্যালেন্স নেই।", txt_no_txn: "কোনো লেনদেন নেই", txt_not_rec: "এই পরিচিতির জন্য এখনও কিছু রেকর্ড করা হয়নি।",
         txt_no_notifications: "কোনো বিজ্ঞপ্তি নেই", txt_notification_hint: "আপনার কালেকশন বুক অ্যাক্টিভিটি এখানে প্রদর্শিত হবে।", txt_no_pending: "এখন কোনো পেন্ডিং এন্ট্রি নেই।",
-        txt_closing: "ক্লোজিং ব্যালেন্স", txt_txns: "লেনদেন", txt_view: "দেখুন →", txt_whatsapp: "হোয়াটসঅ্যাপ রিমাইন্ডার", txt_call: "কল করুন", txt_new_ent: "নতুন এন্ট্রি", txt_mng: "পরিচালনা করুন", txt_v_rep: "রিপোর্ট দেখুন / সম্পাদনা করুন",
+        txt_closing: "ক্লোজিং ব্যালেন্স", txt_txns: "লেনদেন", txt_view: "দেখুন →", txt_whatsapp: "হোয়াটসঅ্যাপ রিমাইন্ডার", txt_call: "কল করুন", txt_new_ent: "বিক্রয়/ক্রয় যোগ করুন", txt_mng: "পরিচালনা করুন", txt_v_rep: "রিপোর্ট দেখুন / সম্পাদনা করুন",
         lbl_fraud: "জালিয়াতি", lbl_risk: "ঝুঁকি", lbl_trusted: "বিশ্বস্ত", lbl_watch: "নজর রাখুন", lbl_unrated: "আনরেটেড", tag_unc: "অনিশ্চিত", tag_paid: "সম্পূর্ণ পেমেন্ট করা হয়েছে", tag_part: "আংশিক পেমেন্ট", tag_no_due: "কোনো দেয় তারিখ নেই",
         head_emp: "कर्मচারী পরিচালনা করুন", sub_emp: "कर्मচারী যোগ করুন এবং তাদের লেজার অ্যাক্সেস নিয়ন্ত্রণ করুন।", div_add_emp: "নতুন কর্মচারী যোগ করুন",
         lbl_emp_name: "কর্মচারীর নাম", ph_emp_name: "উদাঃ রাহুল কুমার", lbl_emp_phone: "ফোন নম্বর (লॉगইন আইডি)",
@@ -5036,7 +5181,19 @@ flow_balanced:
     btn_add_details: "+ অতিরিক্ত বিবরণ যোগ করুন (ঐচ্ছিক)",
 btn_hide_details: "- অতিরিক্ত বিবরণ লুকান",
 btn_take_tour: "অ্যাপ ট্যুর নিন", tour_badge: "✨ কুইক ট্যুর", btn_tour_skip: "এড়িয়ে যান", btn_tour_next: "পরবর্তী →", btn_tour_start: "আমার প্রথম এন্ট্রি যোগ করুন →", msg_tour_skipped: "আপনি যেকোনো সময় হেল্প থেকে ট্যুর পুনরায় শুরু করতে পারেন।", tour_step1_title: "এক নজরে আপনার ব্যবসা", tour_step1_text: "দেখুন আপনার কত পাওনা আছে, কত দিতে হবে और কোথায় মনোযোগ দেওয়া প্রয়োজন।", tour_step2_title: "জানুন কে আপনার কাছে ঋণী", tour_step2_text: "গ্রাহকদের সমস্ত বকেয়া সংগ্রহ এখানে সাজানো আছে।", tour_step3_title: "আপনার দেনা ট্র্যাক করুন", tour_step3_text: "সরবরাহকারী এবং ক্রয়ের বকেয়া এক জায়গায় গুছিয়ে রাখুন।", tour_step4_title: "আপনার গ্রাহক বই", tour_step4_text: "যেকোনো পরিচিতির লেজার, পেমেন্ট এবং ইতিহাস দেখতে সেটি খুলুন।", tour_step5_title: "আপনার প্রথম লেজার তৈরি করুন", tour_step5_text: "একটি পরিচিতি যোগ করতে এবং আপনার প্রথম বিক্রয় বা ক্রয় রেকর্ড করতে এখানে ট্যাপ করুন।", tour_step6_title: "জালিয়াতি সতর্কতা পরীক্ষা করুন", tour_step6_text: "লেনদেন করার আগে অন্যান্য ব্যবসার দ্বারা রিপোর্ট করা পরিচিতিগুলি দেখুন।", tour_step7_title: "আপনি প্রস্তুত!", tour_step7_text: "এখান থেকে আপনার প্রোফাইল, কর্মচারী, ভাষা, নিরাপত্তা এবং আরও অনেক কিছু পরিচালনা করুন।",
-        msg_entry_success: "এন্ট্রি সফলভাবে যোগ করা হয়েছে", msg_pay_success: "পেমেন্ট সফলভাবে যোগ করা হয়েছে", btn_great: "চমৎকার"
+        msg_entry_success: "এন্ট্রি সফলভাবে যোগ করা হয়েছে", msg_pay_success: "পেমেন্ট সফলভাবে যোগ করা হয়েছে", btn_great: "চমৎকার",
+        login_req_title: "লগইন প্রয়োজন", login_req_text: "এই কাজটি করতে এবং আপনার ডেটা সুরক্ষিতভাবে সিঙ্ক করতে অনুগ্রহ করে লগইন করুন।", btn_later: "পরে", btn_login_now: "এখনই লগইন করুন",
+        msg_pending_one: "১টি এন্ট্রি নিশ্চিতকরণের জন্য অপেক্ষা করছে", msg_pending_multi: "টি এন্ট্রি নিশ্চিতকরণের জন্য অপেক্ষা করছে",
+        head_success: "সফল হয়েছে!", msg_action_success: "কাজটি সফলভাবে সম্পন্ন হয়েছে।",
+        entry_sub_sale: "গ্রাহকের কাছ থেকে টাকা আদায় করতে একটি বিক্রয় রেকর্ড করুন",
+        entry_sub_purch: "সরবরাহকারীর দেনা ট্র্যাক করতে একটি ক্রয় রেকর্ড করুন",
+        entry_sub_gen: "আপনার লেজার আপডেট করতে একটি লেনদেন রেকর্ড করুন",
+        entry_title_sale: "বিক্রয় এন্ট্রি",
+        entry_title_purch: "ক্রয় এন্ট্রি",
+        entry_title_gen: "নতুন এন্ট্রি",
+        entry_cat_sale: "বিক্রয় রেকর্ড (পাওনা)",
+        entry_cat_purch: "ক্রয় রেকর্ড (দেনা)",
+        entry_cat_gen: "লেজার লেনদেন"
       }
     };
 
@@ -5072,6 +5229,152 @@ function emptyStateHTML(key, titleKey, messageKey) {
         '</div>'
     );
 }
+function updateEntryHeaderUI(type, isFixedHeader, customTitleKey) {
+    var title = $('#entryTitle');
+    var sub = $('#entrySubtitle');
+
+    var titleKey = 'btn_add_entry';
+    var subKey = 'entry_sub_gen';
+
+    if (!isFixedHeader && selectedCustomerId == null) {
+        if (type === 'debtor') {
+            titleKey = customTitleKey || 'entry_title_sale';
+            subKey = 'entry_sub_sale';
+        } else if (type === 'creditor') {
+            titleKey = customTitleKey || 'entry_title_purch';
+            subKey = 'entry_sub_purch';
+        }
+    }
+
+    if (title) {
+        title.textContent = t(titleKey);
+        title.dataset.i18n = titleKey;
+    }
+    if (sub) {
+        sub.textContent = t(subKey);
+        sub.dataset.i18n = subKey;
+    }
+}
+
+function renderSelectedContactCard(c, allowDeselect) {
+    var note = $('#en-selected-note');
+    var searchContainer = $('#en-search-container');
+
+    if (!note || !c) return;
+
+    var selectedPhone = cleanPhone10(c.phone || '');
+
+    if (searchContainer) searchContainer.style.display = 'none';
+    note.style.display = 'block';
+
+    // Keep header fixed as "New Ledger Entry" for existing contacts
+    updateEntryHeaderUI(entryType, true);
+
+    var removeBtnHtml = allowDeselect
+        ? '<button type="button" id="en-remove-contact-btn" class="selected-contact-remove" aria-label="Remove contact">×</button>'
+        : '';
+
+    note.innerHTML =
+        '<div class="selected-contact-card" style="position: relative;">' +
+            stampHTML(c, false) +
+            '<div class="selected-contact-details">' +
+                '<div class="selected-contact-name">' +
+                    escapeHTML(c.name || 'Contact') +
+                '</div>' +
+                (selectedPhone
+                    ? '<div class="selected-contact-phone">' + escapeHTML(selectedPhone) + '</div>'
+                    : ''
+                ) +
+            '</div>' +
+            removeBtnHtml +
+        '</div>';
+
+    if (allowDeselect) {
+        safeBind('#en-remove-contact-btn', 'click', function() {
+            selectedCustomerId = null;
+            if ($('#en-selected-note')) $('#en-selected-note').style.display = 'none';
+            if ($('#en-search-container')) $('#en-search-container').style.display = 'block';
+            if ($('#en-customer-search')) {
+                $('#en-customer-search').disabled = false;
+                $('#en-customer-search').value = '';
+                $('#en-customer-search').focus();
+            }
+            updateEntryHeaderUI(entryType, false);
+        });
+    }
+}
+
+window.checkAuth = function() {
+    if (window.flutterSession && window.flutterSession.isAuthenticated) {
+        return true;
+    }
+    openOverlay('#loginPromptOverlay');
+    return false;
+};
+
+    window.openNewEntryWith = function(type) {
+        if (!window.checkAuth()) return;
+
+        /*
+         * OWNER PROFILE CHECK
+         *
+         * If in owner mode and name is missing,
+         * force them to setup profile before
+         * creating their first entry.
+         */
+        if (
+            currentRoleMode === 'owner' &&
+            !isOwnerProfileSetup()
+        ) {
+            showToast('Please setup your business profile first');
+
+            configureProfilePopup(true);
+            openOverlay('#onboardOverlay', true);
+
+            return;
+        }
+
+        entryType = type || 'debtor';
+        selectedCustomerId = null;
+        if ($('#en-search-container')) $('#en-search-container').style.display = 'block';
+        if ($('#en-customer-search')) {
+            $('#en-customer-search').value = '';
+            $('#en-customer-search').disabled = false;
+        }
+        if ($('#en-autocomplete')) $('#en-autocomplete').style.display = 'none';
+        if ($('#en-new-customer-fields')) $('#en-new-customer-fields').style.display = 'none';
+        if ($('#en-new-customer-fields-bottom')) $('#en-new-customer-fields-bottom').style.display = 'none';
+        if ($('#en-phone')) $('#en-phone').value = '';
+        if ($('#en-area')) $('#en-area').value = '';
+        if ($('#en-notes')) $('#en-notes').value = '';
+        if ($('#en-selected-note')) $('#en-selected-note').style.display = 'none';
+        if ($('#en-amount')) $('#en-amount').value = '';
+        if ($('#en-discount')) $('#en-discount').value = '';
+
+        if ($('#en-idate')) {
+            $('#en-idate').value = todayISO();
+            cbUpdateDateDisplay('en-idate');
+        }
+        if ($('#en-due')) {
+            $('#en-due').value = '';
+            cbUpdateDateDisplay('en-due');
+        }
+        if ($('#en-desc')) $('#en-desc').value = '';
+        if ($('#en-confirmed')) $('#en-confirmed').checked = true;
+
+        $$('.radio-opt').forEach(function(r) {
+            r.classList.toggle('selected', r.dataset.type === entryType);
+        });
+
+        // Always hide transaction type toggle when opened via openNewEntryWith
+        if ($('#en-type-field')) $('#en-type-field').style.display = 'none';
+
+        var titleKey = entryType === 'debtor' ? 'entry_title_sale' : 'entry_title_purch';
+        updateEntryHeaderUI(entryType, false, titleKey);
+
+        openOverlay('#entryOverlay');
+    };
+
 function isOwnerProfileSetup() {
 
     return Boolean(
@@ -5832,8 +6135,15 @@ function configureProfilePopup(
 };
 
     window.setLanguage = async function(lang) {
-      currentLang = lang; try { await window.storage.set('cb-lang', lang, false); }catch(e){}
-      applyTranslations(); closeOverlay('#langOverlay'); finishBootstrap();
+      currentLang = lang;
+      try {
+          await window.storage.set('cb-lang', lang, false);
+          await window.storage.set('cb-lang-prompted', 'true', false);
+      } catch(e){}
+
+      applyTranslations();
+      closeOverlay('#langOverlay');
+      finishBootstrap();
     };
 
     var $ = function(sel, root){ return (root||document).querySelector(sel); };
@@ -7023,6 +7333,8 @@ async function () {
             }
         }
 
+        updateProfileReminder();
+
     } catch (e) {
 
         console.error(
@@ -7925,14 +8237,40 @@ pendingHtml +=
       } else if (banner) { banner.remove(); closeOverlay('#pendingOverlay'); }
     }
 
+    function updateProfileReminder() {
+        var reminderEl = $('#profileReminder');
+        if (!reminderEl) return;
+
+        var hasName = Boolean(profile && profile.name && profile.name.trim() !== '');
+        if (hasName || currentRoleMode === 'employee' || !(window.flutterSession && window.flutterSession.isAuthenticated)) {
+            reminderEl.innerHTML = '';
+            return;
+        }
+
+        reminderEl.innerHTML = `
+            <div class="incomplete-profile-banner" onclick="document.getElementById('btn-settings-profile').click()">
+                <div style="font-size: 1.2rem;">👤</div>
+                <span>Please complete your profile to enable all features.</span>
+                <div class="arrow">›</div>
+            </div>
+        `;
+    }
+
     async function bootstrap(){
       await reloadFromStorage();
       updateRoleModeUI();
-      bindLoginEvents(); if($('#loadingScreen')) $('#loadingScreen').style.display = 'none';
-      safeGet('cb-lang', false).then(savedLang => {
-          if(savedLang) { currentLang = savedLang.value; applyTranslations(); finishBootstrap(); }
-          else { openOverlay('#langOverlay'); }
-      });
+      bindLoginEvents();
+      if($('#loadingScreen')) $('#loadingScreen').style.display = 'none';
+
+      try {
+          var savedLang = await safeGet('cb-lang', false);
+          if (savedLang && savedLang.value) {
+              currentLang = savedLang.value;
+          }
+      } catch(e) {}
+
+      applyTranslations();
+      finishBootstrap();
     }
 
     function updateRoleModeUI() {
@@ -7946,6 +8284,20 @@ pendingHtml +=
         document.getElementById(
             'roleButtonText'
         );
+
+    /*
+     * Toggle Logout button based on auth state.
+     */
+    var logoutBtn = document.getElementById('btn-settings-logout');
+    if (logoutBtn) {
+        var isAuthenticated = window.flutterSession && window.flutterSession.isAuthenticated;
+        var sessionSection = logoutBtn.closest('.settings-section');
+        if (sessionSection) {
+            sessionSection.style.display = isAuthenticated ? 'block' : 'none';
+        } else {
+            logoutBtn.style.display = isAuthenticated ? 'flex' : 'none';
+        }
+    }
 
     /*
  * An employee must always be able to enter
@@ -8090,6 +8442,7 @@ if (!canManageContacts) {
       applyRolePermissions();
 
       updateProfileChip();
+      updateProfileReminder();
       renderAll();
 
       if (!eventsBound) {
@@ -8099,10 +8452,43 @@ if (!canManageContacts) {
       }
 
       /*
- * ==========================================
- * FIRST-TIME OWNER PROFILE SETUP
- * ==========================================
- */
+       * ==========================================
+       * 0. MIGRATION: Migrate old UID-specific prompt keys to global
+       * ==========================================
+       */
+      try {
+          var migrationUid = (window.flutterSession && window.flutterSession.authUid) || getCurrentBusinessUid();
+          if (migrationUid) {
+              var oldAccountKey = 'cb-lang-prompted-' + migrationUid;
+              var oldAccountRes = await safeGet(oldAccountKey, false);
+              if (oldAccountRes && oldAccountRes.value === 'true') {
+                  await window.storage.set('cb-lang-prompted', 'true', false);
+                  await window.storage.remove(oldAccountKey);
+              }
+          }
+      } catch(e) {}
+
+      /*
+       * ==========================================
+       * 1. GLOBAL LANGUAGE SELECTION (ONCE PER DEVICE)
+       * ==========================================
+       */
+      var hasPromptedLang = false;
+      try {
+          var langPromptRes = await safeGet('cb-lang-prompted', false);
+          hasPromptedLang = (langPromptRes && langPromptRes.value === 'true');
+      } catch(e) {}
+
+      if (!hasPromptedLang) {
+          openOverlay('#langOverlay', true);
+          return;
+      }
+
+      /*
+       * ==========================================
+       * 2. FIRST-TIME OWNER PROFILE SETUP
+       * ==========================================
+       */
 
 
 /*
@@ -8115,7 +8501,8 @@ if (!canManageContacts) {
  * Do NOT ask them to create an owner profile.
  */
 if (
-    currentRoleMode === 'employee'
+    currentRoleMode === 'employee' ||
+    !(window.flutterSession && window.flutterSession.isAuthenticated)
 ) {
 
     if (
@@ -8231,6 +8618,15 @@ if (
     }
 
     function bindLoginEvents() {
+      safeBind('#btn-login-cancel', 'click', function(){
+          closeOverlay('#loginPromptOverlay');
+      });
+      safeBind('#btn-login-now', 'click', function(){
+          closeOverlay('#loginPromptOverlay');
+          if (window.NativeBridge && typeof window.NativeBridge.postMessage === 'function') {
+              window.NativeBridge.postMessage('GOTO_LOGIN');
+          }
+      });
       safeBind('#login-btn', 'click', function(){
           var phone = $('#login-phone').value.replace(/\D/g, '').trim(); if(phone.length < 10) { showToast(t('ph_mobile')); return; }
           localStorage.setItem('cb-logged-in', 'true'); localStorage.setItem('cb-logged-in-phone', phone);
@@ -8390,8 +8786,15 @@ var activeC = 0;
 var totalCustCount = 0;
 
 var guide = $('#newUserGuide');
+var actionsRow = $('#dashboardActions');
+var showGuide = (myCustomers.length === 0);
+
 if (guide) {
-    guide.style.display = (myCustomers.length === 0) ? 'block' : 'none';
+    guide.style.display = showGuide ? 'block' : 'none';
+}
+
+if (actionsRow) {
+    actionsRow.style.display = showGuide ? 'none' : 'flex';
 }
 
 /*
@@ -9005,7 +9408,7 @@ var addEntryBtn =
     addPayBtn +
 
     '<button ' +
-        'class="mini-btn ghost" ' +
+        'class="mini-btn secondary" ' +
         'data-action="view-history" ' +
         'data-id="' +
             escapeHTML(c.id) +
@@ -9073,7 +9476,7 @@ var manageBtn =
     'data-id="' + mc.id + '">' +
     '✏️ ' + t('txt_mng') +
     '</button>';
-        var newTxnBtn = isCreator ? '<button class="mini-btn ghost" data-action="new-txn-for" data-id="'+mc.id+'">'+t('txt_new_ent')+'</button>' : '';
+        var newTxnBtn = isCreator ? '<button class="mini-btn accent" data-action="new-txn-for" data-id="'+mc.id+'">'+t('txt_new_ent')+'</button>' : '';
 
         html += '<div class="card"><div class="row-top"><div style="display:flex;gap:12px;align-items:center;">'+stampHTML(mc,false)+'<div><div class="cust-name">'+escapeHTML(mc.name)+(mc.fraudReported?'<span class="badge-public">Reported</span>':'')+'</div><div class="cust-area">'+escapeHTML(mc.area||'')+(mc.phone?' · '+escapeHTML(mc.phone):'')+'</div></div></div><div style="text-align:right;">'+balHtml+'</div></div>'+(mc.privateNotes ? '<div class="quality-line"><b>'+t('lbl_priv_note').split(' (')[0]+':</b> '+escapeHTML(mc.privateNotes)+'</div>' : '')+'<div class="card-actions">' + manageBtn + '<button class="mini-btn accent" data-action="view-history" data-id="'+mc.id+'">'+t('btn_ledger')+'</button>'+(mc.phone ? '<button class="mini-btn call" onclick="NativeBridge.postMessage(\'CALL:'+escapeHTML(mc.phone)+'\')">'+t('txt_call')+'</button>' : '') + newTxnBtn + '</div></div>';
       }
@@ -10152,6 +10555,7 @@ if (delItemBtn) {
 }
         var collectBtnCust = closest(tNode, '[data-action="collect-payment-cust"]');
         if(collectBtnCust){
+          if (!window.checkAuth()) return;
           collectTargetCustId = collectBtnCust.dataset.custid; collectTargetType = collectBtnCust.dataset.type; var c = myCustById(collectTargetCustId);
           var balData = computeCustomerBalances().find(function(x){ return x.customer.id === collectTargetCustId; }); var netReceivable = 0; var netPayable = 0;
           if (balData) { netReceivable = Math.max(balData.receivable - balData.payable, 0); netPayable = Math.max(balData.payable - balData.receivable, 0); }
@@ -10187,6 +10591,7 @@ if ($('#col-note')) {
     );
 
 if (manageBtn) {
+    if (!window.checkAuth()) return;
 
     if (
         currentRoleMode === 'employee' &&
@@ -10209,71 +10614,41 @@ if (manageBtn) {
 }
         var txnBtn = closest(tNode, '[data-action="new-txn-for"]');
         if(txnBtn){
-          selectedCustomerId = txnBtn.dataset.id; var cc = myCustById(selectedCustomerId);
+          if (!window.checkAuth()) return;
+
+          /*
+           * OWNER PROFILE CHECK
+           */
+          if (
+              currentRoleMode === 'owner' &&
+              !isOwnerProfileSetup()
+          ) {
+              showToast('Please setup your business profile first');
+              configureProfilePopup(true);
+              openOverlay('#onboardOverlay', true);
+              return;
+          }
+
+          if (activeTab === 'dashboard') {
+              if ($('#en-type-field')) $('#en-type-field').style.display = 'none';
+          } else {
+              if ($('#en-type-field')) $('#en-type-field').style.display = 'block';
+          }
+
+          updateEntryHeaderUI(entryType, 'btn_add_entry');
+          selectedCustomerId = txnBtn.dataset.id;
+          var cc = myCustById(selectedCustomerId);
           if($('#en-additional-details')) $('#en-additional-details').style.display='none';
-         if($('#btn-toggle-additional')) $('#btn-toggle-additional').textContent = t('btn_add_details');
-         if ($('#en-customer-search')) {
-    $('#en-customer-search').value = cc ? cc.name : '';
-    $('#en-customer-search').disabled = true;
-}
-if ($('#en-phone') && cc) {
-    $('#en-phone').value = cleanPhone10(cc.phone || '');
-}
-/*
- * Show the same selected-contact card when
- * Add Entry is opened directly from a card.
- */
-var selectedNote =
-    $('#en-selected-note');
+          if($('#btn-toggle-additional')) $('#btn-toggle-additional').textContent = t('btn_add_details');
 
-if (
-    selectedNote &&
-    cc
-) {
-    var selectedPhone =
-        cleanPhone10(
-            cc.phone || ''
-        );
+          if (cc) {
+              renderSelectedContactCard(cc, false);
+              if ($('#en-phone')) $('#en-phone').value = cleanPhone10(cc.phone || '');
+          } else {
+              if ($('#en-search-container')) $('#en-search-container').style.display = 'block';
+              if ($('#en-selected-note')) $('#en-selected-note').style.display = 'none';
+          }
 
-    selectedNote.style.display =
-        'block';
-
-    selectedNote.innerHTML =
-        '<div class="selected-contact-card">' +
-
-            stampHTML(
-                cc,
-                false
-            ) +
-
-            '<div class="selected-contact-details">' +
-
-                '<div class="selected-contact-name">' +
-                    escapeHTML(
-                        cc.name || 'Contact'
-                    ) +
-                '</div>' +
-
-                (
-                    selectedPhone
-                        ? (
-                            '<div class="selected-contact-phone">' +
-                                escapeHTML(
-                                    selectedPhone
-                                ) +
-                            '</div>'
-                        )
-                        : ''
-                ) +
-
-                '<div class="selected-contact-label">' +
-                    'Existing contact selected' +
-                '</div>' +
-
-            '</div>' +
-
-        '</div>';
-}
           if($('#en-new-customer-fields')) $('#en-new-customer-fields').style.display='none';
           if($('#en-new-customer-fields-bottom')) $('#en-new-customer-fields-bottom').style.display='none';
           if($('#en-autocomplete')) $('#en-autocomplete').style.display='none';
@@ -10339,6 +10714,7 @@ if ($('#en-due')) {
     '#btn-settings-security',
     'click',
     function () {
+        if (!window.checkAuth()) return;
         closeOverlay(
             '#settingsOverlay'
         );
@@ -10687,13 +11063,27 @@ safeBind(
       });
 
       safeBind('#fabBtn', 'click', function(){
+        if (!window.checkAuth()) return;
+
+        if (
+            currentRoleMode === 'owner' &&
+            !isOwnerProfileSetup()
+        ) {
+            showToast('Please setup your business profile first');
+            configureProfilePopup(true);
+            openOverlay('#onboardOverlay', true);
+            return;
+        }
+
         selectedCustomerId = null;
+        if ($('#en-search-container')) $('#en-search-container').style.display = 'block';
         if ($('#en-customer-search')) {
-    $('#en-customer-search').disabled = false;
-}
-if($('#en-additional-details')) $('#en-additional-details').style.display='none';
+            $('#en-customer-search').disabled = false;
+            $('#en-customer-search').value = '';
+        }
+        if($('#en-additional-details')) $('#en-additional-details').style.display='none';
         if($('#btn-toggle-additional')) $('#btn-toggle-additional').textContent = t('btn_add_details');
-        if($('#en-customer-search')) $('#en-customer-search').value=''; if($('#en-autocomplete')) $('#en-autocomplete').style.display='none';
+        if($('#en-autocomplete')) $('#en-autocomplete').style.display='none';
         if($('#en-new-customer-fields')) $('#en-new-customer-fields').style.display='none';
         if($('#en-new-customer-fields-bottom')) $('#en-new-customer-fields-bottom').style.display='none';
         if($('#en-phone')) $('#en-phone').value=''; if($('#en-area')) $('#en-area').value='';
@@ -10767,7 +11157,10 @@ if ($('#en-due')) {
         closeOverlay('#onboardOverlay');
       });
       safeBind('#mg-history', 'click', function(){ if(!manageTargetId) return; historyCustomerId = manageTargetId; closeOverlay('#manageOverlay'); renderHistory(); openOverlay('#historyOverlay'); });
-      safeBind('#btn-settings-employees', 'click', function(){ closeOverlay('#settingsOverlay'); renderEmployeesList(); openOverlay('#employeeOverlay'); });
+      safeBind('#btn-settings-employees', 'click', function(){
+        if (!window.checkAuth()) return;
+        closeOverlay('#settingsOverlay'); renderEmployeesList(); openOverlay('#employeeOverlay');
+      });
       safeBind(
     '#btn-settings-help',
     'click',
@@ -10781,9 +11174,9 @@ safeBind(
     '#btn-feedback-bug',
     'click',
     function () {
-
-        openFeedbackForm('bug');
-
+        if (window.checkAuth()) {
+            openFeedbackForm('bug');
+        }
     }
 );
 
@@ -10792,9 +11185,9 @@ safeBind(
     '#btn-feedback-feature',
     'click',
     function () {
-
-        openFeedbackForm('feature');
-
+        if (window.checkAuth()) {
+            openFeedbackForm('feature');
+        }
     }
 );
 
@@ -10803,9 +11196,9 @@ safeBind(
     '#btn-feedback-general',
     'click',
     function () {
-
-        openFeedbackForm('general');
-
+        if (window.checkAuth()) {
+            openFeedbackForm('general');
+        }
     }
 );
 safeBind(
@@ -11289,6 +11682,7 @@ async function(
     '#btn-settings-role',
     'click',
     function () {
+        if (!window.checkAuth()) return;
 
         var targetMode =
             currentRoleMode ===
@@ -11314,6 +11708,7 @@ async function(
     '#btn-settings-profile',
     'click',
     function() {
+        if (!window.checkAuth()) return;
 
         closeOverlay(
             '#settingsOverlay'
@@ -11465,7 +11860,7 @@ $$('.rating-star').forEach(
     }
 );
 
-      $$('.radio-opt').forEach(function(btn){ btn.addEventListener('click', function(){ entryType=this.dataset.type; $$('.radio-opt').forEach(function(r){ r.classList.remove('selected'); }); this.classList.add('selected'); }); });
+      $$('.radio-opt').forEach(function(btn){ btn.addEventListener('click', function(){ entryType=this.dataset.type; $$('.radio-opt').forEach(function(r){ r.classList.remove('selected'); }); this.classList.add('selected'); updateEntryHeaderUI(entryType); }); });
 // NEW: Automatically request contacts when the user taps the search box
       safeBind('#en-customer-search', 'focus', function() {
           if ((!window.deviceContacts || window.deviceContacts.length === 0) && !window.hasRequestedContacts) {
@@ -11516,6 +11911,8 @@ $$('.rating-star').forEach(
 
         if(item.dataset.id === '__new__' || item.dataset.type === 'device'){
           selectedCustomerId = null;
+          if ($('#en-search-container')) $('#en-search-container').style.display = 'block';
+          if ($('#en-selected-note')) $('#en-selected-note').style.display = 'none';
           if(item.dataset.type === 'device') {
               $('#en-customer-search').value = item.dataset.name;
               $('#en-phone').value = cleanPhone10(item.dataset.phone || '');
@@ -11524,84 +11921,21 @@ $$('.rating-star').forEach(
           if($('#en-new-customer-fields-bottom')) $('#en-new-customer-fields-bottom').style.display='block';
           $('#en-autocomplete').style.display='none';
        } else {
-  var c = myCustById(item.dataset.id);
-  if (!c) return;
+          var c = myCustById(item.dataset.id);
+          if (!c) return;
 
-  selectedCustomerId = c.id;
+          selectedCustomerId = c.id;
+          $('#en-autocomplete').style.display = 'none';
 
-  $('#en-customer-search').value = c.name;
+          if ($('#en-new-customer-fields')) $('#en-new-customer-fields').style.display = 'none';
+          if ($('#en-new-customer-fields-bottom')) $('#en-new-customer-fields-bottom').style.display = 'none';
 
-  $('#en-autocomplete').style.display = 'none';
+          if ($('#en-phone')) {
+            $('#en-phone').value = cleanPhone10(c.phone || '');
+          }
 
-  if ($('#en-new-customer-fields')) {
-    $('#en-new-customer-fields').style.display = 'none';
-  }
-
-  if ($('#en-new-customer-fields-bottom')) {
-    $('#en-new-customer-fields-bottom').style.display = 'none';
-  }
-
-  // IMPORTANT:
-  // Always populate the phone field from the selected customer.
-  if ($('#en-phone')) {
-    $('#en-phone').value =
-      cleanPhone10(c.phone || '');
-  }
-          var note =
-    $('#en-selected-note');
-
-if (note) {
-    var selectedPhone =
-        cleanPhone10(
-            c.phone || ''
-        );
-
-    note.style.display =
-        'block';
-
-    note.innerHTML =
-        '<div class="selected-contact-card">' +
-
-            /*
-             * Existing circular initials/profile icon.
-             */
-            stampHTML(
-                c,
-                false
-            ) +
-
-            /*
-             * Contact name and phone beside the icon.
-             */
-            '<div class="selected-contact-details">' +
-
-                '<div class="selected-contact-name">' +
-                    escapeHTML(
-                        c.name || 'Contact'
-                    ) +
-                '</div>' +
-
-                (
-                    selectedPhone
-                        ? (
-                            '<div class="selected-contact-phone">' +
-                                escapeHTML(
-                                    selectedPhone
-                                ) +
-                            '</div>'
-                        )
-                        : ''
-                ) +
-
-                '<div class="selected-contact-label">' +
-                    'Existing contact selected' +
-                '</div>' +
-
-            '</div>' +
-
-        '</div>';
-}
-        }
+          renderSelectedContactCard(c, true);
+       }
       });
 
 
@@ -12591,6 +12925,7 @@ if (!tutorialDone) {
     '#btn-feedback-rate',
     'click',
     function () {
+        if (!window.checkAuth()) return;
 
         selectedRating = 0;
 
