@@ -44,165 +44,149 @@ const whatsappConfig = {
  * ====================================================
  */
 
-const engagementNotifications = [
-  {
-    title: "Aaj ka hisaab? 👀",
-    body:
-      "2 minute nikalo aur aaj ka ledger update kar lo 📒",
-  },
-  {
-    title: "Kal pe mat chhodo 😌",
-    body:
-      "Aaj ka hisaab aaj hi complete kar lo.",
-  },
-  {
-    title:
-      "Customer ka 'kal de dunga' yaad hai? 👀",
-    body:
-      "Pending collections ek baar check kar lo 💰",
-  },
-  {
-    title:
-      "Hisaab yaad rakhna mushkil hai? 😵‍💫",
-    body:
-      "Isliye toh Collection Book hai 😌",
-  },
-  {
-    title:
-      "Business busy hai? 📈",
-    body:
-      "Hisaab messy nahi hona chahiye. Ledger update kar lo.",
-  },
-  {
-    title:
-      "Aaj kisne payment kiya? 👀",
-    body:
-      "Collection Book ko bhi bata do 😄",
-  },
-  {
-    title:
-      "Khata check kiya? 📒",
-    body:
-      "Pending payments ko pending mat rehne do.",
-  },
-  {
-    title:
-      "Ek chhota reminder 😌",
-    body:
-      "Sales aur payments record karna mat bhoolna.",
-  },
-  {
-    title:
-      "Calculator ko chhutti do 😎",
-    body:
-      "Hisaab Collection Book mein update kar lo.",
-  },
-  {
-    title:
-      "Business ka memory card 🧠",
-    body:
-      "Jo yaad nahi rakhna, Collection Book mein likh do.",
-  },
-  {
-    title:
-      "Khata updated hai? ✅",
-    body:
-      "Pending collections ek baar check kar lo.",
-  },
-  {
-    title:
-      "Paise yaad rakhne ka kaam humara 😌",
-    body:
-      "Bas apna ledger updated rakho.",
-  },
-  {
-    title:
-      "Khata shaant kyun hai? 👀",
-    body:
-      "Business update karna reh gaya kya?",
-  },
-  {
-    title:
-      "Kisi ka payment pending hai? 💰",
-    body:
-      "Collection Book kholo aur ek baar check kar lo.",
-  },
-  {
-    title:
-      "Hisaab clear, tension clear 😌",
-    body:
-      "Apna latest ledger update kar lo.",
-  },
-  {
-    title:
-      "Kuch record karna reh toh nahi gaya? 👀",
-    body:
-      "Sales aur payments ek baar verify kar lo.",
-  },
-  {
-    title:
-      "Udhaar ka hisaab ready hai? 📒",
-    body:
-      "Pending entries ko Collection Book mein update kar lo.",
-  },
-  {
-    title:
-      "2 minute ka kaam ⏱️",
-    body:
-      "Ledger update karo aur hisaab tension-free rakho.",
-  },
-  {
-    title:
-      "Payment aayi? 💸",
-    body:
-      "Record kar do, warna baad mein yaad karna padega 😄",
-  },
-  {
-    title:
-      "Khata kholne ka time 👀",
-    body:
-      "Pending dues aur recent payments check kar lo.",
-  },
-];
+/*
+ * ====================================================
+ * COLLECTION BOOK LOCALIZED ENGAGEMENT TEMPLATES
+ * ====================================================
+ */
 
-function getRandomEngagementNotification(
-  lastTitle,
-) {
-  let candidates =
-    engagementNotifications;
+const engagementNotifications = {
+  en: [
+    { title: "Aaj ka hisaab? 👀", body: "2 minute nikalo aur aaj ka ledger update kar lo 📒" },
+    { title: "Kal pe mat chhodo 😌", body: "Aaj ka hisaab aaj hi complete kar lo." },
+    { title: "Customer ka 'kal de dunga' yaad hai? 👀", body: "Pending collections ek baar check kar lo 💰" },
+    { title: "Hisaab yaad rakhna mushkil hai? 😵‍💫", body: "Isliye toh Collection Book hai 😌" },
+    { title: "Business busy hai? 📈", body: "Hisaab messy nahi hona chahiye. Ledger update kar lo." },
+    { title: "Aaj kisne payment kiya? 👀", body: "Collection Book ko bhi bata do 😄" },
+    { title: "Khata check kiya? 📒", body: "Pending payments ko pending mat rehne do." },
+    { title: "Ek chhota reminder 😌", body: "Sales aur payments record karna mat bhoolna." },
+    { title: "Calculator ko chhutti do 😎", body: "Hisaab Collection Book mein update kar lo." },
+    { title: "Business ka memory card 🧠", body: "Jo yaad nahi rakhna, Collection Book mein likh do." },
+    { title: "Khata updated hai? ✅", body: "Pending collections ek baar check kar lo." },
+    { title: "Paise yaad rakhne ka kaam humara 😌", body: "Bas apna ledger updated rakho." },
+    { title: "Khata shaant kyun hai? 👀", body: "Business update karna reh gaya kya?" },
+    { title: "Kisi ka payment pending hai? 💰", body: "Collection Book kholo aur ek baar check kar lo." },
+    { title: "Hisaab clear, tension clear 😌", body: "Apna latest ledger update kar lo." },
+    { title: "Kuch record karna reh toh nahi gaya? 👀", body: "Sales aur payments ek baar verify kar lo." },
+    { title: "Udhaar ka hisaab ready hai? 📒", body: "Pending entries ko Collection Book mein update kar lo." },
+    { title: "2 minute ka kaam ⏱️", body: "Ledger update karo aur hisaab tension-free rakho." },
+    { title: "Payment aayi? 💸", body: "Record kar do, warna baad mein yaad karna padega 😄" },
+    { title: "Khata kholne ka time 👀", body: "Pending dues aur recent payments check kar lo." }
+  ],
+  hi: [
+    { title: "आज का हिसाब? 👀", body: "2 मिनट निकालो और आज का लेजर अपडेट कर लो 📒" },
+    { title: "कल पे मत छोड़ो 😌", body: "आज का हिसाब आज ही पूरा कर लें।" },
+    { title: "पेमेंट मिली? 💸", body: "अभी रिकॉर्ड करें, वरना बाद में याद करना पड़ेगा 😄" },
+    { title: "खाता अपडेट है? ✅", body: "बकाया कलेक्शन एक बार चेक कर लें।" },
+    { title: "बिजनेस का मेमोरी कार्ड 🧠", body: "जो याद नहीं रखना, कलेक्शन बुक में लिख दें।" },
+    { title: "उधार का हिसाब तैयार? 📒", body: "पेंडिंग एंट्रीज को आज ही अपडेट करें।" },
+    { title: "कैलकुलेटर को छुट्टी दो 😎", body: "हिसाब कलेक्शन बुक में सुरक्षित रखें।" },
+    { title: "हिसाब क्लियर, टेंशन क्लियर 😌", body: "अपना लेटेस्ट लेजर अपडेट कर लें।" },
+    { title: "आज किसने पेमेंट किया? 👀", body: "कलेक्शन बुक को भी बता दो 😄" },
+    { title: "बिजी दिन रहा? 📈", body: "हिसाब गड़बड़ नहीं होना चाहिए। लेजर देख लें।" },
+    { title: "कस्टमर का वादा याद है? 👀", body: "पेंडिंग कलेक्शन चेक करें।" },
+    { title: "किताबें बंद करने का समय 📒", body: "आज की सारी सेल और पेमेंट रिकॉर्ड कर लें।" },
+    { title: "छोटा सा रिमाइंडर 😌", body: "अपनी उधारी और वसूली का हिसाब रखें।" },
+    { title: "हिसाब याद रखना मुश्किल है? 😵‍💫", body: "इसलिए तो कलेक्शन बुक है 😌" },
+    { title: "आज की कमाई का रिकॉर्ड 💰", body: "लेजर अपडेट करें और रिलैक्स करें।" },
+    { title: "आपका डिजिटल मुनीम 🧠", body: "हिसाब-किताब अब उंगलियों पर।" },
+    { title: "पैसों का हिसाब, पक्का हिसाब ✅", body: "कलेक्शन बुक में एंट्री करना न भूलें।" },
+    { title: "लेजर चेक किया? 👀", body: "आज की पेंडिंग ड्यूज़ और पेमेंट देख लें।" },
+    { title: "सिर्फ 2 मिनट का काम ⏱️", body: "लेजर अपडेट करें और बेफिक्र हो जाएं।" },
+    { title: "बिजनेस बढ़ेगा, जब हिसाब रहेगा सही 🚀", body: "आज की एंट्रीज पूरी करें।" }
+  ],
+  bn: [
+    { title: "আজকের হিসাব? 👀", body: "২ মিনিট সময় দিন এবং আজকের লেজার আপডেট করুন 📒" },
+    { title: "বকেয়া চেক করেছেন? 📒", body: "পেন্ডিং পেমেন্টগুলো একবার দেখে নিন।" },
+    { title: "পেমেন্ট পেয়েছেন? 💸", body: "এখনই রেকর্ড করুন, নাহলে পরে মনে রাখা কঠিন হবে 😄" },
+    { title: "হিসাব ক্লিয়ার, টেনশন ক্লিয়ার 😌", body: "আপনার লেজারটি আপডেট রাখুন।" },
+    { title: "ব্যবসায় ব্যস্ত? 📈", body: "হিসাব যেন এলোমেলো না হয়। লেজার আপডেট করুন।" },
+    { title: "কালকের জন্য ফেলে রাখবেন না 😌", body: "আজকের হিসাব আজই শেষ করুন।" },
+    { title: "কাস্টমারের কথা মনে আছে? 👀", body: "বকেয়া টাকা আদায়ের জন্য লেজার দেখুন।" },
+    { title: "ব্যবসায়ের মেমরি কার্ড 🧠", body: "যা মনে রাখতে চান না, কালেকশন বুক-এ লিখে রাখুন।" },
+    { title: "ক্যালকুলেটরকে ছুটি দিন 😎", body: "সব হিসাব কালেকশন বুক-এ রেকর্ড করুন।" },
+    { title: "আজ কে পেমেন্ট করল? 👀", body: "কালেকশন বুক-কেও জানিয়ে দিন 😄" },
+    { title: "উধারের হিসাব কি তৈরি? 📒", body: "পেন্ডিং এন্ট্রিগুলো আজই আপডেট করুন।" },
+    { title: "মাত্র ২ মিনিটের কাজ ⏱️", body: "লেজার আপডেট করে নিশ্চিন্ত থাকুন।" },
+    { title: "হিসাব মনে রাখা কঠিন? 😵‍💫", body: "আপনার জন্য আছে কালেকশন বুক 😌" },
+    { title: "হিসাব ঠিক তো বিজনেস ঠিক ✅", body: "আজকের এন্ট্রিগুলো সেরে ফেলুন।" },
+    { title: "বিকেলের চা আর লেজার আপডেট ☕", body: "আজকের সব লেনদেন রেকর্ড করুন।" },
+    { title: "ডিজিটাল খাতা চেক করুন 👀", body: "বকেয়া আর পেমেন্টগুলো যাচাই করে নিন।" },
+    { title: "আজকের ইনকাম রেকর্ড করুন 💰", body: "কালেকশন বুক আপডেট রাখুন।" },
+    { title: "সহজ হিসাব, সহজ ব্যবসা 🚀", body: "লেজার আপডেট করে ফেলুন।" }
+  ],
+  mr: [
+    { title: "आजचा हिशोब? 👀", body: "२ मिनिटे काढा आणि आजचा लेजर अपडेट करा 📒" },
+    { title: "पेमेंट मिळाले? 💸", body: "आत्ताच रेकॉर्ड करा, नाहीतर नंतर लक्षात ठेवावे लागेल 😄" },
+    { title: "खाते अपडेट आहे का? ✅", body: "थकीत येणे एकदा तपासून घ्या।" },
+    { title: "हिशोब क्लिअर, टेन्शन क्लिअर 😌", body: "तुमचा लेजर अपडेट ठेवा।" },
+    { title: "व्यवसायात व्यस्त आहात? 📈", body: "हिशोब विस्कळीत होऊ देऊ नका. लेजर अपडेट करा।" },
+    { title: "उद्यावर टाकू नका 😌", body: "आजचा हिशोब आजच पूर्ण करा।" },
+    { title: "ग्राहकाचे आश्वासन आठवतेय? 👀", body: "थकीत वसुलीसाठी लेजर चेक करा।" },
+    { title: "व्यवसायाचे मेमरी कार्ड 🧠", body: "जे लक्षात ठेवायचे नाही, ते कलेक्शन बुकमध्ये लिहा।" },
+    { title: "कॅल्क्युलेटरला सुट्टी द्या 😎", body: "सर्व हिशोब कलेक्शन बुकमध्ये सुरक्षित ठेवा।" },
+    { title: "आज कोणी पेमेंट केले? 👀", body: "कलेक्शन बुकला पण सांगा 😄" },
+    { title: "उधारीचा हिशोब तयार आहे का? 📒", body: "प्रलंबित नोंदी आजच पूर्ण करा।" },
+    { title: "फक्त २ मिनिटांचे काम ⏱️", body: "लेजर अपडेट करा आणि निर्धास्त व्हा।" },
+    { title: "हिशोब लक्षात ठेवणे कठीण आहे? 😵‍💫", body: "त्यासाठीच कलेक्शन बुक आहे 😌" },
+    { title: "हिशोब पक्का, व्यवसाय नक्की ✅", body: "आजच्या नोंदी पूर्ण करा।" },
+    { title: "डिजिटल लेजर तपासा 👀", body: "आजचे येणे आणि देणे तपासून घ्या।" },
+    { title: "आजची कमाई रेकॉर्ड करा 💰", body: "लेजर अपडेट ठेवा।" },
+    { title: "व्यवसाय वाढवा, हिशोब ठेवा 🚀", body: "आजच्या नोंदी अपडेट करा।" }
+  ],
+  ta: [
+    { title: "இன்றைய கணக்கு? 👀", body: "2 நிமிடம் ஒதுக்கி இன்றைய லெட்ஜரை அப்டேட் செய்யவும் 📒" },
+    { title: "வசூல் நிலுவையில் உள்ளதா? 💰", body: "நிலுவையில் உள்ள வசூல்களை ஒருமுறை சரிபார்க்கவும்." },
+    { title: "பணம் கிடைத்ததா? 💸", body: "உடனடியாகப் பதிவு செய்யுங்கள், இல்லையெனில் பிறகு நினைவில் வைக்க வேண்டியிருக்கும் 😄" },
+    { title: "வியாபாரத்தின் நினைவக அட்டை 🧠", body: "நினைவில் வைக்க விரும்பாததை கலெக்ஷன் புக்கில் எழுதி விடுங்கள்." },
+    { title: "கணக்கு சரியாக இருந்தால் நிம்மதி 😌", body: "உங்கள் லெட்ஜரை அப்டேட் செய்யுங்கள்." },
+    { title: "நாளைக்கு என்று தள்ளிப்போடாதீர்கள் 😌", body: "இன்றைய கணக்கை இன்றே முடியுங்கள்." },
+    { title: "வாடிக்கையாளரின் வாக்குறுதி நினைவிருக்கிறதா? 👀", body: "நிலுவையில் உள்ள வசூலைச் சரிபார்க்கவும்." },
+    { title: "கால்குலேட்டருக்கு விடுமுறை கொடுங்கள் 😎", body: "கணக்குகளை கலெக்ஷன் புக்கில் சேமிக்கவும்." },
+    { title: "இன்று யார் பணம் செலுத்தினார்கள்? 👀", body: "கலெக்ஷன் புக்கிலும் பதிவு செய்யுங்கள் 😄" },
+    { title: "வியாபாரத்தில் பிஸியா? 📈", body: "கணக்கு குழப்பமாக இருக்கக்கூடாது. லெட்ஜரை அப்டேட் செய்யுங்கள்." },
+    { title: "கடன்கணக்கு தயாரா? 📒", body: "நிலுவையில் உள்ள பதிவுகளை இன்று அப்டேட் செய்யவும்." },
+    { title: "வெறும் 2 நிமிட வேலை ⏱️", body: "லெட்ஜரை அப்டேட் செய்து கவலையின்றி இருங்கள்." },
+    { title: "கணக்குகளை நினைவில் வைப்பது கடினமா? 😵‍💫", body: "அதற்காகத்தான் கலெக்ஷன் புக் 😌" },
+    { title: "டிஜிட்டல் லெட்ஜரைச் சரிபார்க்கவும் 👀", body: "இன்றைய வரவு செலவுகளைப் பாருங்கள்." },
+    { title: "இன்றைய லாபத்தைப் பதிவு செய்யுங்கள் 💰", body: "லெட்ஜரை அப்டேட் செய்யுங்கள்." },
+    { title: "சரியான கணக்கு, சிறந்த வியாபாரம் ✅", body: "இன்றைய எண்ட்ரிகளை முடிக்கவும்." },
+    { title: "உங்கள் வணிக முனீம் 🧠", body: "கணக்குகள் இப்போது உங்கள் விரல் நுனியில்." }
+  ],
+  te: [
+    { title: "ఈరోజు లెక్కలు? 👀", body: "2 నిమిషాలు కేటాయించి ఈరోజు లెడ్జర్‌ని అప్‌డేట్ చేయండి 📒" },
+    { title: "బకాయిలు ఉన్నాయా? 💰", body: "పెండింగ్ వసూళ్లను ఒకసారి తనిఖీ చేయండి." },
+    { title: "డబ్బులు అందాయా? 💸", body: "వెంటనే రికార్డ్ చేయండి, లేదంటే తర్వాత గుర్తుంచుకోవడం కష్టం 😄" },
+    { title: "వ్యాపార మెమరీ కార్డ్ 🧠", body: "గుర్తుంచుకోలేని వాటిని కలెక్షన్ బుక్ లో రాసుకోండి." },
+    { title: "లెక్క క్లియర్, టెన్షన్ క్లియర్ 😌", body: "మీ లేటెస్ట్ లెడ్జర్ ని అప్‌డేట్ చేయండి." },
+    { title: "రేపటి వరకు ఆగకండి 😌", body: "ఈరోజు లెక్క ఈరోజే పూర్తి చేయండి." },
+    { title: "కస్టమర్ మాట గుర్తుందా? 👀", body: "పెండింగ్ వసూళ్ల కోసం లెడ్జర్ చూడండి." },
+    { title: "క్యాలిక్యులేటర్ కు సెలవు ఇవ్వండి 😎", body: "అన్ని లెక్కలు కలెక్షన్ బుక్ లో భద్రపరుచుకోండి." },
+    { title: "ఈరోజు ఎవరు పేమెంట్ చేశారు? 👀", body: "కలెక్షన్ బుక్ లో కూడా ఎంట్రీ చేయండి 😄" },
+    { title: "వ్యాపారంలో బిజీగా ఉన్నారా? 📈", body: "లెక్కలు అస్తవ్యస్తం కాకూడదు. లెడ్జర్ ని అప్‌డేట్ చేయండి." },
+    { title: "ఉధారి లెక్క రెడీగా ఉందా? 📒", body: "పెండింగ్ ఎంట్రీలను ఈరోజే పూర్తి చేయండి." },
+    { title: "కేవలం 2 నిమిషాల పని ⏱️", body: "లెడ్జర్ ని అప్‌డేట్ చేసి ప్రశాంతంగా ఉండండి." },
+    { title: "లెక్కలు గుర్తుంచుకోవడం కష్టమా? 😵‍💫", body: "అందుకే మీ కోసం కలెక్షన్ బుక్ 😌" },
+    { title: "డిజిటల్ లెడ్జర్ ని చెక్ చేయండి 👀", body: "ఈరోజు లావాదేవీలను ఒకసారి చూడండి." },
+    { title: "ఈరోజు ఆదాయాన్ని రికార్డ్ చేయండి 💰", body: "లెడ్జర్ ని అప్‌డేట్ చేసుకోండి." },
+    { title: "లెక్క పక్కా, వ్యాపారం పక్కా ✅", body: "ఈరోజు ఎంట్రీలు పూర్తి చేయండి." },
+    { title: "మీ డిజిటల్ అకౌంటెంట్ 🧠", body: "లెక్కలన్నీ ఇక మీ వేలి చివర." }
+  ]
+};
 
-  /*
-   * Avoid sending the exact same notification
-   * title twice in a row to the same user.
-   */
+function getRandomEngagementNotification(lang, lastTitle) {
+  const candidates = engagementNotifications[lang] || engagementNotifications['en'];
+  let filtered = candidates;
+
   if (lastTitle) {
-    candidates =
-      engagementNotifications.filter(
-        (item) =>
-          item.title !== lastTitle,
-      );
+    filtered = candidates.filter(item => item.title !== lastTitle);
   }
 
-  /*
-   * Defensive fallback.
-   */
-  if (candidates.length === 0) {
-    candidates =
-      engagementNotifications;
-  }
+  if (filtered.length === 0) filtered = candidates;
 
-  const randomIndex =
-    Math.floor(
-      Math.random() *
-      candidates.length
-    );
-
-  return candidates[
-    randomIndex
-  ];
+  const randomIndex = Math.floor(Math.random() * filtered.length);
+  return filtered[randomIndex];
 }
-
-
 
 async function sendWhatsAppAppInvitation({
   targetPhone,
@@ -1012,8 +996,10 @@ async function sendEngagementNotifications() {
      * Avoid repeating the user's previous
      * engagement notification.
      */
+    const userLang = user['cb-lang'] || 'en';
     const selectedNotification =
       getRandomEngagementNotification(
+        userLang,
         user.lastEngagementNotificationTitle,
       );
 
@@ -1161,23 +1147,59 @@ async function sendEngagementNotifications() {
  * DAILY ENGAGEMENT NOTIFICATION
  * ====================================================
  *
- * Every day at 7:00 PM IST.
+ * Triggers twice daily at random-looking odd times:
+ * 1. Morning Window: 11:00 AM - 2:00 PM IST
+ * 2. Evening Window: 5:00 PM - 8:30 PM IST
+ *
+ * The function runs frequently and selects one deterministic
+ * "random odd" slot for each window based on the current date.
  */
 exports.sendDailyEngagementNotification =
   onSchedule(
     {
-      schedule:
-        "30 11,17 * * *",
-
-      timeZone:
-        "Asia/Kolkata",
-
-      region:
-        "asia-south1",
+      schedule: "7,23,37,53 11-13,17-20 * * *",
+      timeZone: "Asia/Kolkata",
+      region: "asia-south1",
     },
 
     async () => {
-      await sendEngagementNotifications();
+      const now = new Date();
+      // IST is UTC + 5.5 hours
+      const ist = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
+      const hour = ist.getUTCHours();
+      const minute = ist.getUTCMinutes();
+
+      const dateKey = getIndiaDateKey(now);
+
+      // Deterministic seed for today to ensure a single stable selection per day
+      let hash = 0;
+      for (let i = 0; i < dateKey.length; i++) {
+        hash = ((hash << 5) - hash) + dateKey.charCodeAt(i);
+        hash |= 0;
+      }
+      const seed = Math.abs(hash);
+
+      const targetMins = [7, 23, 37, 53];
+
+      // Morning Window (11:00 - 14:00): 12 potential slots (4 per hour * 3 hours)
+      const morningSlotIndex = seed % 12;
+      const morningHour = 11 + Math.floor(morningSlotIndex / 4);
+      const morningMin = targetMins[morningSlotIndex % 4];
+
+      // Evening Window (17:00 - 20:30): 14 potential slots (4 per hour * 3.5 hours)
+      const eveningSlotIndex = (seed >> 4) % 14;
+      const eveningHour = 17 + Math.floor(eveningSlotIndex / 4);
+      const eveningMin = targetMins[eveningSlotIndex % 4];
+
+      if (
+        (hour === morningHour && minute === morningMin) ||
+        (hour === eveningHour && minute === eveningMin)
+      ) {
+        console.log(`Triggering daily engagement for today's slot: ${hour}:${minute}`);
+        await sendEngagementNotifications();
+      } else {
+        // Quiet skip for other intervals
+      }
     },
   );
 

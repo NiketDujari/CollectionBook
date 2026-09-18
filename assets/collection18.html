@@ -28,6 +28,13 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>
+    // Initialize PDF.js worker
+    if (window['pdfjs-dist/build/pdf']) {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+  </script>
   <style>
     :root{
       --indigo:#2B3A67; --indigo-deep:#182449; --indigo-tint:#e7e9f2;
@@ -716,6 +723,8 @@
     .btn-purch { background: var(--indigo) !important; color: var(--on-accent); }
 
     .overlay{position:fixed;inset:0;background:rgba(42,38,34,.6);display:none;align-items:flex-end;justify-content:center;z-index:1000;}
+    #historyOverlay { z-index: 1010; }
+    #entryOverlay { z-index: 1020; }
     .overlay.open{display:flex;}
     .sheet{background:var(--paper);width:100%;max-width:650px;border-radius:20px 20px 0 0;padding:22px 20px 26px;max-height:92vh;overflow-y:auto;animation:slideup .25s ease;}
     .entry-header-simple {
@@ -830,6 +839,34 @@
     .history-row .hr-amt.dr{color:var(--madder);}
     .history-row .hr-amt.cr{color:var(--sage);}
     .history-row .hr-bal{font-size:.68rem;color:var(--muted);text-align:right;margin-top:2px;font-variant-numeric:tabular-nums;}
+    .hr-actions { position: absolute; top: 12px; right: 10px; }
+    .hr-menu-trigger { background: none; border: none; padding: 8px; color: var(--muted); cursor: pointer; font-size: 1.1rem; line-height: 1; border-radius: 50%; transition: background 0.2s; opacity: 0.7; }
+    .hr-menu-trigger:active { background: var(--khadi-line); }
+    .hr-menu-dropdown { position: absolute; right: 0; top: 100%; margin-top: 4px; background: var(--paper); border: 1px solid var(--khadi-line); border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); z-index: 100; display: none; min-width: 160px; overflow: hidden; animation: menuPop 0.15s ease-out; }
+    @keyframes menuPop { from { opacity: 0; transform: scale(0.9) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+    .hr-menu-dropdown.open { display: block; }
+    .hr-menu-item { width: 100%; border: none; background: none; padding: 12px 16px; display: flex; align-items: center; gap: 10px; font-size: 0.85rem; font-weight: 600; color: var(--charcoal); text-align: left; transition: background 0.2s; }
+    .hr-menu-item:hover { background: var(--khadi); }
+    .hr-menu-item svg { width: 16px; height: 16px; color: var(--indigo); stroke-width: 2.2; }
+    .hr-menu-item.danger { color: var(--madder); }
+    .hr-menu-item.danger svg { color: var(--madder); }
+
+    /* Invoice Preview Overlay */
+    .preview-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 5000; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+    .preview-overlay.open { display: flex; }
+    .preview-card { background: white; width: 100%; max-width: 500px; height: 85vh; border-radius: 20px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 20px 50px rgba(0,0,0,0.4); animation: slideup 0.3s ease; }
+    .preview-header { padding: 16px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: var(--paper); }
+    .preview-header h3 { margin: 0; font-size: 1.1rem; color: var(--indigo); }
+    .preview-close { background: none; border: none; font-size: 1.5rem; color: var(--muted); cursor: pointer; }
+    .preview-body { flex: 1; overflow: auto; padding: 20px; background: #f5f5f5; display: flex; justify-content: center; }
+    .preview-iframe { width: 100%; height: 100%; border: none; background: white; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .preview-footer { padding: 16px 20px; border-top: 1px solid #eee; display: flex; gap: 12px; background: var(--paper); }
+    .preview-footer .btn { flex: 1; padding: 12px; font-size: 0.9rem; }
+    html.dark-mode .preview-card { background: #1a1a1a; }
+    html.dark-mode .preview-header, html.dark-mode .preview-footer { background: #080808; border-color: #2D333D; }
+    html.dark-mode .preview-footer .btn.secondary { background: #1F2226; border-color: #30363D; color: #FFFFFF; }
+    html.dark-mode .preview-body { background: #000; }
+
     .confirm-mini{background:var(--turmeric);color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:.72rem;cursor:pointer;font-weight:700;margin-top:6px;}
 
     .toast{position:fixed;left:50%;bottom:100px;transform:translateX(-50%);background:var(--indigo-deep);color:var(--on-accent);padding:14px 22px;border-radius:999px;font-size:.9rem;font-weight:500;box-shadow:0 6px 20px rgba(0,0,0,.25);opacity:0;pointer-events:none;transition:opacity .25s ease, bottom .25s ease;z-index:3000;max-width:88vw;text-align:center;}
@@ -4450,6 +4487,10 @@ nav.tabs button .count {
           <input id="en-due" type="hidden">
         </div>
       </div>
+      <div class="field">
+        <label data-i18n="lbl_description">Description</label>
+        <textarea id="en-item-desc" data-i18n-ph="ph_item_desc" placeholder="Details of the items or services..." rows="2"></textarea>
+      </div>
       <div id="en-new-customer-fields-bottom" style="display:none;">
         <div class="field"><label data-i18n="lbl_priv_note">Private notes (only you see this)</label><textarea id="en-notes" data-i18n-ph="ph_priv_note" placeholder="Anything you don't want to share" rows="2"></textarea></div>
       </div>
@@ -4457,6 +4498,10 @@ nav.tabs button .count {
     <div class="toggle-row">
       <input type="checkbox" id="en-confirmed" checked>
       <label for="en-confirmed"><span data-i18n="lbl_cust_conf">Contact confirmed this transaction</span><span class="hint" data-i18n="hint_cust_conf">Uncheck if waiting for their approval.</span></label>
+    </div>
+    <div class="toggle-row" id="en-wa-pdf-row">
+      <input type="checkbox" id="en-send-wa-pdf">
+      <label for="en-send-wa-pdf"><span data-i18n="lbl_send_wa_pdf">Generate Invoice to be shared with the contact</span></label>
     </div>
     <div class="sheet-actions">
       <button class="btn secondary" id="en-cancel" data-i18n="btn_cancel">Cancel</button>
@@ -4633,6 +4678,31 @@ nav.tabs button .count {
     <div class="custom-modal-actions">
       <button class="btn secondary" id="customConfirmCancel">Cancel</button>
       <button class="btn danger" id="customConfirmOk">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- Invoice Preview Overlay -->
+<div class="preview-overlay" id="invoicePreviewOverlay">
+    <div class="preview-card">
+    <div class="preview-header">
+      <h3 id="previewTitle" data-i18n="head_preview_inv">Invoice Preview</h3>
+      <button type="button" class="preview-close" id="btn-preview-close">×</button>
+    </div>
+    <div class="preview-body" style="padding: 0;">
+      <div id="pdf-viewer-container" style="width: 100%; height: 100%; overflow: auto; display: flex; flex-direction: column; align-items: center; background: white; padding: 0;">
+        <canvas id="pdf-render-canvas" style="width: 100%; height: auto; display: block;"></canvas>
+      </div>
+    </div>
+    <div class="preview-footer">
+      <button type="button" class="btn secondary" id="btn-preview-download" style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download
+      </button>
+      <button type="button" class="btn primary" id="btn-preview-share" style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+        Share
+      </button>
     </div>
   </div>
 </div>
@@ -4865,6 +4935,9 @@ nav.tabs button .count {
     var eventsBound = false;
     var pdfRetryCount = 0;
     var currentRoleMode = 'owner'; // 'owner' or 'employee'
+    var editingEntryId = null, editingPaymentId = null;
+    var currentPreviewPdf = null;
+    var currentPreviewFilename = '';
 
     var cbTutorialSteps = [
     { target: '#screen-dashboard .stats-grid', icon: '📊', titleKey: 'tour_step1_title', textKey: 'tour_step1_text' },
@@ -4941,20 +5014,23 @@ nav.tabs button .count {
 
     const i18n = {
       en: {
+        btn_view_inv: "View Invoice", btn_edit: "Edit",
         guide_title: "Start Your Ledger", guide_text: "Your collection book is empty. Choose an action below to record your first transaction.", guide_btn_sale: "+ Add Sale", guide_btn_purch: "- Add Purchase",
         app_sub: "Credit & Ledger Management", btn_setup: "Set up", nav_dash: "Dashboard", nav_collect: "To Collect", nav_pay: "To Pay", nav_cust: "Contacts", nav_fraud: "Fraud Alerts",
         stat_rcv: "Total Receivables", stat_pay: "Total Payables", stat_ovd: "Overdue Entries", stat_cust: "Total Contacts",
         rem_head: "Payment Reminders", rem_sub: "Overdue & due within 7 days", col_head: "To Collect", col_sub: "Contacts who need to pay you",
         pay_head: "To Pay", pay_sub: "Suppliers & parties you owe", btn_add_entry: "New Ledger Entry", btn_add_pay: "Add Payment", btn_ledger: "Ledger",
         type_sale: "Sale (To Collect)", type_purch: "Purchase (To Pay)", txt_balance: "Balance", txt_last: "Last", txt_entries: "entries",
-        sale: "Sale", purchase: "Purchase", payment: "Payment", btn_confirm: "Confirm", btn_del: "Del", txt_loading: "Opening your collection book…",
+        sale: "Sale", purchase: "Purchase", payment: "Payment", btn_confirm: "Confirm", btn_del: "Delete", txt_loading: "Opening your collection book…",
+        head_preview_inv: "Invoice Preview", head_preview_receipt: "Receipt Preview", btn_view_receipt: "View Receipt", btn_receipt: "Receipt",
+        lbl_send_wa_receipt: "Generate Receipt to be shared with the contact",
         setup_sub: "This label is stored privately and is never shared with anyone.", lbl_name: "Your Name", ph_name: "e.g. Ramesh Bhai",
         lbl_biz: "Business Name", ph_biz: "e.g. Sharma Traders", lbl_gst: "GST Number (Optional)", ph_gst: "e.g. 29ABCDE1234F1Z5",
         lbl_area: "City / Market Area (Optional)", ph_area: "e.g. Main Market, Delhi", btn_skip: "Cancel", btn_save_prof: "Save Profile", btn_add_cust: "+ Add Entry",
         btn_reset: "Reset my data on this device", lbl_cust_party: "Contact / Party Name", ph_search_cust: "Search existing or add new…", lbl_phone: "Phone",
         lbl_txn_type: "Transaction Type", lbl_gross_amt: "Gross Amount (₹)", lbl_discount: "Discount (₹)", lbl_inv_date: "Invoice Date",
-        lbl_due_date: "Due Date (opt)", lbl_ref: "Ref / Invoice No.", ph_ref: "e.g. Bill No. 994", lbl_cust_conf: "Contact confirmed this transaction",
-        hint_cust_conf: "Uncheck if waiting for their approval.", btn_cancel: "Cancel", btn_save_entry: "Save Entry", lbl_amt: "Amount (₹)",
+        lbl_due_date: "Due Date (opt)", lbl_description: "Description", lbl_ref: "Ref / Invoice No.", ph_ref: "e.g. Bill No. 994", ph_item_desc: "Details of the items or services...", lbl_cust_conf: "Contact confirmed this transaction",
+        hint_cust_conf: "Uncheck if waiting for their approval.", lbl_send_wa_pdf: "Generate Invoice to be shared with the contact", btn_cancel: "Cancel", btn_save_entry: "Save Entry", lbl_amt: "Amount (₹)",
         lbl_date: "Date", lbl_pay_ref: "Payment Ref / Note", ph_pay_ref: "e.g. UPI / Cash", lbl_pay_conf: "Payment received & confirmed",
         hint_pay_conf: "Uncheck if waiting for funds to clear.", btn_save_pay: "Save Payment", head_manage: "Manage Contact",
         lbl_priv_note: "Private notes (only you see this)", ph_priv_note: "Anything you don't want to share", div_trust: "Trust rating (private, for your own reference)",
@@ -5087,20 +5163,23 @@ btn_take_tour: "Take App Tour", tour_badge: "✨ QUICK TOUR", btn_tour_skip: "Sk
         btn_confirm_lang: "Confirm Selection"
       },
       hi: {
+        btn_view_inv: "चालान देखें", btn_edit: "संपादित करें",
         guide_title: "अपना लेजर शुरू करें", guide_text: "आपकी कलेक्शन बुक खाली है। अपना पहला ग्राहक जोड़ने और लेनदेन रिकॉर्ड करने के लिए नीचे दिए गए बटन पर टैপ करें।", guide_btn_sale: "+ बिक्री जोड़ें", guide_btn_purch: "- खरीद जोड़ें",
         app_sub: "क्रेडिट और लेजर प्रबंधन", btn_setup: "सेट अप", nav_dash: "डैशबोर्ड", nav_collect: "लेना है", nav_pay: "देना है", nav_cust: "संपर्क", nav_fraud: "धोखाधड़ी अलर्ट",
         stat_rcv: "कुल प्राप्य राशि", stat_pay: "कुल देय राशि", stat_ovd: "बकाया प्रविष्टियां", stat_cust: "कुल संपर्क",
         rem_head: "भुगतान अनुस्मारक", rem_sub: "बकाया और 7 दिनों के भीतर देय", col_head: "लेना है", col_sub: "संपर्क जिन्हें आपको भुगतान करना है",
         pay_head: "देना है", pay_sub: "आपूर्तिकर्ता और पार्टियां जिन्हें आपको देना है", btn_add_entry: "नई प्रविष्टि", btn_add_pay: "भुगतान जोड़ें", btn_ledger: "लेजर",
         type_sale: "बिक्री (लेना है)", type_purch: "खरीद (देना है)", txt_balance: "बैलेंस", txt_last: "अंतिम", txt_entries: "प्रविष्टियां",
-        sale: "बिक्री", purchase: "खरीद", payment: "भुगतान", btn_confirm: "कन्फर्म", btn_del: "डिलीट", txt_loading: "आपकी कलेक्शन बुक खुल रही है…",
+        sale: "बिक्री", purchase: "खरीद", payment: "भुगतान", btn_confirm: "कन्फर्म", btn_del: "हटाएं", txt_loading: "आपकी कलेक्शन बुक खुल रही है…",
+        head_preview_inv: "इनवॉइस पूर्वावलोकन", head_preview_receipt: "रसीद पूर्वावलोकन", btn_view_receipt: "रसीद देखें", btn_receipt: "रसीद",
+        lbl_send_wa_receipt: "संपर्क के साथ साझा करने के लिए रसीद बनाएं",
         setup_sub: "यह लेबल निजी तौर पर सहेजा गया है और किसी के साथ साझा नहीं किया जाता है।", lbl_name: "आपका नाम", ph_name: "उदा. रमेश भाई",
         lbl_biz: "व्यवसाय का नाम", ph_biz: "उदा. शर्मा ट्रेडर्स", lbl_gst: "जीएसटी नंबर (वैकल्पिक)", ph_gst: "उदा. 29ABCDE1234F1Z5",
         lbl_area: "शहर / बाजार क्षेत्र (वैकल्पिक)", ph_area: "उदा. मुख्य बाजार, दिल्ली", btn_skip: "रद्द करें", btn_save_prof: "प्रोफ़ाइल सहेजें", btn_add_cust: "+ नई प्रविष्टि",
         btn_reset: "इस डिवाइस पर मेरा डेटा रीसेट करें", lbl_cust_party: "संपर्क / पार्टी", ph_search_cust: "मौजूदा खोजें या नया जोड़ें…", lbl_phone: "फ़ोन",
         lbl_txn_type: "लेनदेन का प्रकार", lbl_gross_amt: "कुल राशि (₹)", lbl_discount: "छूट (₹)", lbl_inv_date: "चालान की तारीख",
-        lbl_due_date: "देय तिथि (वैकल्पिक)", lbl_ref: "संदर्भ / चालान संख्या", ph_ref: "उदा. बिल संख्या 994", lbl_cust_conf: "संपर्क ने इस लेनदेन की पुष्टि की",
-        hint_cust_conf: "यदि उनकी स्वीकृति की प्रतीक्षा है तो अनचेक करें।", btn_cancel: "रद्द करें", btn_save_entry: "प्रविष्टि सहेजें", lbl_amt: "राशि (₹)",
+        lbl_due_date: "देय तिथि (वैकल्पिक)", lbl_description: "विवरण", lbl_ref: "संदर्भ / चालान संख्या", ph_ref: "उदा. बिल संख्या 994", ph_item_desc: "वस्तुओं या सेवाओं का विवरण...", lbl_cust_conf: "संपर्क ने इस लेनदेन की पुष्टि की",
+        hint_cust_conf: "यदि उनकी स्वीकृति की प्रतीक्षा है तो अनचेक करें।", lbl_send_wa_pdf: "संपर्क के साथ साझा करने के लिए चालान बनाएं", btn_cancel: "रद्द करें", btn_save_entry: "प्रविष्टि सहेजें", lbl_amt: "राशि (₹)",
         lbl_date: "तारीख", lbl_pay_ref: "भुगतान संदर्भ / नोट", ph_pay_ref: "उदा. यूपीआई / नकद", lbl_pay_conf: "भुगतान प्राप्त और पुष्ट",
         hint_pay_conf: "यदि फंड क्लियर होने की प्रतीक्षा है तो अनचेक करें।", btn_save_pay: "भुगतान सहेजें", head_manage: "संपर्क प्रबंधित करें",
         lbl_priv_note: "निजी नोट्स (केवल आप इसे देखते हैं)", ph_priv_note: "कुछ भी जो आप साझा नहीं करना चाहते हैं", div_trust: "ट्रस्ट रेटिंग (निजी, आपके अपने संदर्भ के लिए)",
@@ -5233,20 +5312,23 @@ btn_take_tour: "ऐप टूर लें", tour_badge: "✨ त्वरित
         btn_confirm_lang: "चयन की पुष्टि करें"
       },
       bn: {
+        btn_view_inv: "চালান দেখুন", btn_edit: "সম্পাদনা করুন",
         guide_title: "আপনার লেজার শুরু করুন", guide_text: "আপনার কালেকশন বুক খালি আছে। লেনদেন রেকর্ড করতে নিচের একটি বোতাম ট্যাপ করুন।", guide_btn_sale: "+ বিক্রয় যোগ করুন", guide_btn_purch: "- ক্রয় যোগ করুন",
         app_sub: "ক্রেডিট এবং লেজার ম্যানেজমেন্ট", btn_setup: "সেট আপ", nav_dash: "ড্যাশবোর্ড", nav_collect: "পাওনা", nav_pay: "দেনা", nav_cust: "পরিচিতি", nav_fraud: "জালিয়াতি সতর্কতা",
         stat_rcv: "মোট প্রাপ্য", stat_pay: "নমোট প্রদেয়", stat_ovd: "বকেয়া এন্ট্রি", stat_cust: "মোট পরিচিতি",
         rem_head: "পেমেন্ট রিমাইন্ডার", rem_sub: "বকেয়া এবং 7 দিনের মধ্যে দেয়", col_head: "পাওনা", col_sub: "পরিচিতি যারা আপনাকে পেমেন্ট করবে",
         pay_head: "দেনা", pay_sub: "সরবরাহকারী এবং পার্টি যাদের আপনি দেবেন", btn_add_entry: "নতুন এন্ট্রি", btn_add_pay: "পেমেন্ট যোগ করুন", btn_ledger: "লেজার",
         type_sale: "বিক্রয় (পাওনা)", type_purch: "ক্রয় (দেনা)", txt_balance: "ব্যালেন্স", txt_last: "শেষ", txt_entries: "এন্ট্রি",
-        sale: "বিক্রয়", purchase: "ক্রয়", payment: "পেমেন্ট", btn_confirm: "নিশ্চিত করুন", btn_del: "মুছুন", txt_loading: "আপনার কালেকশন বুক খুলছে…",
+        sale: "বিক্রয়", purchase: "ক্রয়", payment: "পেমেন্ট",        btn_confirm: "নিশ্চিত করুন", btn_del: "মুছে ফেলুন", txt_loading: "আপনার কালেকশন বুক খুলছে…",
+        head_preview_inv: "ইনভয়েস প্রিভিউ", head_preview_receipt: "মানি রসিদ প্রিভিউ", btn_view_receipt: "রসিদ দেখুন", btn_receipt: "রসিদ",
+        lbl_send_wa_receipt: "পরিচিতির সাথে শেয়ার করার জন্য রসিদ তৈরি করুন",
         setup_sub: "এই লেবেলটি ব্যক্তিগতভাবে সংরক্ষিত এবং কারো সাথে ভাগ করা হয় আদি।", lbl_name: "আপনার নাম", ph_name: "উদাঃ রমেশ ভাই",
         lbl_biz: "ব্যবসার নাম", ph_biz: "উদাঃ শর্মা ট্রেডার্স", lbl_gst: "জিএসটি নম্বর (ঐচ্ছিক)", ph_gst: "উদাঃ 29ABCDE1234F1Z5",
         lbl_area: "শহর / বাজার এলাকা (ঐচ্ছিক)", ph_area: "উদাঃ মেইন মার্কেট, দিল্লি", btn_skip: "বাতিল করুন", btn_save_prof: "প্রোফাইল সংরক্ষণ করুন", btn_add_cust: "+ নতুন এন্ট্রি",
         btn_reset: "এই ডিভাইসে আমার ডেটা রিসেট করুন", lbl_cust_party: "পরিচিতি / পার্টি", ph_search_cust: "বিদ্যমান খুঁজুন বা নতুন যোগ করুন…", lbl_phone: "ফোন",
         lbl_txn_type: "লেনদেনের ধরন", lbl_gross_amt: "মোট পরিমাণ (₹)", lbl_discount: "ছাড় (₹)", lbl_inv_date: "ইনভয়েস তারিখ",
-        lbl_due_date: "দেয় তারিখ (ঐচ্ছিক)", lbl_ref: "রেফারেন্স / ইনভয়েস নং", ph_ref: "উদাঃ বিল নং 994", lbl_cust_conf: "পরিচিতি এই লেনদেন নিশ্চিত করেছেন",
-        hint_cust_conf: "তাদের অনুমোদনের জন্য অপেক্ষা করলে আনচেক করুন।", btn_cancel: "বাতিল করুন", btn_save_entry: "এন্ট্রি সংরক্ষণ করুন", lbl_amt: "পরিমাণ (₹)",
+        lbl_due_date: "দেয় তারিখ (ঐচ্ছিক)", lbl_description: "বিবরণ", lbl_ref: "রেফারেন্স / ইনভয়েস নং", ph_ref: "উদাঃ বিল নং 994", ph_item_desc: "পণ্য বা পরিষেবার বিবরণ...", lbl_cust_conf: "পরিচিতি এই লেনদেন নিশ্চিত করেছেন",
+        hint_cust_conf: "তাদের অনুমোদনের জন্য অপেক্ষা করলে আনচেক করুন।", lbl_send_wa_pdf: "পরিচিতির সাথে শেয়ার করার জন্য চালান তৈরি করুন", btn_cancel: "বাতিল করুন", btn_save_entry: "এন্ট্রি সংরক্ষণ করুন", lbl_amt: "পরিমাণ (₹)",
         lbl_date: "তারিখ", lbl_pay_ref: "পেমেন্ট রেফারেন্স / নোট", ph_pay_ref: "উদাঃ ইউপিআই / নগদ", lbl_pay_conf: "পেমেন্ট প্রাপ্ত এবং নিশ্চিত",
         hint_pay_conf: "তহবিল ক্লিয়ার হওয়ার জন্য অপেক্ষা করলে আনচেক করুন।", btn_save_pay: "পেমেন্ট সংরক্ষণ করুন", head_manage: "পরিচিতি পরিচালনা করুন",
         lbl_priv_note: "ব্যক্তিগত নোট (শুধুমাত্র আপনি এটি দেখেন)", ph_priv_note: "আপনি যা শেয়ার করতে চান না", div_trust: "ট্রাস্ট রেটিং (ব্যক্তিগত, আপনার নিজস্ব রেফারেন্সের জন্য)",
@@ -5379,20 +5461,23 @@ btn_take_tour: "অ্যাপ ট্যুর নিন", tour_badge: "✨ ক
         btn_confirm_lang: "নির্বাচন নিশ্চিত করুন"
       },
       mr: {
+        btn_view_inv: "बीजक पहा", btn_edit: "संपादित करा",
         guide_title: "तुमचे लेजर सुरू करा", guide_text: "तुमची कलेक्शन बुक रिकामी आहे. तुमचा पहिला व्यवहार रेकॉर्ड करण्यासाठी खालीलपैकी एक पर्याय निवडा.", guide_btn_sale: "+ विक्री जोडा", guide_btn_purch: "- खरेदी जोडा",
         app_sub: "क्रेडिट आणि लेजर व्यवस्थापन", btn_setup: "सेट अप", nav_dash: "डॅशबोर्ड", nav_collect: "येणे बाकी", nav_pay: "देणे बाकी", nav_cust: "संपर्क", nav_fraud: "फसवणूक अलर्ट",
         stat_rcv: "एकूण येणे", stat_pay: "एकूण देणे", stat_ovd: "थकीत नोंदी", stat_cust: "एकूण संपर्क",
         rem_head: "पेमेंट रिमाइंडर्स", rem_sub: "थकीत आणि ७ दिवसांत येणारे", col_head: "येणे बाकी", col_sub: "ज्यांच्याकडून पैसे घ्यायचे आहेत",
         pay_head: "देणे बाकी", pay_sub: "ज्यांना पैसे द्यायचे आहेत", btn_add_entry: "नवीन नोंद", btn_add_pay: "पेमेंट जोडा", btn_ledger: "लेजर",
         type_sale: "विक्री (येणे)", type_purch: "खरेदी (देणे)", txt_balance: "बॅलन्स", txt_last: "शेवटच्या", txt_entries: "नोंदी",
-        sale: "विक्री", purchase: "खरेदी", payment: "पेमेंट", btn_confirm: "निश्चित करा", btn_del: "डिलीट", txt_loading: "तुमचे लेजर उघडत आहे...",
+        sale: "विक्री", purchase: "खरेदी", payment: "पेमेंट", btn_confirm: "निश्चित करा", btn_del: "काढून टाका", txt_loading: "तुमचे लेजर उघडत आहे...",
+        head_preview_inv: "इनव्हॉइस पूर्वावलोकन", head_preview_receipt: "पावती पूर्वावलोकन", btn_view_receipt: "पावती पहा", btn_receipt: "पावती",
+        lbl_send_wa_receipt: "संपर्काशी शेअर करण्यासाठी पावती तयार करा",
         setup_sub: "हे नाव खाजगी ठेवले जाते आणि कोणाशीही शेअर केले जात नाही.", lbl_name: "तुमचे नाव", ph_name: "उदा. रमेश भाई",
         lbl_biz: "व्यवसायाचे नाव", ph_biz: "उदा. शर्मा ट्रेडर्स", lbl_gst: "जीएसटी नंबर (पर्यायी)", ph_gst: "उदा. 29ABCDE1234F1Z5",
         lbl_area: "शहर / बाजार परिसर (पर्यायी)", ph_area: "उदा. मुख्य बाजार, मुंबई", btn_skip: "रद्द करा", btn_save_prof: "प्रोफाईल जतन करा", btn_add_cust: "+ नोंद जोडा",
         btn_reset: "या डिव्हाइसवरील माझा डेटा रिसेट करा", lbl_cust_party: "संपर्क / पार्टी", ph_search_cust: "शोध किंवा नवीन जोडा...", lbl_phone: "फोन",
         lbl_txn_type: "व्यवहाराचा प्रकार", lbl_gross_amt: "एकूण रक्कम (₹)", lbl_discount: "सवलत (₹)", lbl_inv_date: "इनव्हॉइस तारीख",
-        lbl_due_date: "देय तारीख (पर्यायी)", lbl_ref: "संदर्भ / बिल क्रमांक", ph_ref: "उदा. बिल नंबर ९९४", lbl_cust_conf: "संपर्काने या व्यवहाराची पुष्टी केली",
-        hint_cust_conf: "मंजुरीची प्रतीक्षा असल्यास अनचेक करा.", btn_cancel: "रद्द करा", btn_save_entry: "नोंद जतन करा", lbl_amt: "रक्कम (₹)",
+        lbl_due_date: "देय तारीख (पर्यायी)", lbl_description: "वर्णन", lbl_ref: "संदर्भ / बिल क्रमांक", ph_ref: "उदा. बिल नंबर ९९४", ph_item_desc: "वस्तू किंवा सेवांचे तपशील...", lbl_cust_conf: "संपर्काने या व्यवहाराची पुष्टी केली",
+        hint_cust_conf: "மஞ்சூரிची प्रतीक्षा असल्यास अनचेक करा.", lbl_send_wa_pdf: "संपर्काशी शेअर करण्यासाठी बीजक तयार करा", btn_cancel: "रद्द करा", btn_save_entry: "नोंद जतन करा", lbl_amt: "रक्कम (₹)",
         lbl_date: "तारीख", lbl_pay_ref: "पेमेंट संदर्भ / टीप", ph_pay_ref: "उदा. UPI / रोख", lbl_pay_conf: "पेमेंट प्राप्त आणि पुष्टी",
         hint_pay_conf: "पैसे जमा होण्याची प्रतीक्षा असल्यास अनचेक करा.", btn_save_pay: "पेमेंट जतन करा", head_manage: "संपर्क व्यवस्थापित करा",
         lbl_priv_note: "खाजगी नोट्स (केवळ तुम्हाला दिसतात)", ph_priv_note: "काहीही जे तुम्हाला शेअर करायचे नाही", div_trust: "विश्वासार्हता रेटिंग (खाजगी)",
@@ -5459,6 +5544,7 @@ btn_take_tour: "অ্যাপ ট্যুর নিন", tour_badge: "✨ ক
         btn_confirm_lang: "निवडीची पुष्टी करा"
       },
       ta: {
+        btn_view_inv: "இன்வாய்ஸைப் பார்", btn_edit: "திருத்து",
         guide_title: "உங்கள் லெட்ஜரைத் தொடங்குங்கள்", guide_text: "உங்கள் சேகரிப்பு புத்தகம் காலியாக உள்ளது. உங்கள் முதல் பரிவர்த்தனையை பதிவு செய்ய கீழே உள்ள செயலைத் தேர்ந்தெடுக்கவும்.", guide_btn_sale: "+ விற்பனை சேர்", guide_btn_purch: "- கொள்முதல் சேர்",
         app_sub: "கடன் மற்றும் லெட்ஜர் மேலாண்மை", btn_setup: "அமைக்கவும்", nav_dash: "டாஷ்போர்டு", nav_collect: "வசூலிக்க வேண்டியவை", nav_pay: "செலுத்த வேண்டியவை", nav_cust: "தொடர்புகள்", nav_fraud: "மோசடி எச்சரிக்கைகள்",
         stat_rcv: "மொத்த வசூல்", stat_pay: "மொத்த நிலுவை", stat_ovd: "காலாவதியான பதிவுகள்", stat_cust: "மொத்த தொடர்புகள்",
@@ -5466,13 +5552,15 @@ btn_take_tour: "অ্যাপ ট্যুর নিন", tour_badge: "✨ ক
         pay_head: "செலுத்த வேண்டியவை", pay_sub: "நீங்கள் பணம் செலுத்த வேண்டிய விநியோகஸ்தர்கள்", btn_add_entry: "புதிய லெட்ஜர் பதிவு", btn_add_pay: "பணம் செலுத்துதல்", btn_ledger: "லெட்ஜர்",
         type_sale: "விற்பனை (வசூலிக்க)", type_purch: "கொள்முதல் (செலுத்த)", txt_balance: "இருப்பு", txt_last: "கடைசி", txt_entries: "பதிவுகள்",
         sale: "விற்பனை", purchase: "கொள்முதல்", payment: "பணம் செலுத்துதல்", btn_confirm: "உறுதி செய்", btn_del: "நீக்கு", txt_loading: "உங்கள் சேகரிப்பு புத்தகத்தைத் திறக்கிறது...",
+        head_preview_inv: "இன்வாய்ஸ் மாதிரிக்காட்சி", head_preview_receipt: "ரசீது மாதிரிக்காட்சி", btn_view_receipt: "ரசீதைப் பார்", btn_receipt: "ரசீது",
+        lbl_send_wa_receipt: "தொடர்புடன் பகிர ரசீதை உருவாக்கவும்",
         setup_sub: "இந்த லேபிள் தனிப்பட்ட முறையில் சேமிக்கப்பட்டு யாருடனும் பகிரப்படாது.", lbl_name: "உங்கள் பெயர்", ph_name: "உதாரணம்: ரமேஷ் பாய்",
         lbl_biz: "வணிகப் பெயர்", ph_biz: "உதாரணம்: சர்மா டிரேடர்ஸ்", lbl_gst: "ஜிஎஸ்டி எண் (விருப்பத்தேர்வு)", ph_gst: "உதாரணம்: 29ABCDE1234F1Z5",
         lbl_area: "நகரம் / சந்தைப் பகுதி (விருப்பத்தேர்வு)", ph_area: "உதாரணம்: முக்கிய சந்தை, சென்னை", btn_skip: "ரத்து செய்", btn_save_prof: "சுயவிவரத்தைச் சேமி", btn_add_cust: "+ பதிவு சேர்",
         btn_reset: "இந்தச் சாதனத்தில் என் தரவை மீட்டமைக்கவும்", lbl_cust_party: "தொடர்பு / கட்சிப் பெயர்", ph_search_cust: "தற்போதுள்ளதைத் தேடவும் அல்லது புதிதாகச் சேர்க்கவும்...", lbl_phone: "தொலைபேசி",
         lbl_txn_type: "பரிவர்த்தனை வகை", lbl_gross_amt: "மொத்தத் தொகை (₹)", lbl_discount: "தள்ளுபடி (₹)", lbl_inv_date: "இன்வாய்ஸ் தேதி",
         lbl_due_date: "காலக்கெடு தேதி (விருப்பத்தேர்வு)", lbl_ref: "குறிப்பு / இன்வாய்స్ எண்", ph_ref: "உதாரணம்: பில் எண் 994", lbl_cust_conf: "தொடர்பு இந்தப் பரிவர்த்தனையை உறுதிப்படுத்தினார்",
-        hint_cust_conf: "அவர்களின் ஒப்புதலுக்காகக் காத்திருந்தால் தேர்வுநீக்கம் செய்யவும்.", btn_cancel: "ரத்து செய்", btn_save_entry: "பதிவைச் சேமி", lbl_amt: "தொகை (₹)",
+        hint_cust_conf: "அவர்களின் ஒப்புதலுக்காகக் காத்திருந்தால் தேர்வுநீக்கம் செய்யவும்.", lbl_send_wa_pdf: "தொடர்புடன் பகிர இன்வாய்ஸை உருவாக்கவும்", btn_cancel: "ரத்து செய்", btn_save_entry: "பதிவைச் சேமி", lbl_amt: "தொகை (₹)",
         lbl_date: "தேதி", lbl_pay_ref: "கட்டண குறிப்பு / குறிப்பு", ph_pay_ref: "உதாரணம்: UPI / ரொக்கம்", lbl_pay_conf: "பணம் பெறப்பட்டு உறுதிப்படுத்தப்பட்டது",
         hint_pay_conf: "நிதி வரும் வரை காத்திருந்தால் தேர்வுநீக்கம் செய்யவும்.", btn_save_pay: "கட்டணத்தைச் சேமி", head_manage: "தொடர்பை நிர்வகி",
         lbl_priv_note: "தனிப்பட்ட குறிப்புகள் (உங்களுக்கு மட்டுமே தெரியும்)", ph_priv_note: "நீங்கள் பகிர விரும்பாத எதுவும்", div_trust: "நம்பகத்தன்மை மதிப்பீடு (தனிப்பட்டது)",
@@ -5540,6 +5628,7 @@ btn_take_tour: "অ্যাপ ট্যুর নিন", tour_badge: "✨ ক
         btn_confirm_lang: "தேர்வை உறுதிப்படுத்தவும்"
       },
       te: {
+        btn_view_inv: "ఇన్‌వాయిస్‌ని చూడండి", btn_edit: "సవరించు",
         guide_title: "మీ లెడ్జర్‌ని ప్రారంభించండి", guide_text: "మీ కలెక్షన్ బుక్ ఖాళీగా ఉంది. మీ మొదటి లావాదేవీని రికార్డ్ చేయడానికి క్రింద ఉన్న చర్యను ఎంచుకోండి.", guide_btn_sale: "+ అమ్మకం జోడించు", guide_btn_purch: "- కొనుగోలు జోడించు",
         app_sub: "క్రెడిట్ & లెడ్జర్ మేనేజ్‌మెంట్", btn_setup: "అమర్చండి", nav_dash: "డాష్‌బోర్డ్", nav_collect: "వసూలు చేయవలసినవి", nav_pay: "చెల్లించవలసినవి", nav_cust: "పరిచయాలు", nav_fraud: "మోసాల హెచ్చరికలు",
         stat_rcv: "మొత్తం వసూళ్లు", stat_pay: "మొత్తం బకాయిలు", stat_ovd: "గడువు ముగిసిన ఎంట్రీలు", stat_cust: "మొత్తం పరిచయాలు",
@@ -5547,13 +5636,15 @@ btn_take_tour: "অ্যাপ ট্যুর নিন", tour_badge: "✨ ক
         pay_head: "చెల్లించవలసినవి", pay_sub: "మీరు డబ్బు చెల్లించవలసిన సరఫరాదారులు", btn_add_entry: "కొత్త లెడ్జర్ ఎంట్రీ", btn_add_pay: "చెల్లింపు జోడించు", btn_ledger: "లెడ్జర్",
         type_sale: "అమ్మకం (వసూలు చేయడానికి)", type_purch: "కొనుగోలు (చెల్లించడానికి)", txt_balance: "బ్యాలెన్స్", txt_last: "చివరి", txt_entries: "ఎంట్రీలు",
         sale: "అమ్మకం", purchase: "కొనుగోలు", payment: "చెల్లింపు", btn_confirm: "ధృవీకరించు", btn_del: "తొలగించు", txt_loading: "మీ లెడ్జర్‌ని తెరుస్తోంది...",
+        head_preview_inv: "ఇన్‌వాయిస్ ప్రివ్యూ", head_preview_receipt: "రశీదు ప్రివ్యూ", btn_view_receipt: "రశీదు చూడండి", btn_receipt: "రశీదు",
+        lbl_send_wa_receipt: "కాంటాక్ట్‌తో షేర్ చేయడానికి రశీదును రూపొందించండి",
         setup_sub: "ఈ సమాచారం వ్యక్తిగతంగా సేవ్ చేయబడుతుంది మరియు ఎవరితోనూ భాగస్వామ్యం చేయబడదు.", lbl_name: "మీ పేరు", ph_name: "ఉదా: రమేష్ భాయ్",
         lbl_biz: "వ్యాపారం పేరు", ph_biz: "ఉదా: శర్మ ట్రేడర్స్", lbl_gst: "GST నంబర్ (ఐచ్ఛికం)", ph_gst: "ఉదా: 29ABCDE1234F1Z5",
         lbl_area: "సిటీ / మార్కెట్ ప్రాంతం (ఐచ్ఛికం)", ph_area: "ఉదా: మెయిన్ మార్కెట్, హైదరాబాద్", btn_skip: "రద్దు చేయి", btn_save_prof: "ప్రొఫైల్‌ను సేవ్ చేయి", btn_add_cust: "+ ఎంట్రీ జోడించు",
         btn_reset: "ఈ పరికరంలో నా డేటాను రీసెట్ చేయి", lbl_cust_party: "పరిచయం / పార్టీ పేరు", ph_search_cust: "వెతకండి లేదా కొత్తది జోడించండి...", lbl_phone: "ఫోన్",
         lbl_txn_type: "లావాదేవీ రకం", lbl_gross_amt: "మొత్తం విలువ (₹)", lbl_discount: "డిస్కౌంట్ (₹)", lbl_inv_date: "ఇన్వాయిస్ తేదీ",
-        lbl_due_date: "గడువు తేదీ (ఐచ్ఛికం)", lbl_ref: "రిఫరెన్స్ / ఇన్వాయిస్ నంబర్", ph_ref: "ఉదా: బిల్ నంబర్ 994", lbl_cust_conf: "కస్టమర్ ఈ లావాదేవీని ధృవీకరించారు",
-        hint_cust_conf: "వారి అనుమతి కోసం వేచి ఉంటే అన్‌చెక్ చేయండి.", btn_cancel: "రద్దు చేయి", btn_save_entry: "ఎంట్రీని సేవ్ చేయి", lbl_amt: "మొత్తం (₹)",
+        lbl_due_date: "గడువు తేదీ (ఐచ్ఛికం)", lbl_description: "వివరణ", lbl_ref: "రిఫరెన్స్ / ఇన్వాయిస్ నంబర్", ph_ref: "ఉదా: బిల్ నంబర్ 994", ph_item_desc: "వస్తువులు లేదా సేవల వివరాలు...", lbl_cust_conf: "కస్టమర్ ఈ లావాదేవీని ధృవీకరించారు",
+        hint_cust_conf: "వారి అనుమతి కోసం వేచి ఉంటే అన్‌చెక్ చేయండి.", lbl_send_wa_pdf: "కాంటాక్ట్‌తో షేర్ చేయడానికి ఇన్‌వాయిస్‌ను రూపొందించండి", btn_cancel: "రద్దు చేయి", btn_save_entry: "ఎంట్రీని సేవ్ చేయి", lbl_amt: "మొత్తం (₹)",
         lbl_date: "తేదీ", lbl_pay_ref: "చెల్లింపు రిఫరెన్స్ / నోట్", ph_pay_ref: "ఉదా: UPI / నగదు", lbl_pay_conf: "చెల్లింపు అందింది & ధృవీకరించబడింది",
         hint_pay_conf: "డబ్బు జమ అయ్యే వరకు వేచి ఉంటే అన్‌చెక్ చేయండి.", btn_save_pay: "చెల్లింపును సేవ్ చేయి", head_manage: "పరిచయాన్ని నిర్వహించు",
         lbl_priv_note: "ప్రైవేట్ నోట్స్ (మీకు మాత్రమే కనిపిస్తాయి)", ph_priv_note: "మీరు భాగస్వామ్యం చేయకూడదనుకునే ఏవైనా విషయాలు", div_trust: "నమ్మకమైన రేటింగ్ (ప్రైవేట్)",
@@ -5621,6 +5712,7 @@ btn_take_tour: "অ্যাপ ট্যুর নিন", tour_badge: "✨ ক
         btn_confirm_lang: "ఎంపికను ధృవీకరించండి"
       },
       ta: {
+        btn_view_inv: "இன்வாய்ஸைப் பார்", btn_edit: "திருத்து",
         guide_title: "உங்கள் லெட்ஜரைத் தொடங்குங்கள்", guide_text: "உங்கள் சேகரிப்பு புத்தகம் காலியாக உள்ளது. உங்கள் முதல் பரிவர்த்தனையை பதிவு செய்ய கீழே உள்ள செயலைத் தேர்ந்தெடுக்கவும்.", guide_btn_sale: "+ விற்பனை சேர்", guide_btn_purch: "- கொள்முதல் சேர்",
         app_sub: "கடன் மற்றும் லெட்ஜர் மேலாண்மை", btn_setup: "அமைக்கவும்", nav_dash: "டாஷ்போர்டு", nav_collect: "வசூலிக்க வேண்டியவை", nav_pay: "செலுத்த வேண்டியவை", nav_cust: "தொடர்புகள்", nav_fraud: "மோசடி எச்சரிக்கைகள்",
         stat_rcv: "மொத்த வசூல்", stat_pay: "மொத்த நிலுவை", stat_ovd: "காலாவதியான பதிவுகள்", stat_cust: "மொத்த தொடர்புகள்",
@@ -5628,13 +5720,15 @@ btn_take_tour: "অ্যাপ ট্যুর নিন", tour_badge: "✨ ক
         pay_head: "செலுத்த வேண்டியவை", pay_sub: "நீங்கள் பணம் செலுத்த வேண்டிய விநியோகஸ்தர்கள்", btn_add_entry: "புதிய லெட்ஜர் பதிவு", btn_add_pay: "பணம் செலுத்துதல்", btn_ledger: "லெட்ஜர்",
         type_sale: "விற்பனை (வசூலிக்க)", type_purch: "கொள்முதல் (செலுத்த)", txt_balance: "இருப்பு", txt_last: "கடைசி", txt_entries: "பதிவுகள்",
         sale: "விற்பனை", purchase: "கொள்முதல்", payment: "பணம் செலுத்துதல்", btn_confirm: "உறுதி செய்", btn_del: "நீக்கு", txt_loading: "உங்கள் சேகரிப்பு புத்தகத்தைத் திறக்கிறது...",
+        head_preview_inv: "இன்வாய்ஸ் மாதிரிக்காட்சி", head_preview_receipt: "ரசீது மாதிரிக்காட்சி", btn_view_receipt: "ரசீதைப் பார்", btn_receipt: "ரசீது",
+        lbl_send_wa_receipt: "தொடர்புடன் பகிர ரசீதை உருவாக்கவும்",
         setup_sub: "இந்த லேபிள் தனிப்பட்ட முறையில் சேமிக்கப்பட்டு யாருடனும் பகிரப்படாது.", lbl_name: "உங்கள் பெயர்", ph_name: "உதாரணம்: ரமேஷ் பாய்",
         lbl_biz: "வணிகப் பெயர்", ph_biz: "உதாரணம்: சர்மா டிரேடர்ஸ்", lbl_gst: "ஜிஎஸ்டி எண் (விருப்பத்தேர்வு)", ph_gst: "உதாரணம்: 29ABCDE1234F1Z5",
         lbl_area: "நகரம் / சந்தைப் பகுதி (விருப்பத்தேர்வு)", ph_area: "உதாரணம்: முக்கிய சந்தை, சென்னை", btn_skip: "ரத்து செய்", btn_save_prof: "சுயவிவரத்தைச் சேமி", btn_add_cust: "+ பதிவு சேர்",
         btn_reset: "இந்தச் சாதனத்தில் என் தரவை மீட்டமைக்கவும்", lbl_cust_party: "தொடர்பு / கட்சிப் பெயர்", ph_search_cust: "தற்போதுள்ளதைத் தேடவும் அல்லது புதிதாகச் சேர்க்கவும்...", lbl_phone: "தொலைபேசி",
         lbl_txn_type: "பரிவர்த்தனை வகை", lbl_gross_amt: "மொத்தத் தொகை (₹)", lbl_discount: "தள்ளுபடி (₹)", lbl_inv_date: "இன்வாய்ஸ் தேதி",
-        lbl_due_date: "காலக்கெடு தேதி (விருப்பத்தேர்வு)", lbl_ref: "குறிப்பு / இன்வாய்ஸ் எண்", ph_ref: "உதாரணம்: பில் எண் 994", lbl_cust_conf: "தொடர்பு இந்தப் பரிவர்த்தனையை உறுதிப்படுத்தினார்",
-        hint_cust_conf: "அவர்களின் ஒப்புதலுக்காகக் காத்திருந்தால் தேர்வுநீக்கம் செய்யவும்.", btn_cancel: "ரத்து செய்", btn_save_entry: "பதிவைச் சேமி", lbl_amt: "தொகை (₹)",
+        lbl_due_date: "காலக்கெடு தேதி (விருப்பத்தேர்வு)", lbl_description: "விளக்கம்", lbl_ref: "குறிப்பு / இன்வாய்ஸ் எண்", ph_ref: "உதாரணம்: பில் எண் 994", ph_item_desc: "பொருட்கள் அல்லது சேவைகளின் விவரங்கள்...", lbl_cust_conf: "தொடர்பு இந்தப் பரிவர்த்தனையை உறுதிப்படுத்தினார்",
+        hint_cust_conf: "அவர்களின் ஒப்புதலுக்காகக் காத்திருந்தால் தேர்வுநீக்கம் செய்யவும்.", lbl_send_wa_pdf: "தொடர்புடன் பகிர இன்வாய்ஸை உருவாக்கவும்", btn_cancel: "ரத்து செய்", btn_save_entry: "பதிவைச் சேமி", lbl_amt: "தொகை (₹)",
         lbl_date: "தேதி", lbl_pay_ref: "கட்டண குறிப்பு / குறிப்பு", ph_pay_ref: "உதாரணம்: UPI / ரொக்கம்", lbl_pay_conf: "பணம் பெறப்பட்டு உறுதிப்படுத்தப்பட்டது",
         hint_pay_conf: "நிதி வரும் வரை காத்திருந்தால் தேர்வுநீக்கம் செய்யவும்.", btn_save_pay: "கட்டணத்தைச் சேமி", head_manage: "தொடர்பை நிர்வகி",
         lbl_priv_note: "தனிப்பட்ட குறிப்புகள் (உங்களுக்கு மட்டுமே தெரியும்)", ph_priv_note: "நீங்கள் பகிர விரும்பாத எதுவும்", div_trust: "நம்பகத்தன்மை மதிப்பீடு (தனிப்பட்டது)",
@@ -5702,6 +5796,7 @@ btn_take_tour: "অ্যাপ ট্যুর নিন", tour_badge: "✨ ক
         btn_confirm_lang: "தேர்வை உறுதிப்படுத்தவும்"
       },
       te: {
+        btn_view_inv: "ఇన్‌వాయిస్‌ని చూడండి", btn_edit: "సవరించు",
         guide_title: "మీ లెడ్జర్‌ని ప్రారంభించండి", guide_text: "మీ కలెక్షన్ బుక్ ఖాళీగా ఉంది. మీ మొదటి లావాదేవీని రికార్డ్ చేయడానికి క్రింద ఉన్న చర్యను ఎంచుకోండి.", guide_btn_sale: "+ అమ్మకం జోడించు", guide_btn_purch: "- కొనుగోలు జోడించు",
         app_sub: "క్రెడిట్ & లెడ్జర్ మేనేజ్‌మెంట్", btn_setup: "అమర్చండి", nav_dash: "డాష్‌బోర్డ్", nav_collect: "వసూలు చేయవలసినవి", nav_pay: "చెల్లించవలసినవి", nav_cust: "పరిచయాలు", nav_fraud: "మోసాల హెచ్చరికలు",
         stat_rcv: "మొత్తం వసూళ్లు", stat_pay: "మొత్తం బకాయిలు", stat_ovd: "గడువు ముగిసిన ఎంట్రీలు", stat_cust: "మొత్తం పరిచయాలు",
@@ -5709,13 +5804,15 @@ btn_take_tour: "অ্যাপ ট্যুর নিন", tour_badge: "✨ ক
         pay_head: "చెల్లించవలసినవి", pay_sub: "మీరు డబ్బు చెల్లించవలసిన సరఫరాదారులు", btn_add_entry: "కొత్త లెడ్జర్ ఎంట్రీ", btn_add_pay: "చెల్లింపు జోడించు", btn_ledger: "లెడ్జర్",
         type_sale: "అమ్మకం (వసూలు చేయడానికి)", type_purch: "కొనుగోలు (చెల్లించడానికి)", txt_balance: "బ్యాలెన్స్", txt_last: "చివరి", txt_entries: "ఎంట్రీలు",
         sale: "అమ్మకం", purchase: "కొనుగోలు", payment: "చెల్లింపు", btn_confirm: "ధృవీకరించు", btn_del: "తొలగించు", txt_loading: "మీ లెడ్జర్‌ని తెరుస్తోంది...",
+        head_preview_inv: "ఇన్‌వాయిస్ ప్రివ్యూ", head_preview_receipt: "రశీదు ప్రివ్యూ", btn_view_receipt: "రశీదు చూడండి", btn_receipt: "రశీదు",
+        lbl_send_wa_receipt: "కాంటాక్ట్‌తో షేర్ చేయడానికి రశీదును రూపొందించండి",
         setup_sub: "ఈ సమాచారం వ్యక్తిగతంగా సేవ్ చేయబడుతుంది మరియు ఎవరితోనూ భాగస్వామ్యం చేయబడదు.", lbl_name: "మీ పేరు", ph_name: "ఉదా: రమేష్ భాయ్",
         lbl_biz: "వ్యాపారం పేరు", ph_biz: "ఉదా: శర్మ ట్రేడర్స్", lbl_gst: "GST నంబర్ (ఐచ్ఛికం)", ph_gst: "ఉదా: 29ABCDE1234F1Z5",
         lbl_area: "సిటీ / మార్కెట్ ప్రాంతం (ఐచ్ఛికం)", ph_area: "ఉదా: మెయిన్ మార్కెట్, హైదరాబాద్", btn_skip: "రద్దు చేయి", btn_save_prof: "ప్రొఫైల్‌ను సేవ్ చేయి", btn_add_cust: "+ ఎంట్రీ జోడించు",
         btn_reset: "ఈ పరికరంలో నా డేటాను రీసెట్ చేయి", lbl_cust_party: "పరిచయం / పార్టీ పేరు", ph_search_cust: "వెతకండి లేదా కొత్తది జోడించండి...", lbl_phone: "ఫోన్",
         lbl_txn_type: "లావాదేవీ రకం", lbl_gross_amt: "మొత్తం విలువ (₹)", lbl_discount: "డిస్కౌంట్ (₹)", lbl_inv_date: "ఇన్వాయిస్ తేదీ",
-        lbl_due_date: "గడువు తేదీ (ఐచ్ఛికం)", lbl_ref: "రిఫరెన్స్ / ఇన్వాయిస్ నంబర్", ph_ref: "ఉదా: బిల్ నంబర్ 994", lbl_cust_conf: "కస్టమర్ ఈ లావాదేవీని ధృవీకరించారు",
-        hint_cust_conf: "వారి అనుమతి కోసం వేచి ఉంటే అన్‌చెక్ చేయండి.", btn_cancel: "రద్దు చేయి", btn_save_entry: "ఎంట్రీని సేవ్ చేయి", lbl_amt: "మొత్తం (₹)",
+        lbl_due_date: "గడువు తేదీ (ఐచ్ఛికం)", lbl_description: "వివరణ", lbl_ref: "రిఫరెన్స్ / ఇన్వాయిస్ నంబర్", ph_ref: "ఉదా: బిల్ నంబర్ 994", ph_item_desc: "వస్తువులు లేదా సేవల వివరాలు...", lbl_cust_conf: "కస్టమర్ ఈ లావాదేవీని ధృవీకరించారు",
+        hint_cust_conf: "వారి అనుమతి కోసం వేచి ఉంటే అన్‌చెక్ చేయండి.", lbl_send_wa_pdf: "కాంటాక్ట్‌తో షేర్ చేయడానికి ఇన్‌వాయిస్‌ను రూపొందించండి", btn_cancel: "రద్దు చేయి", btn_save_entry: "ఎంట్రీని సేవ్ చేయి", lbl_amt: "మొత్తం (₹)",
         lbl_date: "తేదీ", lbl_pay_ref: "చెల్లింపు రిఫరెన్స్ / నోట్", ph_pay_ref: "ఉదా: UPI / నగదు", lbl_pay_conf: "చెల్లింపు అందింది & ధృవీకరించబడింది",
         hint_pay_conf: "డబ్బు జమ అయ్యే వరకు వేచి ఉంటే అన్‌చెక్ చేయండి.", btn_save_pay: "చెల్లింపును సేవ్ చేయి", head_manage: "పరిచయాన్ని నిర్వహించు",
         lbl_priv_note: "ప్రైవేట్ నోట్స్ (మీకు మాత్రమే కనిపిస్తాయి)", ph_priv_note: "మీరు భాగస్వామ్యం చేయకూడదనుకునే ఏవైనా విషయాలు", div_trust: "నమ్మకమైన రేటింగ్ (ప్రైవేట్)",
@@ -5920,6 +6017,10 @@ window.checkAuth = function() {
 
         entryType = type || 'debtor';
         selectedCustomerId = null;
+        editingEntryId = null;
+        editingPaymentId = null;
+        $('#en-save').textContent = t('btn_save_entry');
+
         if ($('#en-search-container')) $('#en-search-container').style.display = 'block';
         if ($('#en-customer-search')) {
             $('#en-customer-search').value = '';
@@ -5931,9 +6032,11 @@ window.checkAuth = function() {
         if ($('#en-phone')) $('#en-phone').value = '';
         if ($('#en-area')) $('#en-area').value = '';
         if ($('#en-notes')) $('#en-notes').value = '';
+        if ($('#en-item-desc')) $('#en-item-desc').value = '';
         if ($('#en-selected-note')) $('#en-selected-note').style.display = 'none';
         if ($('#en-amount')) $('#en-amount').value = '';
         if ($('#en-discount')) $('#en-discount').value = '';
+        if ($('#en-send-wa-pdf')) $('#en-send-wa-pdf').checked = false;
 
         if ($('#en-idate')) {
             $('#en-idate').value = todayISO();
@@ -10404,7 +10507,7 @@ createdByRole:
       for(var r=0;r<displayRows.length;r++){
         var row = displayRows[r]; var balText = Math.abs(row.balAfter) < 0.005 ? '₹0' : ('₹'+fmtMoney(Math.abs(row.balAfter))+(row.balAfter>0?' Dr':' Cr'));
         var confirmBtn = !row.isConfirmed ? '<button class="confirm-mini" data-action="'+(row.isBill?'confirm-inv':'confirm-pay')+'" data-eid="'+row.entryId+'" data-pid="'+(row.payId||'')+'">'+t('btn_confirm')+'</button>' : '';
-        var delBtn = isCreator ? '<button class="confirm-mini" style="background:var(--madder); margin-left:6px;" data-action="delete-item" data-eid="'+row.entryId+'" data-pid="'+(row.payId||'')+'">'+t('btn_del')+'</button>' : '';
+
         var discountHtml = row.discount ? '<div style="font-size:0.75rem; color:var(--turmeric); margin-top:3px; font-weight:600;">'+t('lbl_discount').split(' (')[0]+': ₹'+fmtMoney(row.discount)+'</div>' : '';
         var actorHtml = '';
 
@@ -10420,14 +10523,47 @@ if (
             ) +
         '</div>';
 }
-        html += '<div class="history-row'+(row.isConfirmed?'':' unconfirmed')+'"><div class="hr-top"><div><div class="hr-ref">'+escapeHTML(row.ref)+(row.isBill?'':' ('+t('payment')+')')+(!row.isConfirmed?' — <span style="color:var(--madder);">Pending</span>':'')+'</div>'+discountHtml + '<div class="hr-date">' +
+
+        var actionsHtml = '';
+        var menuItems = '';
+
+        // "View Invoice" / "View Receipt" is shown to everyone
+        var viewBtnText = row.isBill ? t('btn_view_inv') : t('btn_view_receipt');
+        menuItems +=
+          '<button class="hr-menu-item" data-action="preview-invoice" data-eid="'+row.entryId+'" data-pid="'+(row.payId||'')+'">' +
+              '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>' +
+              viewBtnText +
+          '</button>';
+
+        // "Edit" and "Delete" only for the creator
+        if (isCreator) {
+          menuItems +=
+            '<button class="hr-menu-item" data-action="edit-item" data-eid="'+row.entryId+'" data-pid="'+(row.payId||'')+'">' +
+                '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>' +
+                t('btn_edit') +
+            '</button>' +
+            '<button class="hr-menu-item danger" data-action="delete-item" data-eid="'+row.entryId+'" data-pid="'+(row.payId||'')+'">' +
+                '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>' +
+                t('btn_del') +
+            '</button>';
+        }
+
+        if (menuItems) {
+            actionsHtml =
+                '<div class="hr-actions">' +
+                    '<button type="button" class="hr-menu-trigger" aria-label="Transaction menu">⋮</button>' +
+                    '<div class="hr-menu-dropdown">' + menuItems + '</div>' +
+                '</div>';
+        }
+
+        html += '<div class="history-row'+(row.isConfirmed?'':' unconfirmed')+'" style="position: relative; padding-right: 32px;"><div class="hr-top"><div><div class="hr-ref">'+escapeHTML(row.ref)+(row.isBill?'':' ('+t('payment')+')')+(!row.isConfirmed?' — <span style="color:var(--madder);">Pending</span>':'')+'</div>'+discountHtml + '<div class="hr-date">' +
     escapeHTML(
         formatDDMMYYYY(
             row.date
         )
     ) +
 '</div>' +
-actorHtml+confirmBtn+delBtn+'</div><div style="text-align:right;"><div class="hr-amt '+(row.isDr?'dr':'cr')+'">'+(row.isDr?'Dr ':'Cr ')+'₹'+fmtMoney(row.amount)+'</div>'+(row.isConfirmed ? '<div class="hr-bal">'+balText+'</div>' : '<div class="hr-bal">not counted</div>')+'</div></div></div>';
+actorHtml+confirmBtn+'</div><div style="text-align:right;"><div class="hr-amt '+(row.isDr?'dr':'cr')+'">'+(row.isDr?'Dr ':'Cr ')+'₹'+fmtMoney(row.amount)+'</div>'+(row.isConfirmed ? '<div class="hr-bal">'+balText+'</div>' : '<div class="hr-bal">not counted</div>')+'</div></div>' + actionsHtml + '</div>';
       } el.innerHTML = html;
     }
 
@@ -10540,13 +10676,400 @@ if (
       NativeBridge.postMessage("SAVEPDF:" + filename + "|" + base64);
     }
 
-    function sendPdfToCustomer() {
-      if (typeof window.jspdf === 'undefined') { showToast('Generating PDF... Please wait'); setTimeout(sendPdfToCustomer, 500); return; }
-      var c = myCustById(historyCustomerId); if (!c) { showToast('Open a contact ledger first.'); return; }
-      var doc = getCustomerLedgerDoc(c); var safeName = c.name.replace(/[^\x00-\x7F]/g, '').replace(/[^a-z0-9]/gi, '_'); if (!safeName) { safeName = "Contact"; }
-      var filename = "Ledger_" + safeName + ".pdf";
-      try { var base64 = doc.output("datauristring").split(",")[1]; NativeBridge.postMessage("SHAREPDF:" + filename + "|" + base64); }
-      catch (e) { console.error(e); showToast("Unable to generate PDF."); }
+    function getSingleInvoiceDoc(entry, c) {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+
+      // 1. HEADER (BUSINESS DETAILS)
+      const cleanShopName = ((profile && profile.shop) ? profile.shop : ((profile && profile.name) ? profile.name : 'My Business')).replace(/[^\x00-\x7F]/g, '').trim() || 'My Business';
+      doc.setFontSize(20);
+      doc.setTextColor(43, 58, 103); // Indigo
+      doc.setFont('helvetica', 'bold');
+      doc.text(cleanShopName, 14, 20);
+
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(80);
+      let y = 26;
+      if (profile && profile.area) {
+        doc.text(profile.area.replace(/[^\x00-\x7F]/g, '').trim(), 14, y);
+        y += 5;
+      }
+      const ownerPhone = cleanPhone10(window.flutterSession?.ownerPhone || window.flutterSession?.userPhone || '');
+      if (ownerPhone) {
+        doc.text('Phone: ' + ownerPhone, 14, y);
+        y += 5;
+      }
+      if (profile && profile.gst) {
+        doc.text('GST: ' + profile.gst, 14, y);
+      }
+
+      // 2. INVOICE TITLE & INFO BOX
+      doc.setFontSize(32);
+      doc.setTextColor(180);
+      doc.setFont('helvetica', 'bold');
+      doc.text('INVOICE', pageWidth - 14, 22, { align: 'right' });
+
+      const hasInvoiceNo = entry.description && entry.description.trim() !== '';
+      const invoiceHead = hasInvoiceNo ? ['INVOICE #', 'DATE'] : ['DATE'];
+      const invoiceBody = hasInvoiceNo
+        ? [entry.description.trim(), formatDDMMYYYY(entry.invoiceDate || entry.createdAt)]
+        : [formatDDMMYYYY(entry.invoiceDate || entry.createdAt)];
+
+      doc.autoTable({
+        startY: 30,
+        margin: { left: pageWidth - (hasInvoiceNo ? 80 : 50) },
+        tableWidth: hasInvoiceNo ? 66 : 36,
+        head: [invoiceHead],
+        body: [invoiceBody],
+        theme: 'grid',
+        headStyles: { fillColor: [220, 220, 220], textColor: [0, 0, 0], fontStyle: 'bold', halign: 'center' },
+        bodyStyles: { halign: 'center' }
+      });
+
+      // 3. BILL TO SECTION
+      doc.setFontSize(11);
+      doc.setTextColor(0);
+      doc.setFont('helvetica', 'bold');
+      doc.setFillColor(220, 220, 220);
+      doc.rect(14, 55, 60, 7, 'F');
+      doc.text('BILL TO', 16, 60);
+
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.text(c.name.replace(/[^\x00-\x7F]/g, '').trim() || 'Contact', 14, 70);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(80);
+      y = 75;
+      if (c.area) {
+        doc.text(c.area.replace(/[^\x00-\x7F]/g, '').trim(), 14, y);
+        y += 5;
+      }
+      if (c.phone) {
+        doc.text('Phone: ' + c.phone, 14, y);
+      }
+
+      // 4. DESCRIPTION TABLE
+      const typeLabel = entry.type === 'debtor' ? 'Sale' : 'Purchase';
+      let mainDesc = (entry.itemDescription && entry.itemDescription.trim() !== '')
+        ? entry.itemDescription.trim()
+        : typeLabel;
+
+      const tableBody = [
+        [mainDesc, fmtMoney(entry.grossAmount || entry.originalAmount)]
+      ];
+      if (entry.discountAmount > 0) {
+        tableBody.push(['Discount', '-' + fmtMoney(entry.discountAmount)]);
+      }
+
+      doc.autoTable({
+        startY: 90,
+        head: [['DESCRIPTION', 'AMOUNT']],
+        body: tableBody,
+        theme: 'grid',
+        headStyles: { fillColor: [220, 220, 220], textColor: [0, 0, 0], fontStyle: 'bold' },
+        columnStyles: { 1: { halign: 'right', tableWidth: 40 } },
+        styles: { cellPadding: 5 }
+      });
+
+      // 5. TOTAL ROW
+      const finalY = doc.lastAutoTable.finalY;
+      doc.setFontSize(12);
+      doc.setTextColor(0);
+      doc.setFont('helvetica', 'bold');
+      doc.rect(pageWidth - 80, finalY, 66, 10);
+      doc.text('TOTAL', pageWidth - 75, finalY + 7);
+      doc.text('INR ' + fmtMoney(entry.originalAmount), pageWidth - 16, finalY + 7, { align: 'right' });
+
+      // 6. FOOTER
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'italic');
+      doc.setTextColor(100);
+      doc.text('Thank you for your business!', 14, finalY + 20);
+
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.text('If you have any questions about this invoice, please contact', pageWidth / 2, finalY + 40, { align: 'center' });
+      doc.setFont('helvetica', 'bold');
+      doc.text(cleanShopName + (ownerPhone ? ' | ' + ownerPhone : ''), pageWidth / 2, finalY + 45, { align: 'center' });
+
+      return doc;
+    }
+
+    function getSingleReceiptDoc(payment, entry, c) {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+
+      // 1. HEADER (BUSINESS DETAILS)
+      const cleanShopName = ((profile && profile.shop) ? profile.shop : ((profile && profile.name) ? profile.name : 'My Business')).replace(/[^\x00-\x7F]/g, '').trim() || 'My Business';
+      doc.setFontSize(20);
+      doc.setTextColor(43, 58, 103); // Indigo
+      doc.setFont('helvetica', 'bold');
+      doc.text(cleanShopName, 14, 20);
+
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(80);
+      let y = 26;
+      if (profile && profile.area) {
+        doc.text(profile.area.replace(/[^\x00-\x7F]/g, '').trim(), 14, y);
+        y += 5;
+      }
+      const ownerPhone = cleanPhone10(window.flutterSession?.ownerPhone || window.flutterSession?.userPhone || '');
+      if (ownerPhone) {
+        doc.text('Phone: ' + ownerPhone, 14, y);
+        y += 5;
+      }
+      if (profile && profile.gst) {
+        doc.text('GST: ' + profile.gst, 14, y);
+      }
+
+      // 2. RECEIPT TITLE & INFO BOX
+      doc.setFontSize(32);
+      doc.setTextColor(180);
+      doc.setFont('helvetica', 'bold');
+      doc.text('RECEIPT', pageWidth - 14, 22, { align: 'right' });
+
+      doc.autoTable({
+        startY: 30,
+        margin: { left: pageWidth - 60 },
+        tableWidth: 46,
+        head: [['DATE']],
+        body: [[formatDDMMYYYY(payment.date || payment.createdAt)]],
+        theme: 'grid',
+        headStyles: { fillColor: [220, 220, 220], textColor: [0, 0, 0], fontStyle: 'bold', halign: 'center' },
+        bodyStyles: { halign: 'center' }
+      });
+
+      // 3. RECEIVED FROM SECTION
+      doc.setFontSize(11);
+      doc.setTextColor(0);
+      doc.setFont('helvetica', 'bold');
+      doc.setFillColor(220, 220, 220);
+      doc.rect(14, 55, 60, 7, 'F');
+      doc.text('RECEIVED FROM', 16, 60);
+
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.text(c.name.replace(/[^\x00-\x7F]/g, '').trim() || 'Contact', 14, 70);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(80);
+      y = 75;
+      if (c.area) {
+        doc.text(c.area.replace(/[^\x00-\x7F]/g, '').trim(), 14, y);
+        y += 5;
+      }
+      if (c.phone) {
+        doc.text('Phone: ' + c.phone, 14, y);
+      }
+
+      // 4. PAYMENT DETAILS TABLE
+      const paymentDesc = payment.note || 'Payment Received';
+      const tableBody = [
+        [paymentDesc, fmtMoney(payment.amount)]
+      ];
+
+      doc.autoTable({
+        startY: 90,
+        head: [['DESCRIPTION', 'AMOUNT']],
+        body: tableBody,
+        theme: 'grid',
+        headStyles: { fillColor: [220, 220, 220], textColor: [0, 0, 0], fontStyle: 'bold' },
+        columnStyles: { 1: { halign: 'right', tableWidth: 40 } },
+        styles: { cellPadding: 5 }
+      });
+
+      // 5. TOTAL ROW
+      const finalY = doc.lastAutoTable.finalY;
+      doc.setFontSize(12);
+      doc.setTextColor(0);
+      doc.setFont('helvetica', 'bold');
+      doc.rect(pageWidth - 80, finalY, 66, 10);
+      doc.text('PAID AMOUNT', pageWidth - 75, finalY + 7);
+      doc.text('INR ' + fmtMoney(payment.amount), pageWidth - 16, finalY + 7, { align: 'right' });
+
+      // 6. FOOTER
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'italic');
+      doc.setTextColor(100);
+      doc.text('Thank you for your payment!', 14, finalY + 20);
+
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.text('If you have any questions about this receipt, please contact', pageWidth / 2, finalY + 40, { align: 'center' });
+      doc.setFont('helvetica', 'bold');
+      doc.text(cleanShopName + (ownerPhone ? ' | ' + ownerPhone : ''), pageWidth / 2, finalY + 45, { align: 'center' });
+
+      return doc;
+    }
+
+    function sendPdfToCustomer(targetId, entryId) {
+      var pdfData = generatePdfData(targetId, entryId);
+      if (!pdfData) return;
+      NativeBridge.postMessage("SHAREPDF:" + pdfData.filename + "|" + pdfData.base64);
+    }
+
+    function generatePdfData(targetId, entryId, payId) {
+      if (typeof window.jspdf === 'undefined') { showToast('Generating PDF... Please wait'); return null; }
+
+      var actualTargetId = (typeof targetId === 'string') ? targetId : historyCustomerId;
+      var c = myCustById(actualTargetId); if (!c) { showToast('Contact not found.'); return null; }
+
+      var doc;
+      var filenamePrefix = "CollectionBook_";
+      var filenameBody = "";
+
+      if (payId) {
+        var entry = ledger.find(e => (e.payments || []).some(p => p.id === payId));
+        if (entry) {
+          var payment = entry.payments.find(p => p.id === payId);
+          doc = getSingleReceiptDoc(payment, entry, c);
+          filenameBody = "Receipt_" + c.name.replace(/[^a-z0-9]/gi, '_');
+        }
+      } else if (entryId && typeof entryId === 'string') {
+        var entry = ledger.find(e => e.id === entryId);
+        if (entry) {
+          doc = getSingleInvoiceDoc(entry, c);
+          filenameBody = "Invoice_" + (entry.description ? entry.description.replace(/[^a-z0-9]/gi, '_') : (profile && profile.shop ? profile.shop.replace(/[^a-z0-9]/gi, '_') : "Entry"));
+        } else {
+          doc = getCustomerLedgerDoc(c);
+          filenameBody = "Ledger_" + c.name.replace(/[^a-z0-9]/gi, '_');
+        }
+      } else {
+        doc = getCustomerLedgerDoc(c);
+        filenameBody = "Ledger_" + c.name.replace(/[^a-z0-9]/gi, '_');
+      }
+
+      if (!doc) return null;
+
+      var filename = filenamePrefix + filenameBody + ".pdf";
+      var base64 = doc.output("datauristring").split(",")[1];
+      return { base64: base64, filename: filename, doc: doc };
+    }
+
+    async function previewInvoice(entryId, payId) {
+      var pdfData = generatePdfData(historyCustomerId, entryId, payId);
+      if (!pdfData) return;
+
+      currentPreviewPdf = pdfData;
+      currentPreviewFilename = pdfData.filename;
+
+      var titleEl = $('#previewTitle');
+      if (titleEl) {
+        var key = payId ? 'head_preview_receipt' : 'head_preview_inv';
+        titleEl.dataset.i18n = key;
+        titleEl.textContent = t(key);
+      }
+
+      openOverlay('#invoicePreviewOverlay');
+
+      // Small delay to ensure the modal is visible and container has dimensions
+      setTimeout(async function() {
+          var canvas = $('#pdf-render-canvas');
+          var container = $('#pdf-viewer-container');
+          if (!canvas || !container) return;
+
+          try {
+            const binaryString = atob(pdfData.base64);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+              bytes[i] = binaryString.charCodeAt(i);
+            }
+
+            const loadingTask = pdfjsLib.getDocument({data: bytes});
+            const pdf = await loadingTask.promise;
+            const page = await pdf.getPage(1);
+
+            // Use exact container width
+            var containerWidth = container.clientWidth;
+            if (containerWidth === 0) containerWidth = 400; // Fallback
+
+            var baseViewport = page.getViewport({scale: 1.0});
+            var scale = containerWidth / baseViewport.width;
+
+            // Render at high resolution (2x)
+            const viewport = page.getViewport({scale: scale * 2});
+            const context = canvas.getContext('2d');
+
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+
+            // Note: canvas width is managed by CSS (width: 100%)
+
+            const renderContext = {
+              canvasContext: context,
+              viewport: viewport
+            };
+            await page.render(renderContext).promise;
+          } catch (err) {
+            console.error("PDF Preview Error:", err);
+            showToast("Unable to show preview, but you can still Share/Download.");
+          }
+      }, 100);
+    }
+
+
+    function openEditEntry(entry) {
+      editingEntryId = entry.id;
+      editingPaymentId = null;
+      selectedCustomerId = entry.customerId;
+
+      $('#en-search-container').style.display = 'none';
+      $('#en-selected-note').style.display = 'block';
+
+      var c = myCustById(entry.customerId);
+      renderSelectedContactCard(c, false);
+
+      $('#en-amount').value = entry.grossAmount || entry.originalAmount;
+      $('#en-discount').value = entry.discountAmount || 0;
+      $('#en-idate').value = entry.invoiceDate || entry.createdAt.slice(0, 10);
+      cbUpdateDateDisplay('en-idate');
+
+      $('#en-due').value = entry.dueDate || '';
+      cbUpdateDateDisplay('en-due');
+
+      $('#en-desc').value = entry.description || '';
+      $('#en-item-desc').value = entry.itemDescription || '';
+      $('#en-confirmed').checked = entry.isConfirmed !== false;
+
+      entryType = entry.type;
+      $$('.radio-opt').forEach(function(r) {
+          r.classList.toggle('selected', r.dataset.type === entryType);
+      });
+
+      $('#entryTitle').textContent = 'Edit Entry';
+      $('#en-save').textContent = 'Update Entry';
+
+      if (entry.invoiceDate || entry.dueDate || entry.discountAmount || entry.itemDescription) {
+          $('#en-additional-details').style.display = 'block';
+          $('#btn-toggle-additional').textContent = t('btn_hide_details');
+      }
+
+      openOverlay('#entryOverlay');
+    }
+
+    function openEditPayment(entry, payment) {
+      editingEntryId = entry.id;
+      editingPaymentId = payment.id;
+      collectTargetCustId = entry.customerId;
+
+      var c = myCustById(entry.customerId);
+      $('#collect-sub').textContent = 'Editing Payment for ' + c.name;
+
+      $('#col-amount').value = payment.amount;
+      $('#col-date').value = payment.date || payment.createdAt.slice(0, 10);
+      cbUpdateDateDisplay('col-date');
+
+      $('#col-note').value = payment.note || '';
+      $('#col-confirmed').checked = payment.isConfirmed !== false;
+
+      $('#col-save').textContent = 'Update Payment';
+
+      openOverlay('#collectOverlay');
     }
 
     function computeCustomerBalances(){
@@ -11170,6 +11693,8 @@ if (delItemBtn) {
         var collectBtnCust = closest(tNode, '[data-action="collect-payment-cust"]');
         if(collectBtnCust){
           if (!window.checkAuth()) return;
+          editingEntryId = null; editingPaymentId = null;
+          if ($('#col-save')) $('#col-save').textContent = t('btn_save_pay');
           collectTargetCustId = collectBtnCust.dataset.custid; collectTargetType = collectBtnCust.dataset.type; var c = myCustById(collectTargetCustId);
           var balData = computeCustomerBalances().find(function(x){ return x.customer.id === collectTargetCustId; }); var netReceivable = 0; var netPayable = 0;
           if (balData) { netReceivable = Math.max(balData.receivable - balData.payable, 0); netPayable = Math.max(balData.payable - balData.receivable, 0); }
@@ -11229,6 +11754,9 @@ if (manageBtn) {
         var txnBtn = closest(tNode, '[data-action="new-txn-for"]');
         if(txnBtn){
           if (!window.checkAuth()) return;
+          editingEntryId = null; editingPaymentId = null;
+          if ($('#en-save')) $('#en-save').textContent = t('btn_save_entry');
+          if ($('#entryTitle')) $('#entryTitle').textContent = t('entry_title_gen');
 
           /*
            * OWNER PROFILE CHECK
@@ -11323,6 +11851,57 @@ if ($('#en-due')) {
         }
         var dirRateBtn = closest(tNode, '[data-action="dir-rate"]'); if(dirRateBtn){ openDirRateModal(dirRateBtn.dataset.id); return; }
         var dirImportBtn = closest(tNode, '[data-action="dir-import"]'); if(dirImportBtn){ await importFromDirectory(dirImportBtn.dataset.id); return; }
+
+        var previewInvoiceBtn = closest(tNode, '[data-action="preview-invoice"]');
+        if (previewInvoiceBtn) {
+            previewInvoice(previewInvoiceBtn.dataset.eid, previewInvoiceBtn.dataset.pid);
+            return;
+        }
+
+        var menuTrigger = closest(tNode, '.hr-menu-trigger');
+        if (menuTrigger) {
+            e.stopPropagation();
+            var dropdown = menuTrigger.nextElementSibling;
+
+            // Close all other open menus
+            $$('.hr-menu-dropdown.open').forEach(function(el) {
+                if (el !== dropdown) el.classList.remove('open');
+            });
+
+            dropdown.classList.toggle('open');
+            return;
+        }
+
+        // Close menu when clicking anywhere else
+        $$('.hr-menu-dropdown.open').forEach(function(el) {
+            el.classList.remove('open');
+        });
+
+        var editItemBtn = closest(tNode, '[data-action="edit-item"]');
+        if (editItemBtn) {
+            var eid = editItemBtn.dataset.eid;
+            var pid = editItemBtn.dataset.pid;
+
+            var entry = ledger.find(function(e) { return e.id === eid; });
+            if (!entry) {
+                showToast('Entry not found');
+                return;
+            }
+
+            if (pid) {
+                // Edit Payment
+                var payment = (entry.payments || []).find(function(p) { return p.id === pid; });
+                if (!payment) {
+                    showToast('Payment not found');
+                    return;
+                }
+                openEditPayment(entry, payment);
+            } else {
+                // Edit Bill (Sale/Purchase)
+                openEditEntry(entry);
+            }
+            return;
+        }
       });
       safeBind(
     '#btn-settings-security',
@@ -11711,8 +12290,11 @@ safeBind(
         if($('#en-new-customer-fields')) $('#en-new-customer-fields').style.display='none';
         if($('#en-new-customer-fields-bottom')) $('#en-new-customer-fields-bottom').style.display='none';
         if($('#en-phone')) $('#en-phone').value=''; if($('#en-area')) $('#en-area').value='';
-        if($('#en-notes')) $('#en-notes').value=''; if($('#en-selected-note')) $('#en-selected-note').style.display='none';
+        if($('#en-notes')) $('#en-notes').value='';
+        if($('#en-item-desc')) $('#en-item-desc').value='';
+        if($('#en-selected-note')) $('#en-selected-note').style.display='none';
         if($('#en-amount')) $('#en-amount').value=''; if($('#en-discount')) $('#en-discount').value='';
+        if ($('#en-send-wa-pdf')) $('#en-send-wa-pdf').checked = false;
         if ($('#en-idate')) {
     $('#en-idate').value =
         todayISO();
@@ -11747,6 +12329,7 @@ if ($('#en-due')) {
       });
 
       safeBind('#en-cancel', 'click', function () {
+        editingEntryId = null; editingPaymentId = null;
     if ($('#en-customer-search')) {
         $('#en-customer-search').disabled = false;
     }
@@ -11757,7 +12340,10 @@ if ($('#en-due')) {
 
     closeOverlay('#entryOverlay');
 });
-      safeBind('#col-cancel', 'click', function(){ closeOverlay('#collectOverlay'); });
+      safeBind('#col-cancel', 'click', function(){
+        editingEntryId = null; editingPaymentId = null;
+        closeOverlay('#collectOverlay');
+      });
       safeBind('#history-close', 'click', function(){ closeOverlay('#historyOverlay'); });
       safeBind('#dir-cancel', 'click', function(){ closeOverlay('#dirRateOverlay'); });
       safeBind('#mg-cancel', 'click', function(){ closeOverlay('#manageOverlay'); });
@@ -12671,9 +13257,13 @@ $$('.rating-star').forEach(
       });
 
      safeBind('#en-save', 'click', async function(){
-        var searchVal = $('#en-customer-search') ? $('#en-customer-search').value.trim() : ''; if(!searchVal){ showToast('Enter contact name'); return; }
+        var searchVal = $('#en-customer-search') ? $('#en-customer-search').value.trim() : '';
+        if(!editingEntryId && !selectedCustomerId && !searchVal){ showToast('Enter contact name'); return; }
         var gross = $('#en-amount') ? Number($('#en-amount').value||0) : 0; var discount = $('#en-discount') ? Number($('#en-discount').value||0) : 0;
         if(!gross){ showToast('Enter Gross Amount'); return; } var netAmount = Math.max(0, gross - discount);
+
+        var sendPdf = $('#en-send-wa-pdf') ? $('#en-send-wa-pdf').checked : false;
+        var itemDesc = $('#en-item-desc') ? $('#en-item-desc').value.trim() : '';
 
        var entryOwnerUid =
     getCurrentBusinessUid();
@@ -12682,6 +13272,31 @@ var actor =
     getCurrentActor();
         var rawPhone = $('#en-phone') ? cleanPhone10($('#en-phone').value) : '';
         var checkCustId = selectedCustomerId;
+
+        if (editingEntryId) {
+            var existingEntry = ledger.find(function(e) { return e.id === editingEntryId; });
+            if (existingEntry) {
+                existingEntry.grossAmount = gross;
+                existingEntry.discountAmount = discount;
+                existingEntry.originalAmount = netAmount;
+                existingEntry.invoiceDate = ($('#en-idate') && $('#en-idate').value) || todayISO();
+                existingEntry.dueDate = $('#en-due') ? $('#en-due').value : '';
+                existingEntry.description = $('#en-desc') ? $('#en-desc').value.trim() : '';
+                existingEntry.itemDescription = itemDesc;
+                existingEntry.isConfirmed = isConf;
+                existingEntry.type = entryType;
+                existingEntry.updatedAt = new Date().toISOString();
+
+                await saveLedger();
+                showToast('Entry updated');
+                triggerSuccess('msg_action_success');
+                closeOverlay('#entryOverlay');
+                renderAll();
+                if (historyCustomerId) renderHistory();
+            }
+            editingEntryId = null;
+            return;
+        }
 
         // If it's an existing customer, and the field is empty, try to get it from the record
         if (checkCustId && (!rawPhone || rawPhone.length !== 10)) {
@@ -12948,6 +13563,9 @@ if (
                 .trim()
             : '',
 
+    itemDescription:
+        itemDesc,
+
     payments: [],
 
     createdAt:
@@ -13129,6 +13747,13 @@ var ownerMessage =
             triggerSuccess('msg_entry_success');
         }
 
+        if (sendPdf && selectedCustomerId) {
+            const savedEntryId = entry.id;
+            setTimeout(function() {
+                sendPdfToCustomer(selectedCustomerId, savedEntryId);
+            }, 1000);
+        }
+
         // --- NEW: SHOW RATING POPUP AFTER VERY FIRST ENTRY ---
         try {
             var hasSeenRating = await window.storage.get('cb-first-entry-rated', false);
@@ -13168,6 +13793,30 @@ var ownerMessage =
         var currentUid = getCurrentBusinessUid();
         var targetCust = myCustById(collectTargetCustId);
         var targetPhone = targetCust ? (targetCust.phone || '').replace(/\D/g, '') : '';
+
+        if (editingPaymentId) {
+            var existingEntry = ledger.find(function(e) { return e.id === editingEntryId; });
+            if (existingEntry) {
+                var existingPayment = (existingEntry.payments || []).find(function(p) { return p.id === editingPaymentId; });
+                if (existingPayment) {
+                    existingPayment.amount = amt;
+                    existingPayment.date = dateVal;
+                    existingPayment.note = noteVal;
+                    existingPayment.isConfirmed = isConf;
+                    existingPayment.updatedAt = new Date().toISOString();
+
+                    await saveLedger();
+                    showToast('Payment updated');
+                    triggerSuccess('msg_action_success');
+                    closeOverlay('#collectOverlay');
+                    renderAll();
+                    if (historyCustomerId) renderHistory();
+                }
+            }
+            editingEntryId = null;
+            editingPaymentId = null;
+            return;
+        }
 
       var entries = ledger.filter(
     function(l) {
@@ -14282,6 +14931,19 @@ safeBind(
 });
 
       safeBind('#btn-success-close', 'click', function(){ closeOverlay('#successPopup'); });
+
+      safeBind('#btn-preview-close', 'click', function() {
+        closeOverlay('#invoicePreviewOverlay');
+      });
+      safeBind('#btn-preview-download', 'click', function() {
+        if (!currentPreviewPdf) return;
+        NativeBridge.postMessage("SAVEPDF:" + currentPreviewPdf.filename + "|" + currentPreviewPdf.base64);
+      });
+      safeBind('#btn-preview-share', 'click', function() {
+        if (!currentPreviewPdf) return;
+        NativeBridge.postMessage("SHAREPDF:" + currentPreviewPdf.filename + "|" + currentPreviewPdf.base64);
+      });
+
 
       $$('.overlay').forEach(function (overlay) {
           overlay.addEventListener('click', function (e) {
