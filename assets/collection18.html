@@ -8071,13 +8071,12 @@ function getCurrentActor() {
                     'Employee'
                 )
                 : (
+                    (
+                        profile &&
+                        profile.name
+                    ) ||
                     window.flutterSession
                         ?.businessOwnerName ||
-                    (
-                        profile
-                            ? profile.name
-                            : ''
-                    ) ||
                     'Business Owner'
                 ),
 
@@ -12671,6 +12670,16 @@ $$('.rating-star').forEach(
       });
 
      safeBind('#en-save', 'click', async function(){
+        /*
+         * ROBUST PROFILE CHECK
+         */
+        if (currentRoleMode === 'owner' && !isOwnerProfileSetup()) {
+            showToast('Please complete your profile to save entries');
+            configureProfilePopup(true);
+            openOverlay('#onboardOverlay', true);
+            return;
+        }
+
         var searchVal = $('#en-customer-search') ? $('#en-customer-search').value.trim() : ''; if(!searchVal){ showToast('Enter contact name'); return; }
         var gross = $('#en-amount') ? Number($('#en-amount').value||0) : 0; var discount = $('#en-discount') ? Number($('#en-discount').value||0) : 0;
         if(!gross){ showToast('Enter Gross Amount'); return; } var netAmount = Math.max(0, gross - discount);
@@ -12832,23 +12841,25 @@ if (customerSaved) {
 
         var isConf = $('#en-confirmed') ? $('#en-confirmed').checked : true; var c = myCustById(selectedCustomerId);
         var currentBusinessName =
+    (
+        profile &&
+        profile.shop
+    ) ||
     window.flutterSession
         ?.businessName ||
     (
-        profile
-            ? profile.shop
-            : ''
+        profile &&
+        profile.name
     ) ||
     'Business Account';
 
 var currentOwnerName =
+    (
+        profile &&
+        profile.name
+    ) ||
     window.flutterSession
         ?.businessOwnerName ||
-    (
-        profile
-            ? profile.name
-            : ''
-    ) ||
     'Business Owner';
 
     var c = myCustById(checkCustId);
@@ -13157,6 +13168,16 @@ var ownerMessage =
       });
 
       safeBind('#col-save', 'click', async function(){
+        /*
+         * ROBUST PROFILE CHECK
+         */
+        if (currentRoleMode === 'owner' && !isOwnerProfileSetup()) {
+            showToast('Please complete your profile to save payments');
+            configureProfilePopup(true);
+            openOverlay('#onboardOverlay', true);
+            return;
+        }
+
         if(!collectTargetCustId) return;
         var amt = $('#col-amount') ? Number($('#col-amount').value||0) : 0;
         if(!amt){ showToast('Enter amount'); return; }
