@@ -32,16 +32,6 @@ class _OTPScreenState extends State<OTPScreen> {
   Timer? _timer;
   bool canResend = false;
 
-  // Collection Book Brand Colors
-  static const Color khadi = Color(0xFFEFE7D6);
-  static const Color khadiLine = Color(0xFFD8CCB0);
-  static const Color indigo = Color(0xFF2B3A67);
-  static const Color indigoDeep = Color(0xFF182449);
-  static const Color turmeric = Color(0xFFC98A2D);
-  static const Color paper = Color(0xFFFBF8F1);
-  static const Color charcoal = Color(0xFF2A2622);
-  static const Color muted = Color(0xFF77705F);
-
   void startTimer() {
     _secondsRemaining = 60;
     canResend = false;
@@ -140,6 +130,17 @@ class _OTPScreenState extends State<OTPScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    final khadi = isDark ? const Color(0xFF000000) : const Color(0xFFEFE7D6);
+    final paper = isDark ? const Color(0xFF080808) : const Color(0xFFFBF8F1);
+    final charcoal = isDark ? const Color(0xFFE9EDEF) : const Color(0xFF2A2622);
+    final muted = isDark ? const Color(0xFF8696A0) : const Color(0xFF77705F);
+    final turmeric = isDark ? const Color(0xFFB08B4B) : const Color(0xFFC98A2D);
+    final indigo = isDark ? const Color(0xFF4A5A96) : const Color(0xFF2B3A67);
+    final indigoDeep = isDark ? const Color(0xFFFFFFFF) : const Color(0xFF182449);
+    final khadiLine = isDark ? const Color(0xFF23272F) : const Color(0xFFD8CCB0);
+
     return Scaffold(
       backgroundColor: khadi,
       body: Stack(
@@ -147,7 +148,9 @@ class _OTPScreenState extends State<OTPScreen> {
           // Background Line Texture
           Positioned.fill(
             child: CustomPaint(
-              painter: BackgroundLinesPainter(),
+              painter: BackgroundLinesPainter(
+                color: khadiLine.withOpacity(isDark ? 0.05 : 0.35),
+              ),
             ),
           ),
           
@@ -158,7 +161,7 @@ class _OTPScreenState extends State<OTPScreen> {
                   top: 10,
                   left: 10,
                   child: IconButton(
-                    icon: const Icon(Icons.arrow_back_ios_new_rounded, color: indigoDeep),
+                    icon: Icon(Icons.arrow_back_ios_new_rounded, color: isDark ? turmeric : indigoDeep),
                     onPressed: () => Navigator.pop(context),
                   ).animate().fadeIn().slideX(begin: -0.5, end: 0),
                 ),
@@ -196,7 +199,7 @@ class _OTPScreenState extends State<OTPScreen> {
                                     const TextSpan(text: "We've sent a code to\n"),
                                     TextSpan(
                                       text: widget.phone,
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontWeight: FontWeight.w700,
                                         color: charcoal,
                                       ),
@@ -218,7 +221,7 @@ class _OTPScreenState extends State<OTPScreen> {
                               border: Border.all(color: khadiLine),
                               boxShadow: [
                                 BoxShadow(
-                                  color: charcoal.withValues(alpha: 0.06),
+                                  color: Colors.black.withOpacity(isDark ? 0.3 : 0.06),
                                   blurRadius: 20,
                                   offset: const Offset(0, 4),
                                 ),
@@ -242,7 +245,7 @@ class _OTPScreenState extends State<OTPScreen> {
                                         color: charcoal,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: khadi,
+                                        color: isDark ? const Color(0xFF0D0F12) : khadi,
                                         borderRadius: BorderRadius.circular(12),
                                         border: Border.all(color: khadiLine),
                                       ),
@@ -256,12 +259,12 @@ class _OTPScreenState extends State<OTPScreen> {
                                         color: turmeric,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: Colors.white,
+                                        color: isDark ? const Color(0xFF161B22) : Colors.white,
                                         borderRadius: BorderRadius.circular(12),
                                         border: Border.all(color: turmeric, width: 2),
                                         boxShadow: [
                                           BoxShadow(
-                                            color: turmeric.withValues(alpha: 0.1),
+                                            color: turmeric.withOpacity(0.1),
                                             blurRadius: 8,
                                             spreadRadius: 2,
                                           ),
@@ -279,7 +282,7 @@ class _OTPScreenState extends State<OTPScreen> {
                                     onPressed: loading ? null : verifyOTP,
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: indigo,
-                                      foregroundColor: paper,
+                                      foregroundColor: Colors.white,
                                       elevation: 4,
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(14),
@@ -290,7 +293,7 @@ class _OTPScreenState extends State<OTPScreen> {
                                             width: 24,
                                             height: 24,
                                             child: CircularProgressIndicator(
-                                              color: paper,
+                                              color: Colors.white,
                                               strokeWidth: 2.5,
                                             ),
                                           )
@@ -373,6 +376,9 @@ class _OTPScreenState extends State<OTPScreen> {
   }
 
   void showToast(String msg) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final indigoDeep = isDark ? const Color(0xFFFFFFFF) : const Color(0xFF182449);
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(msg),
@@ -385,10 +391,13 @@ class _OTPScreenState extends State<OTPScreen> {
 }
 
 class BackgroundLinesPainter extends CustomPainter {
+  final Color color;
+  BackgroundLinesPainter({required this.color});
+
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = const Color(0xFFD8CCB0).withValues(alpha: 0.35)
+      ..color = color
       ..strokeWidth = 1.0;
 
     const double step = 28.0;

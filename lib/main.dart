@@ -19,6 +19,8 @@ import 'package:collection_book/legal/legal_content.dart';
 import 'package:collection_book/screens/legal_document_screen.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:collection_book/services/app_lock_service.dart';
+import 'package:collection_book/services/app_language_service.dart';
+import 'package:collection_book/services/theme_service.dart';
 import 'firebase_options.dart';
 
 import 'screens/splash_screen.dart';
@@ -58,27 +60,9 @@ void main() async {
     SystemUiMode.edgeToEdge,
   );
 
-  SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
-      statusBarColor:
-      Colors.transparent,
-
-      statusBarIconBrightness:
-      Brightness.light,
-
-      statusBarBrightness:
-      Brightness.dark,
-
-      systemNavigationBarColor:
-      Color(0xFFF7F7F7),
-
-      systemNavigationBarIconBrightness:
-      Brightness.dark,
-    ),
-  );
-
-
   await Hive.openBox("collectionBook");
+  ThemeService.instance.initialize();
+  AppLanguageService.instance.initialize();
 
   runApp(const CollectionBookApp());
 }
@@ -284,9 +268,9 @@ class _StartupLoaderState extends State<StartupLoader> {
         }
 
         if (snapshot.hasError) {
+          final isDark = Theme.of(context).brightness == Brightness.dark;
           return Scaffold(
-            backgroundColor:
-            const Color(0xFFEFE7D6),
+            backgroundColor: isDark ? Colors.black : const Color(0xFFEFE7D6),
 
             body: SafeArea(
               top: false,
@@ -401,40 +385,49 @@ const CollectionBookApp({super.key});
 
 @override
 Widget build(BuildContext context) {
-return MaterialApp(
-title: 'Collection Book',
-  theme: ThemeData(
+return ValueListenableBuilder<ThemeMode>(
+  valueListenable: ThemeService.instance.themeMode,
+  builder: (context, mode, child) {
+    return ValueListenableBuilder<String>(
+      valueListenable: AppLanguageService.instance.currentLanguage,
+      builder: (context, lang, child) {
+        final isDark = mode == ThemeMode.dark;
+        
+        SystemChrome.setSystemUIOverlayStyle(
+          SystemUiOverlayStyle(
+            statusBarColor: Colors.transparent,
+            statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+            statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
+            systemNavigationBarColor: isDark ? Colors.black : const Color(0xFFF7F7F7),
+            systemNavigationBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+          ),
+        );
 
-    scaffoldBackgroundColor: AppTheme.background,
-
-    colorScheme: ColorScheme.fromSeed(
-      seedColor: AppTheme.primary,
-    ),
-
-    useMaterial3: true,
-
-  ),
-debugShowCheckedModeBanner: false,
-
-initialRoute: '/',
-routes: {
-'/': (context) => const AuthWrapper(),
-'/login': (context) => const LoginScreen(),
-'/home': (context) => const AuthWrapper(),
-  '/privacy-policy': (context) =>
-  const LegalDocumentScreen(
-    title: LegalContent.privacyPolicyTitle,
-    content: LegalContent.privacyPolicy,
-  ),
-
-  '/terms': (context) =>
-  const LegalDocumentScreen(
-    title: LegalContent.termsTitle,
-    content: LegalContent.termsAndConditions,
-  ),
-  '/security-settings': (context) =>
-  const SecuritySettingsScreen(),
-},
+        return MaterialApp(
+          title: 'Collection Book',
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          themeMode: mode,
+          debugShowCheckedModeBanner: false,
+          initialRoute: '/',
+          routes: {
+            '/': (context) => const AuthWrapper(),
+            '/login': (context) => const LoginScreen(),
+            '/home': (context) => const AuthWrapper(),
+            '/privacy-policy': (context) => LegalDocumentScreen(
+              title: AppLanguageService.instance.translate('privacy_policy'),
+              content: LegalContent.privacyPolicy,
+            ),
+            '/terms': (context) => LegalDocumentScreen(
+              title: AppLanguageService.instance.translate('terms_conditions'),
+              content: LegalContent.termsAndConditions,
+            ),
+            '/security-settings': (context) => const SecuritySettingsScreen(),
+          },
+        );
+      },
+    );
+  },
 );
 }
 }

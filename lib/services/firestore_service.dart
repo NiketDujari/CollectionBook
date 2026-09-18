@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:ui';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:collection_book/services/app_language_service.dart';
 import 'package:collection_book/services/session_service.dart';
 import 'package:collection_book/services/storage_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -237,6 +238,9 @@ class FirestoreService {
     // 0. Always save global device-level settings to local storage
     if (key == 'cb-lang' || key == 'cb-lang-prompted') {
       await StorageService.set(key, value.toString());
+      if (key == 'cb-lang') {
+        await AppLanguageService.instance.setLanguage(value.toString());
+      }
     }
 
     if (key == 'cb-ledger-v1') {

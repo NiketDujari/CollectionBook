@@ -1580,56 +1580,53 @@ body.no-delete-access
   
 
     /* ========================================
-       DARK MODE
+       DARK MODE (ULTRA-PREMIUM OLED BLACK)
+       Pure Black Foundation with Dimmed Premium Accents.
        ======================================== */
     html.dark-mode {
       color-scheme: dark;
 
-      --indigo:#9DAFF4;
-      --indigo-deep:#C8D2FF;
-      --indigo-tint:#252C43;
+      --indigo:#4A5A96; /* Dimmed Periwinkle Blue */
+      --indigo-deep:#FFFFFF; /* Brighter Titles (YouTube/iOS style) */
+      --indigo-tint:#080A0F;
 
-      --turmeric:#D99A3A;
-      --turmeric-tint:#3B3021;
+      --turmeric:#B08B4B; /* Muted Bronze Gold (Matches Reference) */
+      --turmeric-tint:#121008;
 
-      --khadi:#14171C;
-      --khadi-line:#383E48;
-      --paper:#1E2229;
+      --khadi:#000000; /* OLED Pure Black */
+      --khadi-line:#23272F; /* More visible Slate Border */
+      --paper:#000000; /* Pure Black Surface */
 
-      --madder:#E4777A;
-      --madder-tint:#3D2528;
+      --madder:#D65D5B; /* Muted Coral Red */
+      --madder-tint:#1A0D0E;
 
-      --sage:#8AB98D;
-      --sage-tint:#26362A;
+      --sage:#00A884;
+      --sage-tint:#08120F;
 
-      --charcoal:#F2EEE6;
-      --muted:#AAA398;
-      --neutral-tint:#2B3038;
+      --charcoal:#E9EDEF; /* Primary Text */
+      --muted:#8696A0; /* Secondary Text */
+      --neutral-tint:#0A0C10;
 
-      --on-accent:#FFFDF8;
-      --shadow:0 2px 12px rgba(0,0,0,.32);
+      --on-accent:#FFFFFF; /* White text on muted buttons for better depth */
+      --shadow:0 8px 32px rgba(0,0,0,.8);
     }
 
     html.dark-mode body {
-      background:#14171C;
+      background:#000000;
       color:var(--charcoal);
     }
 
     html.dark-mode body::before {
-      background-image:
-        repeating-linear-gradient(
-          0deg,
-          transparent,
-          transparent 27px,
-          rgba(255,255,255,.025) 28px
-        );
+       background-image: none; /* No grid for OLED black */
     }
 
-    /* Keep branded/action surfaces deep enough for white text. */
+    /* Branded headers: Pure Black with border */
     html.dark-mode header.app-header,
     html.dark-mode .cb-date-header {
-      background:linear-gradient(155deg,#273A78,#151F43);
-      color:var(--on-accent);
+      background:#000000;
+      color:#FFFFFF;
+      border-bottom: 1px solid var(--khadi-line);
+      box-shadow: none;
     }
 
     html.dark-mode .brand-text h1,
@@ -1637,22 +1634,34 @@ body.no-delete-access
     html.dark-mode .notification-header-btn,
     html.dark-mode .cb-date-header,
     html.dark-mode .cb-date-close {
-      color:var(--on-accent);
+      color:#FFFFFF;
     }
 
+    /* Primary system actions - Muted Indigo with white text */
     html.dark-mode .btn.primary,
     html.dark-mode .mini-btn.primary,
     html.dark-mode .cb-date-action.primary,
     html.dark-mode .notification-select-control.selected,
     html.dark-mode .cb-calendar-day.selected {
-      background:#455A9A;
-      border-color:#455A9A;
-      color:var(--on-accent);
+      background:var(--indigo);
+      border-color:var(--indigo);
+      color: #FFFFFF;
+      font-weight: 700;
+    }
+
+    /* Reference: Muted bronze gold for accent buttons with black text */
+    html.dark-mode .btn.accent,
+    html.dark-mode .mini-btn.accent {
+      background:var(--turmeric);
+      border-color:var(--turmeric);
+      color: #000000;
+      font-weight: 700;
     }
 
     html.dark-mode .toast {
-      background:#11182D;
-      color:var(--on-accent);
+      background:#080808;
+      color:#FFFFFF;
+      border: 1px solid #2D333D;
     }
 
     html.dark-mode input,
@@ -1663,81 +1672,101 @@ body.no-delete-access
     html.dark-mode .field textarea,
     html.dark-mode .search-bar input {
       color:var(--charcoal);
+      background: #0D0F12;
+      border-color: #1F2226;
       caret-color:var(--turmeric);
     }
 
     html.dark-mode input::placeholder,
     html.dark-mode textarea::placeholder {
-      color:#827D74;
+      color:#667781;
       opacity:1;
     }
 
     html.dark-mode select option {
-      background:var(--paper);
+      background:#000000;
       color:var(--charcoal);
     }
 
     html.dark-mode input[type="checkbox"],
     html.dark-mode input[type="radio"] {
-      accent-color:#7389DA;
+      accent-color:var(--indigo);
     }
 
     html.dark-mode .overlay,
     html.dark-mode .custom-modal-overlay {
-      background:rgba(0,0,0,.72);
+      background:rgba(0,0,0,.6);
     }
 
     html.dark-mode .cb-date-overlay {
-      background:rgba(5,8,15,.72);
+      background:rgba(0,0,0,.6);
     }
 
     html.dark-mode .directory-notice.private {
-      background:#232A42;
-      border-color:#667CC7;
-      color:#C9D3FF;
+      background:#080A0F;
+      border-color:#1F2226;
+      color:var(--indigo);
     }
 
     html.dark-mode .notification-item.selected {
-      background:rgba(116,137,218,.13);
+      background:rgba(74, 90, 150, .08);
     }
 
     html.dark-mode .notification-delete-btn {
-      color:#F08A8D;
+      color:#F15C6D;
     }
 
     html.dark-mode .mini-btn.whatsapp {
-      color:#fff;
+      background: #00A884;
+      border-color: #00A884;
+      color:#FFFFFF;
     }
 
     html.dark-mode .card .card-actions [data-action="view-history"] {
-      background:#232A42;
-      border-color:#667CC7;
-      color:#C9D3FF;
+      background: #0D0F12;
+      border-color: #30363D;
+      color: #8AA1FF; /* More vibrant Indigo/Periwinkle */
+      font-weight: 700;
     }
 
     html.dark-mode .card .card-actions .mini-btn.call {
-      background: #26362A;
-      border-color: #5C7A5E;
-      color: #8AB98D;
+      background: #08120F;
+      border-color: #10261F;
+      color: #00A884;
     }
 
     html.dark-mode .autocomplete-item:hover {
-      background:#292E36;
-    }
-
-    html.dark-mode ::-webkit-scrollbar {
-      width:8px;
-      height:8px;
+      background:#0D0F12;
     }
 
     html.dark-mode ::-webkit-scrollbar-thumb {
-      background:#454B56;
-      border-radius:999px;
+      background:#30363D;
     }
 
-    html.dark-mode ::-webkit-scrollbar-track {
-      background:transparent;
+    html.dark-mode nav.tabs {
+      background: #000000;
+      border-bottom: 1px solid var(--khadi-line);
     }
+
+    html.dark-mode .stat-tile,
+    html.dark-mode .card {
+       background: #000000; /* Pure black for cards too */
+       border-color: #23272F;
+    }
+
+    html.dark-mode .cb-date-picker {
+       background: #080808;
+       border-color: #2D333D;
+    }
+
+    html.dark-mode .sheet,
+    html.dark-mode .custom-modal-box {
+       background: #080808; /* Deep Obsidian for Popups */
+       border: 1px solid #2D333D;
+       box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+    }
+
+
 
     /* Settings dark-mode row */
     /* ========================================
@@ -2850,6 +2879,80 @@ nav.tabs button .count {
     .feedback-footer { display: flex; justify-content: flex-end; margin-top: 10px; }
     .feedback-char-badge { font-size: 0.72rem; font-weight: 700; padding: 4px 10px; border-radius: 8px; background: var(--khadi-line); color: var(--muted); }
 
+    /* Custom Dropdown Styling */
+    .cb-dropdown {
+      position: relative;
+      width: 100%;
+      text-align: left;
+      margin-bottom: 24px;
+    }
+    .cb-dropdown-trigger {
+      width: 100%;
+      height: 56px;
+      padding: 0 20px;
+      background: var(--khadi);
+      border: 2px solid var(--khadi-line);
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--charcoal);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .cb-dropdown-trigger:active { transform: scale(0.98); }
+    .cb-dropdown-trigger::after {
+      content: '';
+      width: 12px;
+      height: 12px;
+      background: var(--turmeric);
+      -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat center / contain;
+      mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat center / contain;
+      transition: transform 0.2s ease;
+    }
+    .cb-dropdown.open .cb-dropdown-trigger::after { transform: rotate(180deg); }
+    .cb-dropdown.open .cb-dropdown-trigger { border-color: var(--turmeric); background: var(--paper); }
+
+    .cb-dropdown-menu {
+      position: absolute;
+      bottom: calc(100% + 8px);
+      left: 0;
+      right: 0;
+      background: var(--paper);
+      border: 1px solid var(--khadi-line);
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+      z-index: 100;
+      max-height: 280px;
+      overflow-y: auto;
+      display: none;
+      padding: 8px;
+    }
+    .cb-dropdown.open .cb-dropdown-menu { display: block; animation: cbDropIn 0.2s ease-out; }
+    @keyframes cbDropIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    .cb-dropdown-item {
+      padding: 14px 16px;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: background 0.15s ease;
+    }
+    .cb-dropdown-item:hover { background: var(--khadi); }
+    .cb-dropdown-item.selected { background: var(--turmeric-tint); color: var(--turmeric); font-weight: 700; }
+    .cb-dropdown-item.selected::after { content: '✓'; font-size: 1rem; }
+
+    html.dark-mode .cb-dropdown-trigger { background: #0D0F12; border-color: #1F2226; }
+    html.dark-mode .cb-dropdown-menu { background: #161B22; border-color: #2D333D; box-shadow: 0 15px 40px rgba(0,0,0,0.4); }
+    html.dark-mode .cb-dropdown-item:hover { background: #1F2226; }
+    html.dark-mode .cb-dropdown-item.selected { background: rgba(176, 139, 75, 0.1); }
+
   </style>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
@@ -2877,9 +2980,9 @@ nav.tabs button .count {
 
     <div class="brand">
       <div class="brand-mark" id="brandMenuBtn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#C98A2D" stroke-width="1.8">
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--turmeric)" stroke-width="1.8">
           <path d="M4 6h16M4 12h16M4 18h10" stroke-linecap="round"/>
-          <circle cx="19" cy="18" r="1.6" fill="#C98A2D" stroke="none"/>
+          <circle cx="19" cy="18" r="1.6" fill="var(--turmeric)" stroke="none"/>
         </svg>
       </div>
 
@@ -3216,7 +3319,7 @@ nav.tabs button .count {
                 <!-- Ledger Book Shadow/Depth -->
                 <rect x="23" y="38" width="46" height="52" rx="6" fill="#F57F17"/>
                 <!-- Ledger Book Cover -->
-                <rect x="21" y="34" width="46" height="52" rx="6" fill="#FFB300"/>
+                <rect x="21" y="34" width="46" height="52" rx="6" fill="var(--turmeric)"/>
                 <!-- Ledger Book Pages Top -->
                 <path d="M21 40C21 36.6863 23.6863 34 27 34H67V44H27C23.6863 44 21 41.3137 21 38V40Z" fill="#FFFFFF"/>
 
@@ -3229,8 +3332,8 @@ nav.tabs button .count {
                 <rect x="71" y="45" width="2" height="42" rx="1" fill="#FF5252" fill-opacity="0.3"/> <!-- Shine -->
                 <path d="M71 83L73.5 91L76 83H71Z" fill="#CFD8DC"/> <!-- Nib Base -->
                 <path d="M73 89L73.5 91L74 89H73Z" fill="#37474F"/> <!-- Actual point -->
-                <rect x="71" y="58" width="5" height="1.5" fill="#FFD600"/> <!-- Gold ring -->
-                <rect x="74" y="50" width="1.5" height="8" rx="0.5" fill="#FFD600"/> <!-- Clip -->
+                <rect x="71" y="58" width="5" height="1.5" fill="var(--turmeric)"/> <!-- Gold ring -->
+                <rect x="74" y="50" width="1.5" height="8" rx="0.5" fill="var(--turmeric)"/> <!-- Clip -->
 
                 <!-- Decorative UI Elements -->
                 <!-- Top Left Blue Plus -->
@@ -4099,12 +4202,43 @@ nav.tabs button .count {
 </div>
 
 <div class="overlay" id="langOverlay">
-  <div class="sheet" style="text-align:center;">
-    <h3 style="margin-bottom:24px;">Language / भाषा / ভাষা</h3>
-    <div style="display:flex; flex-direction:column; gap:14px; max-width:300px; margin:0 auto;">
-      <button class="btn primary" style="background:var(--indigo);" onclick="window.setLanguage('en')">English</button>
-      <button class="btn secondary" style="border-color:var(--indigo); color:var(--indigo);" onclick="window.setLanguage('hi')">हिन्दी (Hindi)</button>
-      <button class="btn secondary" style="border-color:var(--indigo); color:var(--indigo);" onclick="window.setLanguage('bn')">বাংলা (Bengali)</button>
+  <div class="sheet" style="text-align:center; overflow: visible;">
+    <div style="margin-bottom: 24px;">
+        <div style="font-size: 2.5rem; margin-bottom: 8px;">🌐</div>
+        <h3 style="margin: 0; font-family: 'Rozha One', serif;" data-i18n="lang_title">Select Language</h3>
+        <p style="color: var(--muted); margin: 4px 0 0; font-size: 0.85rem;" data-i18n="lang_sub">Choose your preferred language</p>
+    </div>
+
+    <div style="max-width:320px; margin:0 auto; position: relative;">
+      <div class="cb-dropdown" id="langDropdown">
+        <button type="button" class="cb-dropdown-trigger" id="langDropdownTrigger">
+          <span id="langDropdownLabel">Select Language</span>
+        </button>
+        <div class="cb-dropdown-menu" id="langDropdownMenu">
+          <div class="cb-dropdown-item" data-lang="en">
+            <span>English <small style="opacity:0.6; margin-left:8px;">(English)</small></span>
+          </div>
+          <div class="cb-dropdown-item" data-lang="hi">
+            <span>हिन्दी <small style="opacity:0.6; margin-left:8px;">(Hindi)</small></span>
+          </div>
+          <div class="cb-dropdown-item" data-lang="bn">
+            <span>বাংলা <small style="opacity:0.6; margin-left:8px;">(Bengali)</small></span>
+          </div>
+          <div class="cb-dropdown-item" data-lang="mr">
+            <span>मराठी <small style="opacity:0.6; margin-left:8px;">(Marathi)</small></span>
+          </div>
+          <div class="cb-dropdown-item" data-lang="ta">
+            <span>தமிழ் <small style="opacity:0.6; margin-left:8px;">(Tamil)</small></span>
+          </div>
+          <div class="cb-dropdown-item" data-lang="te">
+            <span>తెలుగు <small style="opacity:0.6; margin-left:8px;">(Telugu)</small></span>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn primary" id="btnConfirmLang" style="width: 100%; height: 56px; border-radius: 16px; font-size: 1.1rem; box-shadow: 0 8px 20px rgba(43, 58, 103, 0.2);" data-i18n="btn_confirm_lang">
+          Confirm Selection
+      </button>
     </div>
   </div>
 </div>
@@ -4727,7 +4861,7 @@ nav.tabs button .count {
     var collectTargetCustId = null, collectTargetType = null;
     var historyCustomerId = null;
     var dirTargetId = null;
-    var currentLang = 'en';
+    var currentLang = 'en', pendingLang = 'en';
     var eventsBound = false;
     var pdfRetryCount = 0;
     var currentRoleMode = 'owner'; // 'owner' or 'employee'
@@ -4947,7 +5081,10 @@ btn_take_tour: "Take App Tour", tour_badge: "✨ QUICK TOUR", btn_tour_skip: "Sk
         entry_title_gen: "New Ledger Entry",
         entry_cat_sale: "SALES ENTRY (TO COLLECT)",
         entry_cat_purch: "PURCHASE ENTRY (TO PAY)",
-        entry_cat_gen: "LEDGER TRANSACTION"
+        entry_cat_gen: "LEDGER TRANSACTION",
+        lang_title: "Select Language",
+        lang_sub: "Choose your preferred language",
+        btn_confirm_lang: "Confirm Selection"
       },
       hi: {
         guide_title: "अपना लेजर शुरू करें", guide_text: "आपकी कलेक्शन बुक खाली है। अपना पहला ग्राहक जोड़ने और लेनदेन रिकॉर्ड करने के लिए नीचे दिए गए बटन पर टैপ करें।", guide_btn_sale: "+ बिक्री जोड़ें", guide_btn_purch: "- खरीद जोड़ें",
@@ -5090,7 +5227,10 @@ btn_take_tour: "ऐप टूर लें", tour_badge: "✨ त्वरित
         entry_title_gen: "नई प्रविष्टि",
         entry_cat_sale: "बिक्री का रिकॉर्ड (प्राप्य)",
         entry_cat_purch: "खरीद का रिकॉर्ड (देय)",
-        entry_cat_gen: "लेजर लेनदेन"
+        entry_cat_gen: "लेजर लेनदेन",
+        lang_title: "भाषा चुनें",
+        lang_sub: "अपनी पसंदीदा भाषा चुनें",
+        btn_confirm_lang: "चयन की पुष्टि करें"
       },
       bn: {
         guide_title: "আপনার লেজার শুরু করুন", guide_text: "আপনার কালেকশন বুক খালি আছে। লেনদেন রেকর্ড করতে নিচের একটি বোতাম ট্যাপ করুন।", guide_btn_sale: "+ বিক্রয় যোগ করুন", guide_btn_purch: "- ক্রয় যোগ করুন",
@@ -5233,7 +5373,411 @@ btn_take_tour: "অ্যাপ ট্যুর নিন", tour_badge: "✨ ক
         entry_title_gen: "নতুন এন্ট্রি",
         entry_cat_sale: "বিক্রয় রেকর্ড (পাওনা)",
         entry_cat_purch: "ক্রয় রেকর্ড (দেনা)",
-        entry_cat_gen: "লেজার লেনদেন"
+        entry_cat_gen: "লেজার লেনদেন",
+        lang_title: "ভাষা নির্বাচন করুন",
+        lang_sub: "আপনার পছন্দের ভাষা চয়ন করুন",
+        btn_confirm_lang: "নির্বাচন নিশ্চিত করুন"
+      },
+      mr: {
+        guide_title: "तुमचे लेजर सुरू करा", guide_text: "तुमची कलेक्शन बुक रिकामी आहे. तुमचा पहिला व्यवहार रेकॉर्ड करण्यासाठी खालीलपैकी एक पर्याय निवडा.", guide_btn_sale: "+ विक्री जोडा", guide_btn_purch: "- खरेदी जोडा",
+        app_sub: "क्रेडिट आणि लेजर व्यवस्थापन", btn_setup: "सेट अप", nav_dash: "डॅशबोर्ड", nav_collect: "येणे बाकी", nav_pay: "देणे बाकी", nav_cust: "संपर्क", nav_fraud: "फसवणूक अलर्ट",
+        stat_rcv: "एकूण येणे", stat_pay: "एकूण देणे", stat_ovd: "थकीत नोंदी", stat_cust: "एकूण संपर्क",
+        rem_head: "पेमेंट रिमाइंडर्स", rem_sub: "थकीत आणि ७ दिवसांत येणारे", col_head: "येणे बाकी", col_sub: "ज्यांच्याकडून पैसे घ्यायचे आहेत",
+        pay_head: "देणे बाकी", pay_sub: "ज्यांना पैसे द्यायचे आहेत", btn_add_entry: "नवीन नोंद", btn_add_pay: "पेमेंट जोडा", btn_ledger: "लेजर",
+        type_sale: "विक्री (येणे)", type_purch: "खरेदी (देणे)", txt_balance: "बॅलन्स", txt_last: "शेवटच्या", txt_entries: "नोंदी",
+        sale: "विक्री", purchase: "खरेदी", payment: "पेमेंट", btn_confirm: "निश्चित करा", btn_del: "डिलीट", txt_loading: "तुमचे लेजर उघडत आहे...",
+        setup_sub: "हे नाव खाजगी ठेवले जाते आणि कोणाशीही शेअर केले जात नाही.", lbl_name: "तुमचे नाव", ph_name: "उदा. रमेश भाई",
+        lbl_biz: "व्यवसायाचे नाव", ph_biz: "उदा. शर्मा ट्रेडर्स", lbl_gst: "जीएसटी नंबर (पर्यायी)", ph_gst: "उदा. 29ABCDE1234F1Z5",
+        lbl_area: "शहर / बाजार परिसर (पर्यायी)", ph_area: "उदा. मुख्य बाजार, मुंबई", btn_skip: "रद्द करा", btn_save_prof: "प्रोफाईल जतन करा", btn_add_cust: "+ नोंद जोडा",
+        btn_reset: "या डिव्हाइसवरील माझा डेटा रिसेट करा", lbl_cust_party: "संपर्क / पार्टी", ph_search_cust: "शोध किंवा नवीन जोडा...", lbl_phone: "फोन",
+        lbl_txn_type: "व्यवहाराचा प्रकार", lbl_gross_amt: "एकूण रक्कम (₹)", lbl_discount: "सवलत (₹)", lbl_inv_date: "इनव्हॉइस तारीख",
+        lbl_due_date: "देय तारीख (पर्यायी)", lbl_ref: "संदर्भ / बिल क्रमांक", ph_ref: "उदा. बिल नंबर ९९४", lbl_cust_conf: "संपर्काने या व्यवहाराची पुष्टी केली",
+        hint_cust_conf: "मंजुरीची प्रतीक्षा असल्यास अनचेक करा.", btn_cancel: "रद्द करा", btn_save_entry: "नोंद जतन करा", lbl_amt: "रक्कम (₹)",
+        lbl_date: "तारीख", lbl_pay_ref: "पेमेंट संदर्भ / टीप", ph_pay_ref: "उदा. UPI / रोख", lbl_pay_conf: "पेमेंट प्राप्त आणि पुष्टी",
+        hint_pay_conf: "पैसे जमा होण्याची प्रतीक्षा असल्यास अनचेक करा.", btn_save_pay: "पेमेंट जतन करा", head_manage: "संपर्क व्यवस्थापित करा",
+        lbl_priv_note: "खाजगी नोट्स (केवळ तुम्हाला दिसतात)", ph_priv_note: "काहीही जे तुम्हाला शेअर करायचे नाही", div_trust: "विश्वासार्हता रेटिंग (खाजगी)",
+        lbl_give_rate: "या संपर्काला रेटिंग द्या", hint_give_rate: "पर्यायी — खाजगी राहते.",
+        lbl_mark_fraud: "फसवणूक म्हणून चिन्हांकित करा", hint_mark_fraud: "स्कोर काहीही असला तरी लाल दाखवते.", lbl_rep_fraud: "इतर व्यापाऱ्यांना कळवा",
+        hint_rep_fraud: "केवळ संपर्काचे तपशील शेअर केले जातात — तुमचे नाव कधीही दाखवले जात नाही.", lbl_inc_phone: "फोन नंबर समाविष्ट करा",
+        lbl_what_happen: "काय झाले? (इतर व्यापाऱ्यांना दिसते)", ph_what_happen: "उदा. डिलिव्हरी घेतली, संपर्क बंद केला", btn_save: "जतन करा",
+        head_fraud_rep: "फसवणूक अहवाल", btn_close: "बंद करा", btn_import: "इंपोर्ट", btn_remove: "काढून टाका", btn_dl_pdf: "PDF डाउनलोड करा", btn_send_pdf: "संपर्काला पाठवा",
+        btn_close_ledger: "लेजर बंद करा", head_bal_sum: "बॅलन्स सारांश", sub_bal_sum: "प्रत्येक संपर्काचा बॅलन्स एका नजरेत.",
+        login_head: "तुमच्या लेजरमध्ये प्रवेश करण्यासाठी लॉग इन करा.", ph_mobile: "मोबाईल नंबर टाका", btn_login: "लॉग इन करा",
+        notice_priv: "🔒 तुमचे खाजगी लेजर. हा डेटा कोणाशीही शेअर केला जात नाही.",
+        notice_pub: "⚠️ व्यापाऱ्यांनी दिलेले फसवणूक इशारे. कोणाचेही वैयक्तिक तपशील दाखवले जात नाहीत.",
+        ph_search_my: "नाव किंवा फोन शोधा...", ph_search_dir: "रिपोर्ट केलेले नाव शोधा...", txt_all_clear: "सर्व क्लियर", txt_no_rem: "कोणीही रिमाइंडर नाही.",
+        txt_nothing: "येथे काहीही नाही", txt_add_col: "बॅलन्स पाहण्यासाठी डॅशबोर्डवरून विक्री जोडा.", txt_add_pay: "बॅलन्स पाहण्यासाठी डॅशबोर्डवरून खरेदी जोडा.",
+        txt_no_cust: "अद्याप कोणीही संपर्क नाही", txt_tap_first: "तुमची संपर्क यादी रिकामी आहे.", txt_no_fraud: "कोणीही फसवणूक अहवाल नाही",
+        txt_when_fraud: "जेव्हा एखादा व्यापारी फसवणुकीची तक्रार करतो, तेव्हा ती येथे दिसते.", txt_tot_col: "एकूण येणे", txt_tot_pay: "एकूण देणे",
+        txt_all_set: "सर्व सेट", txt_no_bal_now: "सध्या कोणताही बॅलन्स नाही.", txt_no_txn: "कोणताही व्यवहार नाही", txt_not_rec: "या संपर्कासाठी काहीही रेकॉर्ड केलेले नाही.",
+        txt_no_notifications: "कोणतीही सूचना नाही", txt_notification_hint: "तुमची हालचाल येथे दिसेल.", txt_no_pending: "सध्या काहीही प्रलंबित नाही.",
+        txt_closing: "अंतिम बॅलन्स", txt_txns: "व्यवहार", txt_view: "पहा →", txt_whatsapp: "WhatsApp रिमाइंडर", txt_call: "कॉल", txt_new_ent: "+ विक्री/खरेदी जोडा", txt_mng: "व्यवस्थापित करा", txt_v_rep: "अहवाल पहा/संपादित करा",
+        lbl_fraud: "फसवणूक", lbl_risk: "जोखीम", lbl_trusted: "विश्वसनीय", lbl_watch: "नजर ठेवा", lbl_unrated: "रेट केलेले नाही", tag_unc: "अपुष्ट", tag_paid: "पूर्ण पेमेंट", tag_part: "अंशतः पेमेंट", tag_no_due: "तारीख नाही",
+        head_emp: "कर्मचारी व्यवस्थापित करा", sub_emp: "कर्मचारी जोडा आणि त्यांचे प्रवेश नियंत्रण करा.", div_add_emp: "नवीन कर्मचारी जोडा",
+        lbl_emp_name: "कर्मचाऱ्याचे नाव", ph_emp_name: "उदा. राहुल कुमार", lbl_emp_phone: "फोन नंबर (लॉगिन ID)",
+        lbl_perm_add: "नोंदी जोडू शकतात", hint_perm_add: "कर्मचाऱ्याला नवीन व्यवहार नोंदवण्याची परवानगी द्या.",
+        lbl_perm_view: "पूर्ण लेजर पाहू शकतात", hint_perm_view: "कर्मचाऱ्याला संपूर्ण इतिहास पाहण्याची परवानगी द्या.",
+        lbl_perm_del: "नोंदी डिलीट करू शकतात", hint_perm_del: "कर्मचाऱ्याला नोंदी कायमच्या काढून टाकण्याची परवानगी द्या.",
+        btn_save_emp: "कर्मचारी जतन करा", txt_no_emp: "अद्याप कोणी कर्मचारी नाही.", btn_remove_emp: "कर्मचारी काढा",
+        btn_profile: "माझी प्रोफाईल", btn_lang: "भाषा", btn_dark_mode: "डार्क मोड", btn_mng_emp: "कर्मचारी व्यवस्थापन", btn_privacy: "गोपनीयता धोरण",
+        btn_terms: "नियम आणि अटी", lbl_legal: "कायदेशीर", btn_logout: "लॉग आउट", head_settings: "सेटिंग्ज", settings_account: "खाते",
+        settings_preferences: "प्राधान्ये", settings_business: "व्यवसाय",
+        settings_support_security: "मदत आणि सुरक्षा", settings_session: "सत्र",
+        btn_security_lock: "सुरक्षा आणि लॉक", btn_help_support: "मदत आणि समर्थन",
+        help_title: "मदत आणि समर्थन", help_subtitle: "मदत हवी आहे का?",
+        help_email_label: "ईमेल समर्थन", help_email_hint: "आमच्या टीमशी संपर्क साधा.", emp_manage_contacts: 'संपर्क व्यवस्थापन',
+        feedback_title: "प्रतिक्रिया आणि समर्थन", feedback_subtitle: "तुमचे मत सांगा.",
+        feedback_bug: "बग रिपोर्ट करा", feedback_feature: "सुविधा सुचवा", feedback_general: "प्रतिक्रिया द्या", feedback_rate: "अॅपला रेट करा",
+        feedback_placeholder: "येथे लिहा...", feedback_submit: "प्रतिक्रिया पाठवा", feedback_thanks: "धन्यवाद!", feedback_required: "प्रतिक्रिया आवश्यक आहे.",
+        feedback_rate_title: "अॅप आवडला का?", feedback_rate_subtitle: "तुमचे रेटिंग आम्हाला मदत करते.", feedback_rate_now: "आत्ता रेट करा", feedback_rate_later: "नंतर",
+        emp_manage_contacts_hint: 'कर्मचाऱ्याला संपर्क व्यवस्थापनाची परवानगी द्या.',
+        notification_customer_new_entry: '₹{amount} ची नवीन {entryType} नोंद जोडली',
+        notification_owner_employee_new_entry: '{customerName} साठी ₹{amount} ची {entryType} नोंद जोडली',
+        notification_customer_payment: '₹{amount} चे पेमेंट नोंदवले',
+        notification_owner_employee_payment: '{customerName} साठी ₹{amount} चे पेमेंट नोंदवले',
+        notification_customer_entry_deleted: '₹{amount} ची {entryType} नोंद डिलीट केली',
+        notification_owner_employee_entry_deleted: '{customerName} साठी ₹{amount} ची {entryType} नोंद डिलीट केली',
+        notification_customer_payment_deleted: '₹{amount} चे पेमेंट डिलीट केले',
+        notification_owner_employee_payment_deleted: '{customerName} साठी ₹{amount} चे पेमेंट डिलीट केले',
+        notification_customer_contact_deleted: '{entryCount} व्यवहारांसह लेजर डिलीट केले',
+        notification_owner_employee_contact_deleted: '{customerName} आणि {entryCount} व्यवहार डिलीट केले',
+        notification_entry_type_sale: 'विक्री', notification_entry_type_purchase: 'खरेदी',
+        stat_net_flow: 'या महिन्याचा निव्वळ प्रवाह', flow_collections_ahead: 'संकलन विक्रीपेक्षा जास्त आहे', flow_sales_ahead: 'विक्री संकलनापेक्षा जास्त आहे', flow_balanced: 'विक्री आणि संकलन संतुलित आहे',
+        txt_ledger_creator_only: 'केवळ लेजर निर्माता नोंदी जोडू शकतो',
+        btn_add_details: "+ अतिरिक्त तपशील जोडा (पर्यायी)", btn_hide_details: "- तपशील लपवा",
+        btn_take_tour: "अॅप टूर घ्या", tour_badge: "✨ क्विक टूर", btn_tour_skip: "वगळा", btn_tour_next: "पुढील →", btn_tour_start: "पहिली नोंद जोडा →", msg_tour_skipped: "तुम्ही कधीही टूर पुन्हा सुरू करू शकता.",
+        tour_step1_title: "तुमचा व्यवसाय एका नजरेत", tour_step1_text: "किती पैसे घ्यायचे, द्यायचे आणि कुठे लक्ष द्यायचे ते पहा.", tour_step2_title: "कोण पैसे देणे लागतो ते ओळखा", tour_step2_text: "प्रलंबित संकलन येथे पहा.", tour_step3_title: "तुम्ही किती देणे लागता ते पहा", tour_step3_text: "पुरवठादारांचे देणे एका ठिकाणी ठेवा.", tour_step4_title: "तुमची संपर्क पुस्तिका", tour_step4_text: "इतिहास पाहण्यासाठी कोणताही संपर्क उघडा.", tour_step5_title: "पहिले लेजर तयार करा", tour_step5_text: "पहिली नोंद करण्यासाठी येथे टॅप करा.", tour_step6_title: "फसवणूक अलर्ट तपासा", tour_step6_text: "इतरांनी रिपोर्ट केलेले संपर्क पहा.", tour_step7_title: "तुम्ही तयार आहात!", tour_step7_text: "सेटिंग्जमधून सर्व काही व्यवस्थापित करा.",
+        msg_entry_success: "नोंद यशस्वीरित्या जोडली", msg_pay_success: "पेमेंट यशस्वीरित्या जोडले", btn_great: "छान",
+        login_req_title: "लॉगिन आवश्यक", login_req_text: "कृपया या कृतीसाठी लॉगिन करा.", btn_later: "नंतर", btn_login_now: "आत्ता लॉगिन करा",
+        msg_pending_one: "१ नोंद पुष्टीकरणाच्या प्रतीक्षेत", msg_pending_multi: "नोंदी पुष्टीकरणाच्या प्रतीक्षेत",
+        head_success: "यशस्वी!", msg_action_success: "कृती यशस्वीरित्या पूर्ण झाली.",
+        entry_sub_sale: "विक्री नोंदवून पैसे घ्या", entry_sub_purch: "खरेदी नोंदवून देणी व्यवस्थापित करा", entry_sub_gen: "नोंद करून लेजर अपडेट करा",
+        entry_title_sale: "विक्रीची नोंद", entry_title_purch: "खरेदीची नोंद", entry_title_gen: "नवीन लेजर नोंद",
+        entry_cat_sale: "विक्री नोंद (येणे)", entry_cat_purch: "खरेदी नोंद (देणे)", entry_cat_gen: "लेजर व्यवहार",
+        lang_title: "भाषा निवडा",
+        lang_sub: "तुमची आवडती भाषा निवडा",
+        btn_confirm_lang: "निवडीची पुष्टी करा"
+      },
+      ta: {
+        guide_title: "உங்கள் லெட்ஜரைத் தொடங்குங்கள்", guide_text: "உங்கள் சேகரிப்பு புத்தகம் காலியாக உள்ளது. உங்கள் முதல் பரிவர்த்தனையை பதிவு செய்ய கீழே உள்ள செயலைத் தேர்ந்தெடுக்கவும்.", guide_btn_sale: "+ விற்பனை சேர்", guide_btn_purch: "- கொள்முதல் சேர்",
+        app_sub: "கடன் மற்றும் லெட்ஜர் மேலாண்மை", btn_setup: "அமைக்கவும்", nav_dash: "டாஷ்போர்டு", nav_collect: "வசூலிக்க வேண்டியவை", nav_pay: "செலுத்த வேண்டியவை", nav_cust: "தொடர்புகள்", nav_fraud: "மோசடி எச்சரிக்கைகள்",
+        stat_rcv: "மொத்த வசூல்", stat_pay: "மொத்த நிலுவை", stat_ovd: "காலாவதியான பதிவுகள்", stat_cust: "மொத்த தொடர்புகள்",
+        rem_head: "கட்டண நினைவூட்டல்கள்", rem_sub: "காலாவதியானவை & 7 நாட்களுக்குள் வருபவை", col_head: "வசூலிக்க வேண்டியவை", col_sub: "உங்களுக்கு பணம் செலுத்த வேண்டிய தொடர்புகள்",
+        pay_head: "செலுத்த வேண்டியவை", pay_sub: "நீங்கள் பணம் செலுத்த வேண்டிய விநியோகஸ்தர்கள்", btn_add_entry: "புதிய லெட்ஜர் பதிவு", btn_add_pay: "பணம் செலுத்துதல்", btn_ledger: "லெட்ஜர்",
+        type_sale: "விற்பனை (வசூலிக்க)", type_purch: "கொள்முதல் (செலுத்த)", txt_balance: "இருப்பு", txt_last: "கடைசி", txt_entries: "பதிவுகள்",
+        sale: "விற்பனை", purchase: "கொள்முதல்", payment: "பணம் செலுத்துதல்", btn_confirm: "உறுதி செய்", btn_del: "நீக்கு", txt_loading: "உங்கள் சேகரிப்பு புத்தகத்தைத் திறக்கிறது...",
+        setup_sub: "இந்த லேபிள் தனிப்பட்ட முறையில் சேமிக்கப்பட்டு யாருடனும் பகிரப்படாது.", lbl_name: "உங்கள் பெயர்", ph_name: "உதாரணம்: ரமேஷ் பாய்",
+        lbl_biz: "வணிகப் பெயர்", ph_biz: "உதாரணம்: சர்மா டிரேடர்ஸ்", lbl_gst: "ஜிஎஸ்டி எண் (விருப்பத்தேர்வு)", ph_gst: "உதாரணம்: 29ABCDE1234F1Z5",
+        lbl_area: "நகரம் / சந்தைப் பகுதி (விருப்பத்தேர்வு)", ph_area: "உதாரணம்: முக்கிய சந்தை, சென்னை", btn_skip: "ரத்து செய்", btn_save_prof: "சுயவிவரத்தைச் சேமி", btn_add_cust: "+ பதிவு சேர்",
+        btn_reset: "இந்தச் சாதனத்தில் என் தரவை மீட்டமைக்கவும்", lbl_cust_party: "தொடர்பு / கட்சிப் பெயர்", ph_search_cust: "தற்போதுள்ளதைத் தேடவும் அல்லது புதிதாகச் சேர்க்கவும்...", lbl_phone: "தொலைபேசி",
+        lbl_txn_type: "பரிவர்த்தனை வகை", lbl_gross_amt: "மொத்தத் தொகை (₹)", lbl_discount: "தள்ளுபடி (₹)", lbl_inv_date: "இன்வாய்ஸ் தேதி",
+        lbl_due_date: "காலக்கெடு தேதி (விருப்பத்தேர்வு)", lbl_ref: "குறிப்பு / இன்வாய்స్ எண்", ph_ref: "உதாரணம்: பில் எண் 994", lbl_cust_conf: "தொடர்பு இந்தப் பரிவர்த்தனையை உறுதிப்படுத்தினார்",
+        hint_cust_conf: "அவர்களின் ஒப்புதலுக்காகக் காத்திருந்தால் தேர்வுநீக்கம் செய்யவும்.", btn_cancel: "ரத்து செய்", btn_save_entry: "பதிவைச் சேமி", lbl_amt: "தொகை (₹)",
+        lbl_date: "தேதி", lbl_pay_ref: "கட்டண குறிப்பு / குறிப்பு", ph_pay_ref: "உதாரணம்: UPI / ரொக்கம்", lbl_pay_conf: "பணம் பெறப்பட்டு உறுதிப்படுத்தப்பட்டது",
+        hint_pay_conf: "நிதி வரும் வரை காத்திருந்தால் தேர்வுநீக்கம் செய்யவும்.", btn_save_pay: "கட்டணத்தைச் சேமி", head_manage: "தொடர்பை நிர்வகி",
+        lbl_priv_note: "தனிப்பட்ட குறிப்புகள் (உங்களுக்கு மட்டுமே தெரியும்)", ph_priv_note: "நீங்கள் பகிர விரும்பாத எதுவும்", div_trust: "நம்பகத்தன்மை மதிப்பீடு (தனிப்பட்டது)",
+        lbl_give_rate: "இந்தத் தொடர்புக்கு மதிப்பீடு வழங்கவும்", hint_give_rate: "விருப்பத்தேர்வு — தனிப்பட்டதாக இருக்கும்.",
+        lbl_mark_fraud: "மோசடியாகக் குறிக்கவும்", hint_mark_fraud: "மதிப்பீடு எதுவாக இருந்தாலும் சிவப்பு நிறத்தைக் காட்டும்.", lbl_rep_fraud: "இந்த மோசடியை அனாமதேயமாக மற்ற வணிகர்களுக்கு அறிவிக்கவும்",
+        hint_rep_fraud: "தொடர்பின் விவரங்கள் மட்டுமே பகிரப்படும் — உங்கள் பெயர் ஒருபோதும் காட்டப்படாது.", lbl_inc_phone: "தொலைபேசி எண்ணைச் சேர்க்கவும்",
+        lbl_what_happen: "என்ன நடந்தது? (உதாரணம்: டெலிவரி எடுத்தார், பதிலளிக்கவில்லை)", ph_what_happen: "உதாரணம்: டெலிவரி எடுத்தார், பதிலளிக்கவில்லை", btn_save: "சேமி",
+        head_fraud_rep: "மோசடி அறிக்கை", btn_close: "மூடு", btn_import: "இறக்குமதி", btn_remove: "நீக்கு", btn_dl_pdf: "PDF பதிவிறக்கம்", btn_send_pdf: "தொடர்புக்கு அனுப்பு",
+        btn_close_ledger: "லெட்ஜரை மூடு", head_bal_sum: "இருப்புச் சுருக்கம்", sub_bal_sum: "ஒவ்வொரு தொடர்பின் நிலுவைத் தொகையும் ஒரே பார்வையில்.",
+        login_head: "உங்கள் லெட்ஜரை அணுக பாதுகாப்பாக உள்நுழையவும்.", ph_mobile: "மொபைல் எண்ணை உள்ளிடவும்", btn_login: "பயன்பாட்டில் உள்நுழையவும்",
+        notice_priv: "🔒 உங்கள் தனிப்பட்ட தொடர்புப் புத்தகம். இந்தத் தரவு உங்கள் கணக்கின் கீழ் மட்டுமே சேமிக்கப்படும்.",
+        notice_pub: "⚠️ மற்ற வணிகர்களால் அனாமதேயமாக அறிவிக்கப்பட்ட மோசடி எச்சரிக்கைகள்.",
+        ph_search_my: "பெயர் அல்லது தொலைபேசியைத் தேடவும்...", ph_search_dir: "அறிவிக்கப்பட்ட பெயரைக் கண்டறியவும்...", txt_all_clear: "அனைத்தும் முடிந்தது", txt_no_rem: "நிலுவையில் நினைவூட்டல்கள் இல்லை.",
+        txt_nothing: "இங்கே எதுவும் இல்லை", txt_add_col: "வசூலிக்க வேண்டியதைப் பார்க்க டாஷ்போர்டிலிருந்து விற்பனையைச் சேர்க்கவும்.", txt_add_pay: "செலுத்த வேண்டியதைப் பார்க்க டாஷ்போர்டிலிருந்து கொள்முதலைச் சேர்க்கவும்.",
+        txt_no_cust: "இன்னும் தொடர்புகள் இல்லை", txt_tap_first: "உங்கள் தொடர்புப் பட்டியல் காலியாக உள்ளது.", txt_no_fraud: "மோசடி அறிக்கைகள் இல்லை",
+        txt_when_fraud: "ஒரு வணிகர் மோசடியைப் பற்றி அறிவிக்கும்போது, அது இங்கே தோன்றும்.", txt_tot_col: "மொத்த வசூல்", txt_tot_pay: "மொத்த நிலுவை",
+        txt_all_set: "அனைத்தும் தீர்க்கப்பட்டது", txt_no_bal_now: "தற்போது நிலுவைத் தொகைகள் இல்லை.", txt_no_txn: "பரிவர்த்தனைகள் இல்லை", txt_not_rec: "இந்தத் தொடர்புக்கு இன்னும் எதுவும் பதிவு செய்யப்படவில்லை.",
+        txt_no_notifications: "அறிவிப்புகள் இல்லை", txt_notification_hint: "உங்கள் செயல்பாடுகள் இங்கே தோன்றும்.", txt_no_pending: "தற்போது நிலுவையில் பதிவுகள் இல்லை.",
+        txt_closing: "இறுதி இருப்பு", txt_txns: "பரிவர்த்தனைகள்", txt_view: "பார் →", txt_whatsapp: "WhatsApp நினைவூட்டல்", txt_call: "அழைப்பு", txt_new_ent: "+ விற்பனை/கொள்முதல் சேர்", txt_mng: "நிர்வகி", txt_v_rep: "அறிக்கையைப் பார் / திருத்து",
+        lbl_fraud: "மோசடி", lbl_risk: "ஆபத்து", lbl_trusted: "நம்பகமானவர்", lbl_watch: "கவனிக்கவும்", lbl_unrated: "மதிப்பிடப்படவில்லை", tag_unc: "உறுதிப்படுத்தப்படாதது", tag_paid: "முழுமையாக செலுத்தப்பட்டது", tag_part: "பகுதியளவு செலுத்தப்பட்டது", tag_no_due: "காலக்கெடு இல்லை",
+        head_emp: "ஊழியர்களை நிர்வகி", sub_emp: "ஊழியர்களைச் சேர்த்து அவர்களின் லெட்ஜர் அணுகலைக் கட்டுப்படுத்தவும்.", div_add_emp: "புதிய ஊழியரைச் சேர்க்கவும்",
+        lbl_emp_name: "ஊழியர் பெயர்", ph_emp_name: "உதாரணம்: ராகுல் குமார்", lbl_emp_phone: "தொலைபேసి எண் (உள்நுழைவு ID)",
+        lbl_perm_add: "பதிவுகளைச் சேர்க்கலாம்", hint_perm_add: "புதிய பரிவர்த்தனைகளைப் பதிவு செய்ய ஊழியரை அனுமதிக்கவும்.",
+        lbl_perm_view: "முழு லெட்ஜரையும் பார்க்கலாம்", hint_perm_view: "முழு வரலாற்றையும் பார்க்க ஊழியரை அனுமதிக்கவும்.",
+        lbl_perm_del: "பதிவுகளை நீக்கலாம்", hint_perm_del: "பதிவுகளை நிரந்தரமாக நீக்க ஊழியரை அனுமதிக்கவும்.",
+        btn_save_emp: "ஊழியரைச் சேமி", txt_no_emp: "இன்னும் ஊழியர்கள் சேர்க்கப்படவில்லை.", btn_remove_emp: "ஊழியரை நீக்கு",
+        btn_profile: "என் சுயவிவரம்", btn_lang: "மொழி", btn_dark_mode: "டார்க் மோด", btn_mng_emp: "ஊழியர்களை நிர்வகி", btn_privacy: "தனியுரிமைக் கொள்கை",
+        btn_terms: "விதிமுறைகள் & நிபந்தனைகள்", lbl_legal: "சட்டம்", btn_logout: "வெளியேறு", head_settings: "அமைப்புகள்", settings_account: "கணக்கு",
+        settings_preferences: "விருப்பத்தேர்வுகள்", settings_business: "வணிகம்",
+        settings_support_security: "ஆதரவு & பாதுகாப்பு", settings_session: "அமர்வு",
+        btn_security_lock: "பாதுகாப்பு & பயன்பாட்டு பூட்டு", btn_help_support: "உதவி & ஆதரவு",
+        help_title: "உதவி & ஆதரவு", help_subtitle: "உதவி தேவையா?",
+        help_email_label: "மின்னஞ்சல் ஆதரவு", help_email_hint: "ஆதரவுக் குழுவைத் தொடர்பு கொள்ளவும்.", emp_manage_contacts: 'தொடர்புகளை நிர்வகி',
+        feedback_title: "கருத்து & ஆதரவு", feedback_subtitle: "உங்கள் எண்ணங்களைச் சொல்லுங்கள்.",
+        feedback_bug: "பிழையை அறிவிக்கவும்", feedback_feature: "வசதியை பரிந்துரைக்கவும்", feedback_general: "கருத்து தெரிவிக்கவும்", feedback_rate: "மதிப்பீடு வழங்கவும்",
+        feedback_placeholder: "உங்கள் கருத்தை இங்கே எழுதவும்...", feedback_submit: "கருத்தை அனுப்பு", feedback_thanks: "நன்றி!", feedback_required: "கருத்தைத் தெரிவிக்கவும்.",
+        feedback_rate_title: "பயன்பாடு பிடித்துள்ளதா?", feedback_rate_subtitle: "உங்கள் மதிப்பீடு எங்களுக்கு உதவும்.", feedback_rate_now: "மதிப்பிடு", feedback_rate_later: "பிறகு",
+        emp_manage_contacts_hint: 'வணிகத் தொடர்புகளை நிர்வகிக்க ஊழியரை அனுமதிக்கவும்.',
+        notification_customer_new_entry: '₹{amount} க்கு புதிய {entryType} பதிவு சேர்க்கப்பட்டது',
+        notification_owner_employee_new_entry: '{customerName} க்காக ₹{amount} க்கு புதிய {entryType} பதிவு சேர்க்கப்பட்டது',
+        notification_customer_payment: '₹{amount} கட்டணம் பதிவு செய்யப்பட்டது',
+        notification_owner_employee_payment: '{customerName} க்காக ₹{amount} கட்டணம் பதிவு செய்யப்பட்டது',
+        notification_customer_entry_deleted: '₹{amount} பெறுமானமுள்ள {entryType} பதிவு நீக்கப்பட்டது',
+        notification_owner_employee_entry_deleted: '{customerName} க்காக ₹{amount} பெறுமானமுள்ள {entryType} பதிவு நீக்கப்பட்டது',
+        notification_customer_payment_deleted: '₹{amount} கட்டணம் நீக்கப்பட்டது',
+        notification_owner_employee_payment_deleted: '{customerName} க்காக ₹{amount} கட்டணம் நீக்கப்பட்டது',
+        notification_customer_contact_deleted: '{entryCount} பரிவர்த்தனைகளைக் கொண்ட உங்கள் லெட்ஜர் நீக்கப்பட்டது',
+        notification_owner_employee_contact_deleted: '{customerName} மற்றும் {entryCount} பரிவர்த்தனைகள் நீக்கப்பட்டன',
+        notification_entry_type_sale: 'விற்பனை', notification_entry_type_purchase: 'கொள்முதல்',
+        stat_net_flow: 'இந்த மாத நிகర ஓட்டம்', flow_collections_ahead: 'வசூல் விற்பனையை விட அதிகமாக உள்ளது', flow_sales_ahead: 'விற்பனை வசூலை விட அதிகமாக உள்ளது', flow_balanced: 'விற்பனையும் வசூலும் சமமாக உள்ளன',
+        txt_ledger_creator_only: 'லெட்ஜரை உருவாக்கியவர் மட்டுமே பதிவுகளைச் சேர்க்க முடியும்',
+        btn_add_details: "+ கூடுதல் விவரங்களைச் சேர் (விருப்பத்தேர்வு)", btn_hide_details: "- விவரங்களை மறை",
+        btn_take_tour: "பயன்பாட்டு வழிகாட்டி", tour_badge: "✨ விரைவு வழிகாட்டி", btn_tour_skip: "தவிர்", btn_tour_next: "அடுத்து →", btn_tour_start: "முதல் பதிவைச் சேர் →", msg_tour_skipped: "நீங்கள் எப்போது வேண்டுமானாலும் வழிகாட்டியை மீண்டும் தொடங்கலாம்.",
+        tour_step1_title: "உங்கள் வணிகம் ஒரே பார்வையில்", tour_step1_text: "எவ்வளவு வசூலிக்க வேண்டும், செலுத்த வேண்டும் என்று பாருங்கள்.", tour_step2_title: "யார் பணம் கொடுக்க வேண்டும் என்று தெரிந்து கொள்ளுங்கள்", tour_step2_text: "நிலுவையில் உள்ள வசூல்கள் இங்கே உள்ளன.", tour_step3_title: "நீங்கள் செலுத்த வேண்டியதைக் கண்காணியுங்கள்", tour_step3_text: "விநியோகஸ்தர் நிலுவைகளை ஓரிடத்தில் வைத்திருங்கள்.", tour_step4_title: "உங்கள் தொடர்புப் புத்தகம்", tour_step4_text: "வரலாற்றைப் பார்க்க எந்தவொரு தொடர்பையும் திறக்கவும்.", tour_step5_title: "முதல் லெட்ஜரை உருவாக்குங்கள்", tour_step5_text: "முதல் பதிவைச் செய்ய இங்கே தட்டவும்.", tour_step6_title: "மோசடி எச்சரிக்கைகளைச் சரிபார்க்கவும்", tour_step6_text: "வணிகங்களால் அறிவிக்கப்பட்ட தொடர்புகளைப் பாருங்கள்.", tour_step7_title: "நீங்கள் தயார்!", tour_step7_text: "சுயவிவரம், மொழியை இங்கிருந்து நிர்வகிக்கவும்.",
+        msg_entry_success: "பதிவு வெற்றிகரமாகச் சேர்க்கப்பட்டது", msg_pay_success: "கட்டணம் வெற்றிகரமாகச் சேர்க்கப்பட்டது", btn_great: "அருமை",
+        login_req_title: "உள்நுழைவு தேவை", login_req_text: "இந்தச் செயலைச் செய்ய உள்நுழையவும்.", btn_later: "பிறகு", btn_login_now: "இப்போதே உள்நுழை",
+        msg_pending_one: "1 பதிவு உறுதிப்படுத்தலுக்காகக் காத்திருக்கிறது", msg_pending_multi: "பதிவுகள் உறுதிப்படுத்தலுக்காகக் காத்திருக்கின்றன",
+        head_success: "வெற்றி!", msg_action_success: "செயல் வெற்றிகரமாக முடிந்தது.",
+        entry_sub_sale: "பணம் வசூலிக்க விற்பனையைப் பதிவு செய்யுங்கள்", entry_sub_purch: "கொள்முதலைப் பதிவு செய்யுங்கள்", entry_sub_gen: "லெட்ஜரைப் புதுப்பிக்க ஒரு பரிவர்த்தனையைப் பதிவு செய்யுங்கள்",
+        entry_title_sale: "விற்பனைப் பதிவு", entry_title_purch: "கொள்முதல் பதிவு", entry_title_gen: "புதிய லெட்ஜர் பதிவு",
+        entry_cat_sale: "விற்பனைப் பதிவு (வசூலிக்க)", entry_cat_purch: "கொள்முதல் பதிவு (செலுத்த)",
+        entry_cat_gen: "லெட்ஜர் பரிவர்த்தனை",
+        lang_title: "மொழியைத் தேர்ந்தெடுக்கவும்",
+        lang_sub: "உங்களுக்கு விருப்பமான மொழியைத் தேர்வு செய்யவும்",
+        btn_confirm_lang: "தேர்வை உறுதிப்படுத்தவும்"
+      },
+      te: {
+        guide_title: "మీ లెడ్జర్‌ని ప్రారంభించండి", guide_text: "మీ కలెక్షన్ బుక్ ఖాళీగా ఉంది. మీ మొదటి లావాదేవీని రికార్డ్ చేయడానికి క్రింద ఉన్న చర్యను ఎంచుకోండి.", guide_btn_sale: "+ అమ్మకం జోడించు", guide_btn_purch: "- కొనుగోలు జోడించు",
+        app_sub: "క్రెడిట్ & లెడ్జర్ మేనేజ్‌మెంట్", btn_setup: "అమర్చండి", nav_dash: "డాష్‌బోర్డ్", nav_collect: "వసూలు చేయవలసినవి", nav_pay: "చెల్లించవలసినవి", nav_cust: "పరిచయాలు", nav_fraud: "మోసాల హెచ్చరికలు",
+        stat_rcv: "మొత్తం వసూళ్లు", stat_pay: "మొత్తం బకాయిలు", stat_ovd: "గడువు ముగిసిన ఎంట్రీలు", stat_cust: "మొత్తం పరిచయాలు",
+        rem_head: "చెల్లింపు రిమైండర్లు", rem_sub: "గడువు ముగిసినవి & 7 రోజులలో రావలసినవి", col_head: "వసూలు చేయవలసినవి", col_sub: "మీకు డబ్బు చెల్లించవలసిన వారు",
+        pay_head: "చెల్లించవలసినవి", pay_sub: "మీరు డబ్బు చెల్లించవలసిన సరఫరాదారులు", btn_add_entry: "కొత్త లెడ్జర్ ఎంట్రీ", btn_add_pay: "చెల్లింపు జోడించు", btn_ledger: "లెడ్జర్",
+        type_sale: "అమ్మకం (వసూలు చేయడానికి)", type_purch: "కొనుగోలు (చెల్లించడానికి)", txt_balance: "బ్యాలెన్స్", txt_last: "చివరి", txt_entries: "ఎంట్రీలు",
+        sale: "అమ్మకం", purchase: "కొనుగోలు", payment: "చెల్లింపు", btn_confirm: "ధృవీకరించు", btn_del: "తొలగించు", txt_loading: "మీ లెడ్జర్‌ని తెరుస్తోంది...",
+        setup_sub: "ఈ సమాచారం వ్యక్తిగతంగా సేవ్ చేయబడుతుంది మరియు ఎవరితోనూ భాగస్వామ్యం చేయబడదు.", lbl_name: "మీ పేరు", ph_name: "ఉదా: రమేష్ భాయ్",
+        lbl_biz: "వ్యాపారం పేరు", ph_biz: "ఉదా: శర్మ ట్రేడర్స్", lbl_gst: "GST నంబర్ (ఐచ్ఛికం)", ph_gst: "ఉదా: 29ABCDE1234F1Z5",
+        lbl_area: "సిటీ / మార్కెట్ ప్రాంతం (ఐచ్ఛికం)", ph_area: "ఉదా: మెయిన్ మార్కెట్, హైదరాబాద్", btn_skip: "రద్దు చేయి", btn_save_prof: "ప్రొఫైల్‌ను సేవ్ చేయి", btn_add_cust: "+ ఎంట్రీ జోడించు",
+        btn_reset: "ఈ పరికరంలో నా డేటాను రీసెట్ చేయి", lbl_cust_party: "పరిచయం / పార్టీ పేరు", ph_search_cust: "వెతకండి లేదా కొత్తది జోడించండి...", lbl_phone: "ఫోన్",
+        lbl_txn_type: "లావాదేవీ రకం", lbl_gross_amt: "మొత్తం విలువ (₹)", lbl_discount: "డిస్కౌంట్ (₹)", lbl_inv_date: "ఇన్వాయిస్ తేదీ",
+        lbl_due_date: "గడువు తేదీ (ఐచ్ఛికం)", lbl_ref: "రిఫరెన్స్ / ఇన్వాయిస్ నంబర్", ph_ref: "ఉదా: బిల్ నంబర్ 994", lbl_cust_conf: "కస్టమర్ ఈ లావాదేవీని ధృవీకరించారు",
+        hint_cust_conf: "వారి అనుమతి కోసం వేచి ఉంటే అన్‌చెక్ చేయండి.", btn_cancel: "రద్దు చేయి", btn_save_entry: "ఎంట్రీని సేవ్ చేయి", lbl_amt: "మొత్తం (₹)",
+        lbl_date: "తేదీ", lbl_pay_ref: "చెల్లింపు రిఫరెన్స్ / నోట్", ph_pay_ref: "ఉదా: UPI / నగదు", lbl_pay_conf: "చెల్లింపు అందింది & ధృవీకరించబడింది",
+        hint_pay_conf: "డబ్బు జమ అయ్యే వరకు వేచి ఉంటే అన్‌చెక్ చేయండి.", btn_save_pay: "చెల్లింపును సేవ్ చేయి", head_manage: "పరిచయాన్ని నిర్వహించు",
+        lbl_priv_note: "ప్రైవేట్ నోట్స్ (మీకు మాత్రమే కనిపిస్తాయి)", ph_priv_note: "మీరు భాగస్వామ్యం చేయకూడదనుకునే ఏవైనా విషయాలు", div_trust: "నమ్మకమైన రేటింగ్ (ప్రైవేట్)",
+        lbl_give_rate: "ఈ పరిచయానికి రేటింగ్ ఇవ్వండి", hint_give_rate: "ఐచ్ఛికం — ప్రైవేట్‌గా ఉంటుంది.",
+        lbl_mark_fraud: "మోసపూరితమైనదిగా గుర్తించండి", hint_mark_fraud: "రేటింగ్‌తో సంబంధం లేకుండా ఎరుపు రంగులో చూపిస్తుంది.", lbl_rep_fraud: "ఈ మోసాన్ని ఇతర వ్యాపారులకు తెలియజేయండి",
+        hint_rep_fraud: "పరిచయం వివరాలు మాత్రమే భాగస్వామ్యం చేయబడతాయి — మీ పేరు ఎప్పుడూ చూపబడదు.", lbl_inc_phone: "ఫోన్ నంబర్‌ను చేర్చండి",
+        lbl_what_happen: "ఏం జరిగింది? (ఉదా: డెలివరీ తీసుకున్నారు, స్పందించడం లేదు)", ph_what_happen: "ఉదా: డెలివరీ తీసుకున్నారు, స్పందించడం లేదు", btn_save: "సేవ్ చేయి",
+        head_fraud_rep: "మోసం నివేదిక", btn_close: "మూసివేయి", btn_import: "ఇంపోర్ట్", btn_remove: "తొలగించు", btn_dl_pdf: "PDF డౌన్‌లోడ్", btn_send_pdf: "పరిచయానికి పంపు",
+        btn_close_ledger: "లెడ్జర్‌ను మూసివేయి", head_bal_sum: "బ్యాలెన్స్ సారాంశం", sub_bal_sum: "ప్రతి పరిచయం యొక్క బకాయిలు ఒక్క చూపులో.",
+        login_head: "మీ లెడ్జర్‌ని యాక్సెస్ చేయడానికి సురక్షితంగా లాగిన్ అవ్వండి.", ph_mobile: "మొబైల్ నంబర్‌ను నమోదు చేయండి", btn_login: "యాప్‌లోకి లాగిన్ అవ్వండి",
+        notice_priv: "🔒 మీ ప్రైవేట్ కాంటాక్ట్ బుక్. ఈ డేటా మీ ఖాతాలో మాత్రమే ఉంటుంది.",
+        notice_pub: "⚠️ ఇతర వ్యాపారులు నివేదించిన మోసాల హెచ్చరికలు.",
+        ph_search_my: "పేరు లేదా ఫోన్ కోసం వెతకండి...", ph_search_dir: "నివేదించబడిన పేరును వెతకండి...", txt_all_clear: "అంతా క్లియర్", txt_no_rem: "పెండింగ్ రిమైండర్లు లేవు.",
+        txt_nothing: "ఇక్కడ ఏమీ లేదు", txt_add_col: "బకాయిలు చూడటానికి డాష్‌బోర్డ్ నుండి అమ్మకాన్ని జోడించండి.", txt_add_pay: "బకాయిలు చూడటానికి డాష్‌బోర్డ్ నుండి కొనుగోలును జోడించండి.",
+        txt_no_cust: "ఇంకా పరిచయాలు లేవు", txt_tap_first: "మీ పరిచయాల జాబితా ఖాళీగా ఉంది.", txt_no_fraud: "మోసాల నివేదికలు లేవు",
+        txt_when_fraud: "ఎవరైనా వ్యాపారి మోసాన్ని నివేదించినప్పుడు, అది ఇక్కడ కనిపిస్తుంది.", txt_tot_col: "మొత్తం వసూళ్లు", txt_tot_pay: "మొత్తం బకాయిలు",
+        txt_all_set: "అన్నీ సెటిల్ అయ్యాయి", txt_no_bal_now: "ప్రస్తుతం బకాయిలు లేవు.", txt_no_txn: "లావాదేవీలు లేవు", txt_not_rec: "ఈ పరిచయం కోసం ఇంకా ఏమీ రికార్డ్ చేయబడలేదు.",
+        txt_no_notifications: "నోటిఫికేషన్లు లేవు", txt_notification_hint: "మీ కార్యకలాపాలు ఇక్కడ కనిపిస్తాయి.", txt_no_pending: "ప్రస్తుతం పెండింగ్ ఎంట్రీలు లేవు.",
+        txt_closing: "చివరి బ్యాలెన్స్", txt_txns: "లావాదేవీలు", txt_view: "చూడండి →", txt_whatsapp: "WhatsApp రిమైండర్", txt_call: "కాల్", txt_new_ent: "+ అమ్మకం/కొనుగోలు జోడించు", txt_mng: "నిర్వహించు", txt_v_rep: "నివేదికను చూడండి / సవరించండి",
+        lbl_fraud: "మోసం", lbl_risk: "ప్రమాదం", lbl_trusted: "నమ్మకమైన వారు", lbl_watch: "గమనించండి", lbl_unrated: "రేటింగ్ ఇవ్వలేదు", tag_unc: "ధృవీకరించబడలేదు", tag_paid: "పూర్తిగా చెల్లించారు", tag_part: "పాక్షికంగా చెల్లించారు", tag_no_due: "గడువు తేదీ లేదు",
+        head_emp: "ఉద్యోగులను నిర్వహించండి", sub_emp: "ఉద్యోగులను జోడించండి మరియు వారి లెడ్జర్ యాక్సెస్‌ను నియంత్రించండి.", div_add_emp: "కొత్త ఉద్యోగిని జోడించండి",
+        lbl_emp_name: "ఉద్యోగి పేరు", ph_emp_name: "ఉదా: రాహుల్ కుమార్", lbl_emp_phone: "ఫోన్ నంబర్ (లాగిన్ ID)",
+        lbl_perm_add: "ఎంట్రీలు జోడించవచ్చు", hint_perm_add: "కొత్త లావాదేవీలను రికార్డ్ చేయడానికి ఉద్యోగిని అనుమతించండి.",
+        lbl_perm_view: "పూర్తి లెడ్జర్‌ను చూడవచ్చు", hint_perm_view: "పూర్తి చరిత్రను చూడటానికి ఉద్యోగిని అనుమతించండి.",
+        lbl_perm_del: "ఎంట్రీలను తొలగించవచ్చు", hint_perm_del: "రికార్డులను శాశ్వతంగా తొలగించడానికి ఉద్యోగిని అనుమతించండి.",
+        btn_save_emp: "ఉద్యోగిని సేవ్ చేయి", txt_no_emp: "ఇంకా ఉద్యోగులను జోడించలేదు.", btn_remove_emp: "ఉద్యోగిని తొలగించు",
+        btn_profile: "నా ప్రొఫైల్", btn_lang: "భాష", btn_dark_mode: "డార్క్ మోడ్", btn_mng_emp: "ఉద్యోగులను నిర్వహించండి", btn_privacy: "గోప్యతా విధానం",
+        btn_terms: "నిబంధనలు & షరతులు", lbl_legal: "చట్టపరమైన", btn_logout: "లాగ్ అవుట్", head_settings: "సెట్టింగ్‌లు", settings_account: "ఖాతా",
+        settings_preferences: "ప్రాధాన్యతలు", settings_business: "వ్యాపారం",
+        settings_support_security: "మద్దతు & భద్రత", settings_session: "సెషన్",
+        btn_security_lock: "భద్రత & యాప్ లాక్", btn_help_support: "సహాయం & మద్దతు",
+        help_title: "సహాయం & మద్దతు", help_subtitle: "సహాయం కావాలా?",
+        help_email_label: "ఇమెయిల్ మద్దతు", help_email_hint: "మద్దతు బృందాన్ని సంప్రదించండి.", emp_manage_contacts: 'పరిచయాలను నిర్వహించు',
+        feedback_title: "అభిప్రాయం & మద్దతు", feedback_subtitle: "మీ అభిప్రాయాన్ని తెలియజేయండి.",
+        feedback_bug: "బగ్‌ను నివేదించండి", feedback_feature: "ఫీచర్‌ను సూచించండి", feedback_general: "అభిప్రాయాన్ని ఇవ్వండి", feedback_rate: "యాప్‌ను రేట్ చేయండి",
+        feedback_placeholder: "మీ అభిప్రాయాన్ని ఇక్కడ రాయండి...", feedback_submit: "అభిప్రాయాన్ని పంపు", feedback_thanks: "ధన్యవాదాలు!", feedback_required: "అభిప్రాయం అవసరం.",
+        feedback_rate_title: "యాప్ నచ్చిందా?", feedback_rate_subtitle: "మీ రేటింగ్ మాకు సహాయపడుతుంది.", feedback_rate_now: "రేట్ చేయండి", feedback_rate_later: "తర్వాత",
+        emp_manage_contacts_hint: 'వ్యాపార పరిచయాలను నిర్వహించడానికి ఉద్యోగిని అనుమతించండి.',
+        notification_customer_new_entry: '₹{amount} కోసం కొత్త {entryType} ఎంట్రీ జోడించబడింది',
+        notification_owner_employee_new_entry: '{customerName} కోసం ₹{amount} కి కొత్త {entryType} ఎంట్రీ జోడించబడింది',
+        notification_customer_payment: '₹{amount} చెల్లింపు రికార్డ్ చేయబడింది',
+        notification_owner_employee_payment: '{customerName} కోసం ₹{amount} చెల్లింపు రికార్డ్ చేయబడింది',
+        notification_customer_entry_deleted: '₹{amount} విలువైన {entryType} ఎంట్రీ తొలగించబడింది',
+        notification_owner_employee_entry_deleted: '{customerName} కోసం ₹{amount} విలువైన {entryType} ఎంట్రీ తొలగించబడింది',
+        notification_customer_payment_deleted: '₹{amount} చెల్లింపు తొలగించబడింది',
+        notification_owner_employee_payment_deleted: '{customerName} కోసం ₹{amount} చెల్లింపు తొలగించబడింది',
+        notification_customer_contact_deleted: '{entryCount} లావాదేవీలతో మీ లెడ్జర్ తొలగించబడింది',
+        notification_owner_employee_contact_deleted: '{customerName} మరియు {entryCount} లావాదేవీలు తొలగించబడ్డాయి',
+        notification_entry_type_sale: 'అమ్మకం', notification_entry_type_purchase: 'కొనుగోలు',
+        stat_net_flow: 'ఈ నెల నికర ప్రవాహం', flow_collections_ahead: 'వసూళ్లు అమ్మకాల కంటే ఎక్కువగా ఉన్నాయి', flow_sales_ahead: 'అమ్మకాలు వసూళ్ల కంటే ఎక్కువగా ఉన్నాయి', flow_balanced: 'అమ్మకాలు మరియు వసూళ్లు సమంగా ఉన్నాయి',
+        txt_ledger_creator_only: 'లెడ్జర్ సృష్టించిన వారు మాత్రమే ఎంట్రీలను జోడించగలరు',
+        btn_add_details: "+ అదనపు వివరాలను జోడించు (ఐచ్ఛికం)", btn_hide_details: "- వివరాలను దాచు",
+        btn_take_tour: "యాప్ టూర్ తీసుకోండి", tour_badge: "✨ క్విక్ టూర్", btn_tour_skip: "వదిలేయండి", btn_tour_next: "తర్వాత →", btn_tour_start: "మొదటి ఎంట్రీని జోడించు →", msg_tour_skipped: "మీరు ఎప్పుడైనా మళ్ళీ టూర్ ప్రారంభించవచ్చు.",
+        tour_step1_title: "మీ వ్యాపారం ఒక్క చూపులో", tour_step1_text: "మీరు ఎంత వసూలు చేయాలో, ఎంత చెల్లించాలో చూడండి.", tour_step2_title: "ఎవరు బాకీ ఉన్నారో తెలుసుకోండి", tour_step2_text: "పెండింగ్ వసూళ్లు ఇక్కడ ఉన్నాయి.", tour_step3_title: "మీరు ఎంత బాకీ ఉన్నారో చూడండి", tour_step3_text: "సరఫరాదారుల బకాయిలను ఒకే చోట ఉంచండి.", tour_step4_title: "మీ పరిచయాల పుస్తకం", tour_step4_text: "చరిత్రను చూడటానికి ఏదైనా పరిచయాన్ని తెరవండి.", tour_step5_title: "మొదటి లెడ్జర్‌ను సృష్టించండి", tour_step5_text: "మొదటి ఎంట్రీ చేయడానికి ఇక్కడ ట్యాప్ చేయండి.", tour_step6_title: "మోసాల హెచ్చరికలను తనిఖీ చేయండి", tour_step6_text: "ఇతర వ్యాపారులు నివేదించిన పరిచయాలను చూడండి.", tour_step7_title: "మీరు సిద్ధం!", tour_step7_text: "సెట్టింగ్‌ల నుండి అన్నింటినీ నిర్వహించండి.",
+        msg_entry_success: "ఎంట్రీ విజయవంతంగా జోడించబడింది", msg_pay_success: "చెల్లింపు విజయవంతంగా జోడించబడింది", btn_great: "అద్భుతం",
+        login_req_title: "లాగాగిన్ అవసరం", login_req_text: "ఈ చర్యను చేయడానికి లాగిన్ అవ్వండి.", btn_later: "తర్వాత", btn_login_now: "ఇప్పుడే లాగిన్ అవ్వండి",
+        msg_pending_one: "1 ఎంట్రీ ధృవీకరణ కోసం వేచి ఉంది", msg_pending_multi: "ఎంట్రీలు ధృవీకరణ కోసం వేచి ఉన్నాయి",
+        head_success: "విజయం!", msg_action_success: "చర్య విజయవంతంగా పూర్తయింది.",
+        entry_sub_sale: "డబ్బు వసూలు చేయడానికి అమ్మకాన్ని రికార్డ్ చేయండి", entry_sub_purch: "కొనుగోలును రికార్డ్ చేయండి", entry_sub_gen: "లెడ్జర్‌ను అప్‌డేట్ చేయడానికి లావాదేవీని రికార్డ్ చేయండి",
+        entry_title_sale: "అమ్మకం నమోదు", entry_title_purch: "కొనుగోలు నమోదు", entry_title_gen: "కొత్త లెడ్జర్ నమోదు",
+        entry_cat_sale: "అమ్మకం నమోదు (వసూలు చేయడానికి)", entry_cat_purch: "కొనుగోలు నమోదు (చెల్లించడానికి)",
+        entry_cat_gen: "లెడ్జర్ లావాదేవీ",
+        lang_title: "భాషను ఎంచుకోండి",
+        lang_sub: "మీకు నచ్చిన భాషను ఎంచుకోండి",
+        btn_confirm_lang: "ఎంపికను ధృవీకరించండి"
+      },
+      ta: {
+        guide_title: "உங்கள் லெட்ஜரைத் தொடங்குங்கள்", guide_text: "உங்கள் சேகரிப்பு புத்தகம் காலியாக உள்ளது. உங்கள் முதல் பரிவர்த்தனையை பதிவு செய்ய கீழே உள்ள செயலைத் தேர்ந்தெடுக்கவும்.", guide_btn_sale: "+ விற்பனை சேர்", guide_btn_purch: "- கொள்முதல் சேர்",
+        app_sub: "கடன் மற்றும் லெட்ஜர் மேலாண்மை", btn_setup: "அமைக்கவும்", nav_dash: "டாஷ்போர்டு", nav_collect: "வசூலிக்க வேண்டியவை", nav_pay: "செலுத்த வேண்டியவை", nav_cust: "தொடர்புகள்", nav_fraud: "மோசடி எச்சரிக்கைகள்",
+        stat_rcv: "மொத்த வசூல்", stat_pay: "மொத்த நிலுவை", stat_ovd: "காலாவதியான பதிவுகள்", stat_cust: "மொத்த தொடர்புகள்",
+        rem_head: "கட்டண நினைவூட்டல்கள்", rem_sub: "காலாவதியானவை & 7 நாட்களுக்குள் வருபவை", col_head: "வசூலிக்க வேண்டியவை", col_sub: "உங்களுக்கு பணம் செலுத்த வேண்டிய தொடர்புகள்",
+        pay_head: "செலுத்த வேண்டியவை", pay_sub: "நீங்கள் பணம் செலுத்த வேண்டிய விநியோகஸ்தர்கள்", btn_add_entry: "புதிய லெட்ஜர் பதிவு", btn_add_pay: "பணம் செலுத்துதல்", btn_ledger: "லெட்ஜர்",
+        type_sale: "விற்பனை (வசூலிக்க)", type_purch: "கொள்முதல் (செலுத்த)", txt_balance: "இருப்பு", txt_last: "கடைசி", txt_entries: "பதிவுகள்",
+        sale: "விற்பனை", purchase: "கொள்முதல்", payment: "பணம் செலுத்துதல்", btn_confirm: "உறுதி செய்", btn_del: "நீக்கு", txt_loading: "உங்கள் சேகரிப்பு புத்தகத்தைத் திறக்கிறது...",
+        setup_sub: "இந்த லேபிள் தனிப்பட்ட முறையில் சேமிக்கப்பட்டு யாருடனும் பகிரப்படாது.", lbl_name: "உங்கள் பெயர்", ph_name: "உதாரணம்: ரமேஷ் பாய்",
+        lbl_biz: "வணிகப் பெயர்", ph_biz: "உதாரணம்: சர்மா டிரேடர்ஸ்", lbl_gst: "ஜிஎஸ்டி எண் (விருப்பத்தேர்வு)", ph_gst: "உதாரணம்: 29ABCDE1234F1Z5",
+        lbl_area: "நகரம் / சந்தைப் பகுதி (விருப்பத்தேர்வு)", ph_area: "உதாரணம்: முக்கிய சந்தை, சென்னை", btn_skip: "ரத்து செய்", btn_save_prof: "சுயவிவரத்தைச் சேமி", btn_add_cust: "+ பதிவு சேர்",
+        btn_reset: "இந்தச் சாதனத்தில் என் தரவை மீட்டமைக்கவும்", lbl_cust_party: "தொடர்பு / கட்சிப் பெயர்", ph_search_cust: "தற்போதுள்ளதைத் தேடவும் அல்லது புதிதாகச் சேர்க்கவும்...", lbl_phone: "தொலைபேசி",
+        lbl_txn_type: "பரிவர்த்தனை வகை", lbl_gross_amt: "மொத்தத் தொகை (₹)", lbl_discount: "தள்ளுபடி (₹)", lbl_inv_date: "இன்வாய்ஸ் தேதி",
+        lbl_due_date: "காலக்கெடு தேதி (விருப்பத்தேர்வு)", lbl_ref: "குறிப்பு / இன்வாய்ஸ் எண்", ph_ref: "உதாரணம்: பில் எண் 994", lbl_cust_conf: "தொடர்பு இந்தப் பரிவர்த்தனையை உறுதிப்படுத்தினார்",
+        hint_cust_conf: "அவர்களின் ஒப்புதலுக்காகக் காத்திருந்தால் தேர்வுநீக்கம் செய்யவும்.", btn_cancel: "ரத்து செய்", btn_save_entry: "பதிவைச் சேமி", lbl_amt: "தொகை (₹)",
+        lbl_date: "தேதி", lbl_pay_ref: "கட்டண குறிப்பு / குறிப்பு", ph_pay_ref: "உதாரணம்: UPI / ரொக்கம்", lbl_pay_conf: "பணம் பெறப்பட்டு உறுதிப்படுத்தப்பட்டது",
+        hint_pay_conf: "நிதி வரும் வரை காத்திருந்தால் தேர்வுநீக்கம் செய்யவும்.", btn_save_pay: "கட்டணத்தைச் சேமி", head_manage: "தொடர்பை நிர்வகி",
+        lbl_priv_note: "தனிப்பட்ட குறிப்புகள் (உங்களுக்கு மட்டுமே தெரியும்)", ph_priv_note: "நீங்கள் பகிர விரும்பாத எதுவும்", div_trust: "நம்பகத்தன்மை மதிப்பீடு (தனிப்பட்டது)",
+        lbl_give_rate: "இந்தத் தொடர்புக்கு மதிப்பீடு வழங்கவும்", hint_give_rate: "விருப்பத்தேர்வு — தனிப்பட்டதாக இருக்கும்.",
+        lbl_mark_fraud: "மோசடியாகக் குறிக்கவும்", hint_mark_fraud: "மதிப்பீடு எதுவாக இருந்தாலும் சிவப்பு நிறத்தைக் காட்டும்.", lbl_rep_fraud: "இந்த மோசடியை அனாமதேயமாக மற்ற வணிகர்களுக்கு அறிவிக்கவும்",
+        hint_rep_fraud: "தொடர்பின் விவரங்கள் மட்டுமே பகிரப்படும் — உங்கள் பெயர் ஒருபோதும் காட்டப்படாது.", lbl_inc_phone: "தொலைபேசி எண்ணைச் சேர்க்கவும்",
+        lbl_what_happen: "என்ன நடந்தது? (மற்ற வணிகர்களுக்குத் தெரியும்)", ph_what_happen: "உதாரணம்: டெலிவரி எடுத்தார், பதிலளிக்கவில்லை", btn_save: "சேமி",
+        head_fraud_rep: "மோசடி அறிக்கை", btn_close: "மூடு", btn_import: "இறக்குமதி", btn_remove: "நீக்கு", btn_dl_pdf: "PDF பதிவிறக்கம்", btn_send_pdf: "தொடர்புக்கு அனுப்பு",
+        btn_close_ledger: "லெட்ஜரை மூடு", head_bal_sum: "இருப்புச் சுருக்கம்", sub_bal_sum: "ஒவ்வொரு தொடர்பின் நிலுவைத் தொகையும் ஒரே பார்வையில்.",
+        login_head: "உங்கள் லெட்ஜரை அணுக பாதுகாப்பாக உள்நுழையவும்.", ph_mobile: "மொபைல் எண்ணை உள்ளிடவும்", btn_login: "பயன்பாட்டில் உள்நுழையவும்",
+        notice_priv: "🔒 உங்கள் தனிப்பட்ட தொடர்புப் புத்தகம். இந்தத் தரவு உங்கள் கணக்கின் கீழ் மட்டுமே சேமிக்கப்படும்.",
+        notice_pub: "⚠️ மற்ற வணிகர்களால் அனாமதேயமாக அறிவிக்கப்பட்ட மோசடி எச்சரிக்கைகள்.",
+        ph_search_my: "பெயர் அல்லது தொலைபேசியைத் தேடவும்...", ph_search_dir: "அறிவிக்கப்பட்ட பெயரைக் கண்டறியவும்...", txt_all_clear: "அனைத்தும் முடிந்தது", txt_no_rem: "நிலுவையில் நினைவூட்டல்கள் இல்லை.",
+        txt_nothing: "இங்கே எதுவும் இல்லை", txt_add_col: "வசூலிக்க வேண்டியதைப் பார்க்க டாஷ்போர்டிலிருந்து விற்பனையைச் சேர்க்கவும்.", txt_add_pay: "செலுத்த வேண்டியதைப் பார்க்க டாஷ்போர்டிலிருந்து கொள்முதலைச் சேர்க்கவும்.",
+        txt_no_cust: "இன்னும் தொடர்புகள் இல்லை", txt_tap_first: "உங்கள் தொடர்புப் பட்டியல் காலியாக உள்ளது.", txt_no_fraud: "மோசடி அறிக்கைகள் இல்லை",
+        txt_when_fraud: "ஒரு வணிகர் மோசடியைப் பற்றி அறிவிக்கும்போது, அது இங்கே தோன்றும்.", txt_tot_col: "மொத்த வசூல்", txt_tot_pay: "மொத்த நிலுவை",
+        txt_all_set: "அனைத்தும் தீர்க்கப்பட்டது", txt_no_bal_now: "தற்போது நிலுவைத் தொகைகள் இல்லை.", txt_no_txn: "பரிவர்த்தனைகள் இல்லை", txt_not_rec: "இந்தத் தொடர்புக்கு இன்னும் எதுவும் பதிவு செய்யப்படவில்லை.",
+        txt_no_notifications: "அறிவிப்புகள் இல்லை", txt_notification_hint: "உங்கள் செயல்பாடுகள் இங்கே தோன்றும்.", txt_no_pending: "தற்போது நிலுவையில் பதிவுகள் இல்லை.",
+        txt_closing: "இறுதி இருப்பு", txt_txns: "பரிவர்த்தனைகள்", txt_view: "பார் →", txt_whatsapp: "WhatsApp நினைவூட்டல்", txt_call: "அழைப்பு", txt_new_ent: "+ விற்பனை/கொள்முதல் சேர்", txt_mng: "நிர்வகி", txt_v_rep: "அறிக்கையைப் பார் / திருத்து",
+        lbl_fraud: "மோசடி", lbl_risk: "ஆபத்து", lbl_trusted: "நம்பகமானவர்", lbl_watch: "கவனிக்கவும்", lbl_unrated: "மதிப்பிடப்படவில்லை", tag_unc: "உறுதிப்படுத்தப்படாதது", tag_paid: "முழுமையாக செலுத்தப்பட்டது", tag_part: "பகுதியளவு செலுத்தப்பட்டது", tag_no_due: "காலக்கெடு இல்லை",
+        head_emp: "ஊழியர்களை நிர்வகி", sub_emp: "ஊழியர்களைச் சேர்த்து அவர்களின் லெட்ஜர் அணுகலைக் கட்டுப்படுத்தவும்.", div_add_emp: "புதிய ஊழியரைச் சேர்க்கவும்",
+        lbl_emp_name: "ஊழியர் பெயர்", ph_emp_name: "உதாரணம்: ராகுல் குமார்", lbl_emp_phone: "தொலைபேசி எண் (உள்நுழைவு ID)",
+        lbl_perm_add: "பதிவுகளைச் சேர்க்கலாம்", hint_perm_add: "புதிய பரிவர்த்தனைகளைப் பதிவு செய்ய ஊழியரை அனுமதிக்கவும்.",
+        lbl_perm_view: "முழு லெட்ஜரையும் பார்க்கலாம்", hint_perm_view: "முழு வரலாற்றையும் பார்க்க ஊழியரை அனுமதிக்கவும்.",
+        lbl_perm_del: "பதிவுகளை நீக்கலாம்", hint_perm_del: "பதிவுகளை நிரந்தரமாக நீக்க ஊழியரை அனுமதிக்கவும்.",
+        btn_save_emp: "ஊழியரைச் சேமி", txt_no_emp: "இன்னும் ஊழியர்கள் சேர்க்கப்படவில்லை.", btn_remove_emp: "ஊழியரை நீக்கு",
+        btn_profile: "என் சுயவிவரம்", btn_lang: "மொழி", btn_dark_mode: "டார்க் மோட்", btn_mng_emp: "ஊழியர்களை நிர்வகி", btn_privacy: "தனியுரிமைக் கொள்கை",
+        btn_terms: "விதிமுறைகள் & நிபந்தனைகள்", lbl_legal: "சட்டம்", btn_logout: "வெளியேறு", head_settings: "அமைப்புகள்", settings_account: "கணக்கு",
+        settings_preferences: "விருப்பத்தேர்வுகள்", settings_business: "வணிகம்",
+        settings_support_security: "ஆதரவு & பாதுகாப்பு", settings_session: "அமர்வு",
+        btn_security_lock: "பாதுகாப்பு & பயன்பாட்டு பூட்டு", btn_help_support: "உதவி & ஆதரவு",
+        help_title: "உதவி & ஆதரவு", help_subtitle: "உதவி தேவையா?",
+        help_email_label: "மின்னஞ்சல் ஆதரவு", help_email_hint: "ஆதரவுக் குழுவைத் தொடர்பு கொள்ளவும்.", emp_manage_contacts: 'தொடர்புகளை நிர்வகி',
+        feedback_title: "கருத்து & ஆதரவு", feedback_subtitle: "உங்கள் எண்ணங்களைச் சொல்லுங்கள்.",
+        feedback_bug: "பிழையை அறிவிக்கவும்", feedback_feature: "வசதியை பரிந்துரைக்கவும்", feedback_general: "கருத்து தெரிவிக்கவும்", feedback_rate: "மதிப்பீடு வழங்கவும்",
+        feedback_placeholder: "உங்கள் கருத்தை இங்கே எழுதவும்...", feedback_submit: "கருத்தை அனுப்பு", feedback_thanks: "நன்றி!", feedback_required: "கருத்தைத் தெரிவிக்கவும்.",
+        feedback_rate_title: "பயன்பாடு பிடித்துள்ளதா?", feedback_rate_subtitle: "உங்கள் மதிப்பீடு எங்களுக்கு உதவும்.", feedback_rate_now: "மதிப்பிடு", feedback_rate_later: "பிறகு",
+        emp_manage_contacts_hint: 'வணிகத் தொடர்புகளை நிர்வகிக்க ஊழியரை அனுமதிக்கவும்.',
+        notification_customer_new_entry: '₹{amount} க்கு புதிய {entryType} பதிவு சேர்க்கப்பட்டது',
+        notification_owner_employee_new_entry: '{customerName} க்காக ₹{amount} க்கு புதிய {entryType} பதிவு சேர்க்கப்பட்டது',
+        notification_customer_payment: '₹{amount} கட்டணம் பதிவு செய்யப்பட்டது',
+        notification_owner_employee_payment: '{customerName} க்காக ₹{amount} கட்டணம் பதிவு செய்யப்பட்டது',
+        notification_customer_entry_deleted: '₹{amount} பெறுமானமுள்ள {entryType} பதிவு நீக்கப்பட்டது',
+        notification_owner_employee_entry_deleted: '{customerName} க்காக ₹{amount} பெறுமானமுள்ள {entryType} பதிவு நீக்கப்பட்டது',
+        notification_customer_payment_deleted: '₹{amount} கட்டணம் நீக்கப்பட்டது',
+        notification_owner_employee_payment_deleted: '{customerName} க்காக ₹{amount} கட்டணம் நீக்கப்பட்டது',
+        notification_customer_contact_deleted: '{entryCount} பரிவர்த்தனைகளைக் கொண்ட உங்கள் லெட்ஜர் நீக்கப்பட்டது',
+        notification_owner_employee_contact_deleted: '{customerName} மற்றும் {entryCount} பரிவர்த்தனைகள் நீக்கப்பட்டன',
+        notification_entry_type_sale: 'விற்பனை', notification_entry_type_purchase: 'கொள்முதல்',
+        stat_net_flow: 'இந்த மாத நிகர ஓட்டம்', flow_collections_ahead: 'வசூல் விற்பனையை விட அதிகமாக உள்ளது', flow_sales_ahead: 'விற்பனை வசூலை விட அதிகமாக உள்ளது', flow_balanced: 'விற்பனையும் வசூலும் சமமாக உள்ளன',
+        txt_ledger_creator_only: 'லெட்ஜரை உருவாக்கியவர் மட்டுமே பதிவுகளைச் சேர்க்க முடியும்',
+        btn_add_details: "+ கூடுதல் விவரங்களைச் சேர் (விருப்பத்தேர்வு)", btn_hide_details: "- விவரங்களை மறை",
+        btn_take_tour: "பயன்பாட்டு வழிகாட்டி", tour_badge: "✨ விரைவு வழிகாட்டி", btn_tour_skip: "தவிர்", btn_tour_next: "அடுத்து →", btn_tour_start: "முதல் பதிவைச் சேர் →", msg_tour_skipped: "நீங்கள் எப்போது வேண்டுமானாலும் வழிகாட்டியை மீண்டும் தொடங்கலாம்.",
+        tour_step1_title: "உங்கள் வணிகம் ஒரே பார்வையில்", tour_step1_text: "எவ்வளவு வசூலிக்க வேண்டும், செலுத்த வேண்டும் என்று பாருங்கள்.", tour_step2_title: "யார் பணம் கொடுக்க வேண்டும் என்று தெரிந்து கொள்ளுங்கள்", tour_step2_text: "நிலுவையில் உள்ள வசூல்கள் இங்கே உள்ளன.", tour_step3_title: "நீங்கள் செலுத்த வேண்டியதைக் கண்காணியுங்கள்", tour_step3_text: "விநியோகஸ்தர் நிலுவைகளை ஓரிடத்தில் வைத்திருங்கள்.", tour_step4_title: "உங்கள் தொடர்புப் புத்தகம்", tour_step4_text: "வரலாற்றைப் பார்க்க எந்தவொரு தொடர்பையும் திறக்கவும்.", tour_step5_title: "முதல் லெட்ஜரை உருவாக்குங்கள்", tour_step5_text: "முதல் பதிவைச் செய்ய இங்கே தட்டவும்.", tour_step6_title: "மோசடி எச்சரிக்கைகளைச் சரிபார்க்கவும்", tour_step6_text: "வணிகங்களால் அறிவிக்கப்பட்ட தொடர்புகளைப் பாருங்கள்.", tour_step7_title: "நீங்கள் தயார்!", tour_step7_text: "சுயவிவரம், மொழியை இங்கிருந்து நிர்வகிக்கவும்.",
+        msg_entry_success: "பதிவு வெற்றிகரமாகச் சேர்க்கப்பட்டது", msg_pay_success: "கட்டணம் வெற்றிகரமாகச் சேர்க்கப்பட்டது", btn_great: "அருமை",
+        login_req_title: "உள்நுழைவு தேவை", login_req_text: "இந்தச் செயலைச் செய்ய உள்நுழையவும்.", btn_later: "பிறகு", btn_login_now: "இப்போதே உள்நுழை",
+        msg_pending_one: "1 பதிவு உறுதிப்படுத்தலுக்காகக் காத்திருக்கிறது", msg_pending_multi: "பதிவுகள் உறுதிப்படுத்தலுக்காகக் காத்திருக்கின்றன",
+        head_success: "வெற்றி!", msg_action_success: "செயல் வெற்றிகரமாக முடிந்தது.",
+        entry_sub_sale: "பணம் வசூலிக்க விற்பனையைப் பதிவு செய்யுங்கள்", entry_sub_purch: "கொள்முதலைப் பதிவு செய்யுங்கள்", entry_sub_gen: "லெட்ஜரைப் புதுப்பிக்க ஒரு பரிவர்த்தனையைப் பதிவு செய்யுங்கள்",
+        entry_title_sale: "விற்பனைப் பதிவு", entry_title_purch: "கொள்முதல் பதிவு", entry_title_gen: "புதிய லெட்ஜர் பதிவு",
+        entry_cat_sale: "விற்பனைப் பதிவு (வசூலிக்க)", entry_cat_purch: "கொள்முதல் பதிவு (செலுத்த)",
+        entry_cat_gen: "லெட்ஜர் பரிவர்த்தனை",
+        lang_title: "மொழியைத் தேர்ந்தெடுக்கவும்",
+        lang_sub: "உங்களுக்கு விருப்பமான மொழியைத் தேர்வு செய்யவும்",
+        btn_confirm_lang: "தேர்வை உறுதிப்படுத்தவும்"
+      },
+      te: {
+        guide_title: "మీ లెడ్జర్‌ని ప్రారంభించండి", guide_text: "మీ కలెక్షన్ బుక్ ఖాళీగా ఉంది. మీ మొదటి లావాదేవీని రికార్డ్ చేయడానికి క్రింద ఉన్న చర్యను ఎంచుకోండి.", guide_btn_sale: "+ అమ్మకం జోడించు", guide_btn_purch: "- కొనుగోలు జోడించు",
+        app_sub: "క్రెడిట్ & లెడ్జర్ మేనేజ్‌మెంట్", btn_setup: "అమర్చండి", nav_dash: "డాష్‌బోర్డ్", nav_collect: "వసూలు చేయవలసినవి", nav_pay: "చెల్లించవలసినవి", nav_cust: "పరిచయాలు", nav_fraud: "మోసాల హెచ్చరికలు",
+        stat_rcv: "మొత్తం వసూళ్లు", stat_pay: "మొత్తం బకాయిలు", stat_ovd: "గడువు ముగిసిన ఎంట్రీలు", stat_cust: "మొత్తం పరిచయాలు",
+        rem_head: "చెల్లింపు రిమైండర్లు", rem_sub: "గడువు ముగిసినవి & 7 రోజులలో రావలసినవి", col_head: "వసూలు చేయవలసినవి", col_sub: "మీకు డబ్బు చెల్లించవలసిన వారు",
+        pay_head: "చెల్లించవలసినవి", pay_sub: "మీరు డబ్బు చెల్లించవలసిన సరఫరాదారులు", btn_add_entry: "కొత్త లెడ్జర్ ఎంట్రీ", btn_add_pay: "చెల్లింపు జోడించు", btn_ledger: "లెడ్జర్",
+        type_sale: "అమ్మకం (వసూలు చేయడానికి)", type_purch: "కొనుగోలు (చెల్లించడానికి)", txt_balance: "బ్యాలెన్స్", txt_last: "చివరి", txt_entries: "ఎంట్రీలు",
+        sale: "అమ్మకం", purchase: "కొనుగోలు", payment: "చెల్లింపు", btn_confirm: "ధృవీకరించు", btn_del: "తొలగించు", txt_loading: "మీ లెడ్జర్‌ని తెరుస్తోంది...",
+        setup_sub: "ఈ సమాచారం వ్యక్తిగతంగా సేవ్ చేయబడుతుంది మరియు ఎవరితోనూ భాగస్వామ్యం చేయబడదు.", lbl_name: "మీ పేరు", ph_name: "ఉదా: రమేష్ భాయ్",
+        lbl_biz: "వ్యాపారం పేరు", ph_biz: "ఉదా: శర్మ ట్రేడర్స్", lbl_gst: "GST నంబర్ (ఐచ్ఛికం)", ph_gst: "ఉదా: 29ABCDE1234F1Z5",
+        lbl_area: "సిటీ / మార్కెట్ ప్రాంతం (ఐచ్ఛికం)", ph_area: "ఉదా: మెయిన్ మార్కెట్, హైదరాబాద్", btn_skip: "రద్దు చేయి", btn_save_prof: "ప్రొఫైల్‌ను సేవ్ చేయి", btn_add_cust: "+ ఎంట్రీ జోడించు",
+        btn_reset: "ఈ పరికరంలో నా డేటాను రీసెట్ చేయి", lbl_cust_party: "పరిచయం / పార్టీ పేరు", ph_search_cust: "వెతకండి లేదా కొత్తది జోడించండి...", lbl_phone: "ఫోన్",
+        lbl_txn_type: "లావాదేవీ రకం", lbl_gross_amt: "మొత్తం విలువ (₹)", lbl_discount: "డిస్కౌంట్ (₹)", lbl_inv_date: "ఇన్వాయిస్ తేదీ",
+        lbl_due_date: "గడువు తేదీ (ఐచ్ఛికం)", lbl_ref: "రిఫరెన్స్ / ఇన్వాయిస్ నంబర్", ph_ref: "ఉదా: బిల్ నంబర్ 994", lbl_cust_conf: "కస్టమర్ ఈ లావాదేవీని ధృవీకరించారు",
+        hint_cust_conf: "వారి అనుమతి కోసం వేచి ఉంటే అన్‌చెక్ చేయండి.", btn_cancel: "రద్దు చేయి", btn_save_entry: "ఎంట్రీని సేవ్ చేయి", lbl_amt: "మొత్తం (₹)",
+        lbl_date: "తేదీ", lbl_pay_ref: "చెల్లింపు రిఫరెన్స్ / నోట్", ph_pay_ref: "ఉదా: UPI / నగదు", lbl_pay_conf: "చెల్లింపు అందింది & ధృవీకరించబడింది",
+        hint_pay_conf: "డబ్బు జమ అయ్యే వరకు వేచి ఉంటే అన్‌చెక్ చేయండి.", btn_save_pay: "చెల్లింపును సేవ్ చేయి", head_manage: "పరిచయాన్ని నిర్వహించు",
+        lbl_priv_note: "ప్రైవేట్ నోట్స్ (మీకు మాత్రమే కనిపిస్తాయి)", ph_priv_note: "మీరు భాగస్వామ్యం చేయకూడదనుకునే ఏవైనా విషయాలు", div_trust: "నమ్మకమైన రేటింగ్ (ప్రైవేట్)",
+        lbl_give_rate: "ఈ పరిచయానికి రేటింగ్ ఇవ్వండి", hint_give_rate: "ఐచ్ఛికం — ప్రైవేట్‌గా ఉంటుంది.",
+        lbl_mark_fraud: "మోసపూరితమైనదిగా గుర్తించండి", hint_mark_fraud: "రేటింగ్‌తో సంబంధం లేకుండా ఎరుపు రంగులో చూపిస్తుంది.", lbl_rep_fraud: "ఈ మోసాన్ని ఇతర వ్యాపారులకు తెలియజేయండి",
+        hint_rep_fraud: "పరిచయం వివరాలు మాత్రమే భాగస్వామ్యం చేయబడతాయి — మీ పేరు ఎప్పుడూ చూపబడదు.", lbl_inc_phone: "ఫోన్ నంబర్‌ను చేర్చండి",
+        lbl_what_happen: "ఏం జరిగింది? (ఇతర వ్యాపారులకు కనిపిస్తుంది)", ph_what_happen: "ఉదా: డెలివరీ తీసుకున్నారు, స్పందించడం లేదు", btn_save: "సేవ్ చేయి",
+        head_fraud_rep: "మోసం నివేదిక", btn_close: "మూసివేయి", btn_import: "ఇంపోర్ట్", btn_remove: "తొలగించు", btn_dl_pdf: "PDF డౌన్‌లోడ్", btn_send_pdf: "పరిచయానికి పంపు",
+        btn_close_ledger: "లెడ్జర్‌ను మూసివేయి", head_bal_sum: "బ్యాలెన్స్ సారాంశం", sub_bal_sum: "ప్రతి పరిచయం యొక్క బకాయిలు ఒక్క చూపులో.",
+        login_head: "మీ లెడ్జర్‌ని యాక్సెస్ చేయడానికి సురక్షితంగా లాగిన్ అవ్వండి.", ph_mobile: "మొబైల్ నంబర్‌ను నమోదు చేయండి", btn_login: "యాప్‌లోకి లాగిన్ అవ్వండి",
+        notice_priv: "🔒 మీ ప్రైవేట్ కాంటాక్ట్ బుక్. ఈ డేటా మీ ఖాతాలో మాత్రమే ఉంటుంది.",
+        notice_pub: "⚠️ ఇతర వ్యాపారులు నివేదించిన మోసాల హెచ్చరికలు.",
+        ph_search_my: "పేరు లేదా ఫోన్ కోసం వెతకండి...", ph_search_dir: "నివేదించబడిన పేరును వెతకండి...", txt_all_clear: "అంతా క్లియర్", txt_no_rem: "పెండింగ్ రిమైండర్లు లేవు.",
+        txt_nothing: "ఇక్కడ ఏమీ లేదు", txt_add_col: "బకాయిలు చూడటానికి డాష్‌బోర్డ్ నుండి అమ్మకాన్ని జోడించండి.", txt_add_pay: "బకాయిలు చూడటానికి డాష్‌బోర్డ్ నుండి కొనుగోలును జోడించండి.",
+        txt_no_cust: "ఇంకా పరిచయాలు లేవు", txt_tap_first: "మీ పరిచయాల జాబితా ఖాళీగా ఉంది.", txt_no_fraud: "మోసాల నివేదికలు లేవు",
+        txt_when_fraud: "ఎవరైనా వ్యాపారి మోసాన్ని నివేదించినప్పుడు, అది ఇక్కడ కనిపిస్తుంది.", txt_tot_col: "మొత్తం వసూళ్లు", txt_tot_pay: "మొత్తం బకాయిలు",
+        txt_all_set: "అన్నీ సెటిల్ అయ్యాయి", txt_no_bal_now: "ప్రస్తుతం బకాయిలు లేవు.", txt_no_txn: "లావాదేవీలు లేవు", txt_not_rec: "ఈ పరిచయం కోసం ఇంకా ఏమీ రికార్డ్ చేయబడలేదు.",
+        txt_no_notifications: "నోటిఫికేషన్లు లేవు", txt_notification_hint: "మీ కార్యకలాపాలు ఇక్కడ కనిపిస్తాయి.", txt_no_pending: "ప్రస్తుతం పెండింగ్ ఎంట్రీలు లేవు.",
+        txt_closing: "చివరి బ్యాలెన్స్", txt_txns: "లావాదేవీలు", txt_view: "చూడండి →", txt_whatsapp: "WhatsApp రిమైండర్", txt_call: "కాల్", txt_new_ent: "+ అమ్మకం/కొనుగోలు జోడించు", txt_mng: "నిర్వహించు", txt_v_rep: "నివేదికను చూడండి / సవరించండి",
+        lbl_fraud: "మోసం", lbl_risk: "ప్రమాదం", lbl_trusted: "నమ్మకమైన వారు", lbl_watch: "గమనించండి", lbl_unrated: "రేటింగ్ ఇవ్వలేదు", tag_unc: "ధృవీకరించబడలేదు", tag_paid: "పూర్తిగా చెల్లించారు", tag_part: "పాక్షికంగా చెల్లించారు", tag_no_due: "గడువు తేదీ లేదు",
+        head_emp: "ఉద్యోగులను నిర్వహించండి", sub_emp: "ఉద్యోగులను జోడించండి మరియు వారి లెడ్జర్ యాక్సెస్‌ను నియంత్రించండి.", div_add_emp: "కొత్త ఉద్యోగిని జోడించండి",
+        lbl_emp_name: "ఉద్యోగి పేరు", ph_emp_name: "ఉదా: రాహుల్ కుమార్", lbl_emp_phone: "ఫోన్ నంబర్ (లాగిన్ ID)",
+        lbl_perm_add: "ఎంట్రీలు జోడించవచ్చు", hint_perm_add: "కొత్త లావాదేవీలను రికార్డ్ చేయడానికి ఉద్యోగిని అనుమతించండి.",
+        lbl_perm_view: "పూర్తి లెడ్జర్‌ను చూడవచ్చు", hint_perm_view: "పూర్తి చరిత్రను చూడటానికి ఉద్యోగిని అనుమతించండి.",
+        lbl_perm_del: "ఎంట्रीలను తొలగించవచ్చు", hint_perm_del: "రికార్డులను శాశ్వతంగా తొలగించడానికి ఉద్యోగిని అనుమతించండి.",
+        btn_save_emp: "ఉద్యోగిని సేవ్ చేయి", txt_no_emp: "ఇంకా ఉద్యోగులను జోడించలేదు.", btn_remove_emp: "ఉద్యోగిని తొలగించు",
+        btn_profile: "నా ప్రొఫైల్", btn_lang: "భాష", btn_dark_mode: "డార్క్ మోడ్", btn_mng_emp: "ఉద్యోగులను నిర్వహించండి", btn_privacy: "గోప్యతా విధానం",
+        btn_terms: "నిబంధనలు & షరతులు", lbl_legal: "చట్టపరమైన", btn_logout: "లాగ్ అవుట్", head_settings: "సెట్టింగ్‌లు", settings_account: "ఖాతా",
+        settings_preferences: "ప్రాధాన్యతలు", settings_business: "వ్యాపారం",
+        settings_support_security: "మద్దతు & భద్రత", settings_session: "సెషన్",
+        btn_security_lock: "భద్రత & యాప్ లాక్", btn_help_support: "సహాయం & మద్దతు",
+        help_title: "సహాయం & మద్దతు", help_subtitle: "సహాయం కావాలా?",
+        help_email_label: "ఇమెయిల్ మద్దతు", help_email_hint: "మద్దతు బృందాన్ని సంప్రదించండి.", emp_manage_contacts: 'పరిచయాలను నిర్వహించు',
+        feedback_title: "అభిప్రాయం & మద్దతు", feedback_subtitle: "మీ అభిప్రాయాన్ని తెలియజేయండి.",
+        feedback_bug: "బగ్‌ను నివేదించండి", feedback_feature: "ఫీచర్‌ను సూచించండి", feedback_general: "అభిప్రాయాన్ని ఇవ్వండి", feedback_rate: "యాప్‌ను రేట్ చేయండి",
+        feedback_placeholder: "మీ అభిప్రायాన్ని ఇక్కడ రాయండి...", feedback_submit: "అభిప్రాయాన్ని పంపు", feedback_thanks: "ధన్యవాదాలు!", feedback_required: "అభిప్రాయం అవసరం.",
+        feedback_rate_title: "యాప్ నచ్చిందా?", feedback_rate_subtitle: "మీ రేటింగ్ మాకు సహాయపడుతుంది.", feedback_rate_now: "రేట్ చేయండి", feedback_rate_later: "తర్వాత",
+        emp_manage_contacts_hint: 'వ్యాపార పరిచయాలను నిర్వహించడానికి ఉద్యోగిని అనుమతించండి.',
+        notification_customer_new_entry: '₹{amount} కోసం కొత్త {entryType} ఎంట్రీ జోడించబడింది',
+        notification_owner_employee_new_entry: '{customerName} కోసం ₹{amount} కి కొత్త {entryType} ఎంట్రీ జోడించబడింది',
+        notification_customer_payment: '₹{amount} చెల్లింపు రికార్డ్ చేయబడింది',
+        notification_owner_employee_payment: '{customerName} కోసం ₹{amount} చెల్లింపు రికార్డ్ చేయబడింది',
+        notification_customer_entry_deleted: '₹{amount} విలువైన {entryType} ఎంట్రీ తొలగించబడింది',
+        notification_owner_employee_entry_deleted: '{customerName} కోసం ₹{amount} విలువైన {entryType} ఎంట్రీ తొలగించబడింది',
+        notification_customer_payment_deleted: '₹{amount} చెల్లింపు తొలగించబడింది',
+        notification_owner_employee_payment_deleted: '{customerName} కోసం ₹{amount} చెల్లింపు తొలగించబడింది',
+        notification_customer_contact_deleted: '{entryCount} లావాదేవీలతో మీ లెడ్జర్ తొలగించబడింది',
+        notification_owner_employee_contact_deleted: '{customerName} మరియు {entryCount} లావాదేవీలు తొలగించబడ్డాయి',
+        notification_entry_type_sale: 'అమ్మకం', notification_entry_type_purchase: 'కొనుగోలు',
+        stat_net_flow: 'ఈ నెల నికర ప్రవాహం', flow_collections_ahead: 'వసూళ్లు అమ్మకాల కంటే ఎక్కువగా ఉన్నాయి', flow_sales_ahead: 'అమ్మకాలు వసూళ్ల కంటే ఎక్కువగా ఉన్నాయి', flow_balanced: 'అమ్మకాలు మరియు వసూళ్లు సమంగా ఉన్నాయి',
+        txt_ledger_creator_only: 'లెడ్జర్ సృష్టించిన వారు మాత్రమే ఎంట్రీలను జోడించగలరు',
+        btn_add_details: "+ అదనపు వివరాలను జోడించు (ఐచ్ఛికం)", btn_hide_details: "- వివరాలను దాచు",
+        btn_take_tour: "యాప్ టూర్ తీసుకోండి", tour_badge: "✨ క్విక్ టూర్", btn_tour_skip: "వదిలేయండి", btn_tour_next: "తర్వాత →", btn_tour_start: "మొదటి ఎంట్రీని జోడించు →", msg_tour_skipped: "మీరు ఎప్పుడైనా మళ్ళీ టూర్ ప్రారంభించవచ్చు.",
+        tour_step1_title: "మీ వ్యాపారం ఒక్క చూపులో", tour_step1_text: "మీరు ఎంత వసూలు చేయాలో, ఎంత చెల్లించాలో చూడండి.", tour_step2_title: "ఎవరు బాకీ ఉన్నారో తెలుసుకోండి", tour_step2_text: "పెండింగ్ వసూళ్లు ఇక్కడ ఉన్నాయి.", tour_step3_title: "మీరు ఎంత బాకీ ఉన్నారో చూడండి", tour_step3_text: "సరఫరాదారుల బకాయిలను ఒకే చోట ఉంచండి.", tour_step4_title: "మీ పరిచయాల పుస్తకం", tour_step4_text: "చరిత్రను చూడటానికి ఏదైనా పరిచయాన్ని తెరవండి.", tour_step5_title: "మొదటి లెడ్జర్‌ను సృష్టించండి", tour_step5_text: "మొదటి ఎంట్రీ చేయడానికి ఇక్కడ ట్యాప్ చేయండి.", tour_step6_title: "మోసాల హెచ్చరికలను తనిఖీ చేయండి", tour_step6_text: "ఇతర వ్యాపారులు నివేదించిన పరిచయాలను చూడండి.", tour_step7_title: "మీరు సిద్ధం!", tour_step7_text: "సెట్టింగ్‌ల నుండి అన్నింటినీ నిర్వహించండి.",
+        msg_entry_success: "ఎంట్రీ విజయవంతంగా జోడించబడింది", msg_pay_success: "చెల్లింపు విజయవంతంగా జోడించబడింది", btn_great: "అద్భుతం",
+        login_req_title: "లాగిన్ అవసరం", login_req_text: "ఈ చర్యను చేయడానికి లాగిన్ అవ్వండి.", btn_later: "తర్వాత", btn_login_now: "ఇప్పుడే లాగిన్ అవ్వండి",
+        msg_pending_one: "1 ఎంట్రీ ధృవీకరణ కోసం వేచి ఉంది", msg_pending_multi: "ఎంట్రీలు ధృవీకరణ కోసం వేచి ఉన్నాయి",
+        head_success: "విజయం!", msg_action_success: "చర్య విజయవంతంగా పూర్తయింది.",
+        entry_sub_sale: "డబ్బు వసూలు చేయడానికి అమ్మకాన్ని రికార్డ్ చేయండి", entry_sub_purch: "కొనుగోలును రికార్డ్ చేయండి", entry_sub_gen: "లెడ్జర్‌ను అప్‌డేట్ చేయడానికి లావాదేవీని రికార్డ్ చేయండి",
+        entry_title_sale: "అమ్మకం నమోదు", entry_title_purch: "కొనుగోలు నమోదు", entry_title_gen: "కొత్త లెడ్జర్ నమోదు",
+        entry_cat_sale: "అమ్మకం నమోదు (వసూలు చేయడానికి)", entry_cat_purch: "కొनुగోలు నమోదు (చెల్లించడానికి)",
+        entry_cat_gen: "లెడ్జర్ లావాదేవీ"
       }
     };
 
@@ -6174,8 +6718,26 @@ function configureProfilePopup(
     return 'exit';
 };
 
+    function updateLangPickerUI(lang) {
+        pendingLang = lang || currentLang;
+
+        var selectedItem = $$('.cb-dropdown-item').find(function(item) {
+            return item.dataset.lang === pendingLang;
+        });
+
+        if (selectedItem) {
+            if ($('#langDropdownLabel')) {
+                $('#langDropdownLabel').textContent = selectedItem.querySelector('span').firstChild.textContent.trim();
+            }
+            $$('.cb-dropdown-item').forEach(function(item) {
+                item.classList.toggle('selected', item === selectedItem);
+            });
+        }
+    }
+
     window.setLanguage = async function(lang) {
       currentLang = lang;
+      pendingLang = lang;
       try {
           await window.storage.set('cb-lang', lang, false);
           await window.storage.set('cb-lang-prompted', 'true', false);
@@ -8520,6 +9082,7 @@ if (!canManageContacts) {
       } catch(e) {}
 
       if (!hasPromptedLang) {
+          updateLangPickerUI();
           openOverlay('#langOverlay', true);
           return;
       }
@@ -9467,7 +10030,7 @@ var addEntryBtn =
         var h='';
         for(var j=0;j<arr.length;j++){
           var e=arr[j]; var c=myCustById(e.customerId); var s=calculateEntryState(e); var pct = e.originalAmount ? Math.min(100, Math.round((s.paid/e.originalAmount)*100)) : 0;
-          h += '<div class="card"><div class="row-top"><div style="display:flex;gap:12px;align-items:center;">'+stampHTML(c,false)+'<div><div class="cust-name">'+escapeHTML(e.customerName)+'</div>'+dueTag(e)+'</div></div><div><div class="amount owe-me">₹'+fmtMoney(s.bal)+'</div><div class="amount-sub">of ₹'+fmtMoney(e.originalAmount)+'</div></div></div><div class="progress-track"><div class="progress-fill" style="width:'+pct+'%;"></div></div><div class="quality-line"><b>'+escapeHTML(e.description||t('sale'))+'</b></div><div class="card-actions"><button class="mini-btn ghost" data-action="view-history" data-id="'+e.customerId+'">'+t('btn_ledger')+'</button></div></div>';
+          h += '<div class="card"><div class="row-top"><div style="display:flex;gap:12px;align-items:center;">'+stampHTML(c,false)+'<div><div class="cust-name">'+escapeHTML(e.customerName)+'</div>'+dueTag(e)+'</div></div><div><div class="amount owe-me">₹'+fmtMoney(s.bal)+'</div><div class="amount-sub">of ₹'+fmtMoney(e.originalAmount)+'</div></div></div><div class="progress-track"><div class="progress-fill" style="width:'+pct+'%;"></div></div><div class="quality-line"><b>'+escapeHTML(e.description||t('sale'))+'</b></div><div class="card-actions"><button class="mini-btn secondary" data-action="view-history" data-id="'+e.customerId+'">'+t('btn_ledger')+'</button></div></div>';
         } return h;
       }
       if($('#debtorList')) $('#debtorList').innerHTML = genGroupedHtml(dList, true);
@@ -9518,7 +10081,14 @@ var manageBtn =
     '</button>';
         var newTxnBtn = isCreator ? '<button class="mini-btn accent" data-action="new-txn-for" data-id="'+mc.id+'">'+t('txt_new_ent')+'</button>' : '';
 
-        html += '<div class="card"><div class="row-top"><div style="display:flex;gap:12px;align-items:center;">'+stampHTML(mc,false)+'<div><div class="cust-name">'+escapeHTML(mc.name)+(mc.fraudReported?'<span class="badge-public">Reported</span>':'')+'</div><div class="cust-area">'+escapeHTML(mc.area||'')+(mc.phone?' · '+escapeHTML(mc.phone):'')+'</div></div></div><div style="text-align:right;">'+balHtml+'</div></div>'+(mc.privateNotes ? '<div class="quality-line"><b>'+t('lbl_priv_note').split(' (')[0]+':</b> '+escapeHTML(mc.privateNotes)+'</div>' : '')+'<div class="card-actions">' + manageBtn + '<button class="mini-btn accent" data-action="view-history" data-id="'+mc.id+'">'+t('btn_ledger')+'</button>'+(mc.phone ? '<button class="mini-btn call" onclick="NativeBridge.postMessage(\'CALL:'+escapeHTML(mc.phone)+'\')">'+t('txt_call')+'</button>' : '') + newTxnBtn + '</div></div>';
+        html += '<div class="card"><div class="row-top"><div style="display:flex;gap:12px;align-items:center;">'+stampHTML(mc,false)+'<div><div class="cust-name">'+escapeHTML(mc.name)+(mc.fraudReported?'<span class="badge-public">Reported</span>':'')+'</div><div class="cust-area">'+escapeHTML(mc.area||'')+(mc.phone?' · '+escapeHTML(mc.phone):'')+'</div></div></div><div style="text-align:right;">'+balHtml+'</div></div>'+(mc.privateNotes ? '<div class="quality-line"><b>'+t('lbl_priv_note').split(' (')[0]+':</b> '+escapeHTML(mc.privateNotes)+'</div>' : '')+'<div class="card-actions">' + manageBtn +     '<button ' +
+        'class="mini-btn secondary" ' +
+        'data-action="view-history" ' +
+        'data-id="' +
+            escapeHTML(mc.id) +
+        '">' +
+            t('btn_ledger') +
+    '</button>' + (mc.phone ? '<button class="mini-btn call" onclick="NativeBridge.postMessage(\'CALL:'+escapeHTML(mc.phone)+'\')">'+t('txt_call')+'</button>' : '') + newTxnBtn + '</div></div>';
       }
       if($('#myCustomerList')) $('#myCustomerList').innerHTML = html || emptyStateHTML('contacts', 'txt_no_cust', 'txt_tap_first');
     }
@@ -10035,7 +10605,7 @@ if (
             '<div><div class="cust-name">'+escapeHTML(d.customer.name)+'</div><div class="cust-area">'+escapeHTML(d.customer.area||'')+'</div></div></div><div style="text-align:right;">'+
             ((type==='all'||type==='recv') && d.netReceivable>0.005 ? '<div class="amount owe-me">₹'+fmtMoney(d.netReceivable)+'</div>' : '') +
             ((type==='all'||type==='pay') && d.netPayable>0.005 ? '<div class="amount i-owe">₹'+fmtMoney(d.netPayable)+'</div>' : '')+'</div></div>'+
-            '<div class="card-actions"><button class="mini-btn ghost" data-action="view-history" data-id="'+d.customer.id+'">'+t('btn_ledger')+'</button></div></div>';
+            '<div class="card-actions"><button class="mini-btn secondary" data-action="view-history" data-id="'+d.customer.id+'">'+t('btn_ledger')+'</button></div></div>';
         }
       }
       if($('#balanceList')) $('#balanceList').innerHTML = html;
@@ -10083,8 +10653,12 @@ if (
       var base64 = doc.output('datauristring').split(',')[1]; NativeBridge.postMessage("SAVEPDF:" + filename + "|" + base64);
     }
 
-     function applyDarkMode(enabled) {
+     window.applyDarkMode = function(enabled) {
        document.documentElement.classList.toggle('dark-mode', enabled === true);
+
+       if (window.NativeBridge && typeof window.NativeBridge.postMessage === 'function') {
+         window.NativeBridge.postMessage('THEME_CHANGE:' + (enabled ? 'dark' : 'light'));
+       }
 
        var button = document.getElementById('btn-settings-dark-mode');
        if (button) {
@@ -10094,11 +10668,11 @@ if (
        try {
          localStorage.setItem('cb-dark-mode', enabled === true ? 'true' : 'false');
        } catch (e) {}
-     }
+     };
 
-     function isDarkModeEnabled() {
+     window.isDarkModeEnabled = function() {
        return document.documentElement.classList.contains('dark-mode');
-     }
+     };
 
      // Sync the toggle state with the early <head> theme bootstrap.
      applyDarkMode(isDarkModeEnabled());
@@ -10786,6 +11360,7 @@ safeBind(
     '#notificationBtn',
     'click',
     function () {
+
 var notificationButton =
     $('#notificationBtn');
 
@@ -10835,15 +11410,24 @@ if (notificationButton) {
                 'active'
             );
 
+        var isAuthenticated =
+            window.flutterSession &&
+            window.flutterSession.isAuthenticated;
+
         if (
+            isAuthenticated &&
             window.NativeBridge &&
-            typeof window.NativeBridge
-                .postMessage ===
-                'function'
+            typeof window.NativeBridge.postMessage === 'function'
         ) {
             window.NativeBridge.postMessage(
                 'LOAD_NOTIFICATIONS'
             );
+        } else {
+            /*
+             * If not logged in, immediately show
+             * the empty state.
+             */
+            window.onNotificationsLoaded([]);
         }
     }
 );
@@ -11803,7 +12387,32 @@ async function(
 );
 
 
-      safeBind('#btn-settings-lang', 'click', function(){ closeOverlay('#settingsOverlay'); openOverlay('#langOverlay'); });
+      safeBind('#btn-settings-lang', 'click', function(){
+          closeOverlay('#settingsOverlay');
+          updateLangPickerUI();
+          openOverlay('#langOverlay');
+      });
+
+      safeBind('#langDropdownTrigger', 'click', function(e) {
+          e.stopPropagation();
+          $('#langDropdown').classList.toggle('open');
+      });
+
+      safeBind('#langDropdownMenu', 'click', function(e) {
+          var item = closest(e.target, '.cb-dropdown-item');
+          if (item) {
+              updateLangPickerUI(item.dataset.lang);
+              $('#langDropdown').classList.remove('open');
+          }
+      });
+
+      safeBind('body', 'click', function() {
+          if ($('#langDropdown')) $('#langDropdown').classList.remove('open');
+      });
+
+      safeBind('#btnConfirmLang', 'click', function() {
+          window.setLanguage(pendingLang);
+      });
       safeBind(
     '#btn-settings-privacy',
     'click',

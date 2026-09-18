@@ -17,33 +17,6 @@ class AppLockScreen extends StatefulWidget {
 }
 
 class _AppLockScreenState extends State<AppLockScreen> {
-  static const Color indigo =
-  Color(0xFF2B3A67);
-
-  static const Color indigoDeep =
-  Color(0xFF182449);
-
-  static const Color turmeric =
-  Color(0xFFC98A2D);
-
-  static const Color khadi =
-  Color(0xFFEFE7D6);
-
-  static const Color khadiLine =
-  Color(0xFFD8CCB0);
-
-  static const Color paper =
-  Color(0xFFFBF8F1);
-
-  static const Color muted =
-  Color(0xFF77705F);
-
-  static const Color charcoal =
-  Color(0xFF2A2622);
-
-  static const Color madder =
-  Color(0xFFA63D40);
-
   final TextEditingController _pinController =
   TextEditingController();
 
@@ -185,6 +158,18 @@ class _AppLockScreenState extends State<AppLockScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    final khadi = isDark ? const Color(0xFF000000) : const Color(0xFFEFE7D6);
+    final paper = isDark ? const Color(0xFF080808) : const Color(0xFFFBF8F1);
+    final charcoal = isDark ? const Color(0xFFE9EDEF) : const Color(0xFF2A2622);
+    final muted = isDark ? const Color(0xFF8696A0) : const Color(0xFF77705F);
+    final turmeric = isDark ? const Color(0xFFB08B4B) : const Color(0xFFC98A2D);
+    final indigo = isDark ? const Color(0xFF4A5A96) : const Color(0xFF2B3A67);
+    final indigoDeep = isDark ? const Color(0xFFFFFFFF) : const Color(0xFF182449);
+    final khadiLine = isDark ? const Color(0xFF23272F) : const Color(0xFFD8CCB0);
+    final madder = const Color(0xFFA63D40);
+
     return Scaffold(
       backgroundColor: khadi,
 
@@ -223,15 +208,15 @@ class _AppLockScreenState extends State<AppLockScreen> {
                   child: IntrinsicHeight(
                     child: Column(
                       children: [
-                        _buildBrandHeader(),
+                        _buildBrandHeader(indigo, indigoDeep, turmeric),
 
                         const Spacer(),
 
-                        _buildLockCard(),
+                        _buildLockCard(paper, khadiLine, indigo, indigoDeep, muted, turmeric, madder, khadi),
 
                         const Spacer(),
 
-                        _buildFooter(),
+                        _buildFooter(muted),
                       ],
                     ),
                   ),
@@ -244,7 +229,7 @@ class _AppLockScreenState extends State<AppLockScreen> {
     );
   }
 
-  Widget _buildBrandHeader() {
+  Widget _buildBrandHeader(Color indigo, Color indigoDeep, Color turmeric) {
     return Column(
       children: [
         Container(
@@ -257,7 +242,7 @@ class _AppLockScreenState extends State<AppLockScreen> {
             BoxShape.circle,
 
             gradient:
-            const LinearGradient(
+            LinearGradient(
               begin:
               Alignment.topLeft,
 
@@ -266,7 +251,7 @@ class _AppLockScreenState extends State<AppLockScreen> {
 
               colors: [
                 indigo,
-                indigoDeep,
+                indigoDeep.withOpacity(0.8),
               ],
             ),
 
@@ -299,7 +284,7 @@ class _AppLockScreenState extends State<AppLockScreen> {
           ),
 
           child:
-          const Icon(
+          Icon(
             Icons
                 .menu_book_outlined,
 
@@ -316,7 +301,7 @@ class _AppLockScreenState extends State<AppLockScreen> {
           14,
         ),
 
-        const Text(
+        Text(
           'Collection Book',
 
           style:
@@ -341,7 +326,7 @@ class _AppLockScreenState extends State<AppLockScreen> {
           3,
         ),
 
-        const Text(
+        Text(
           'CREDIT & LEDGER MANAGEMENT',
 
           style:
@@ -364,7 +349,7 @@ class _AppLockScreenState extends State<AppLockScreen> {
     );
   }
 
-  Widget _buildLockCard() {
+  Widget _buildLockCard(Color paper, Color khadiLine, Color indigo, Color indigoDeep, Color muted, Color turmeric, Color madder, Color khadi) {
     return Container(
       width: double.infinity,
 
@@ -378,8 +363,7 @@ class _AppLockScreenState extends State<AppLockScreen> {
 
       decoration:
       BoxDecoration(
-        color:
-        paper,
+        color: paper,
 
         borderRadius:
         BorderRadius.circular(
@@ -393,18 +377,16 @@ class _AppLockScreenState extends State<AppLockScreen> {
         ),
 
         boxShadow:
-        const [
+        [
           BoxShadow(
             color:
-            Color(
-              0x16000000,
-            ),
+            Colors.black.withOpacity(0.1),
 
             blurRadius:
             18,
 
             offset:
-            Offset(
+            const Offset(
               0,
               7,
             ),
@@ -440,7 +422,7 @@ class _AppLockScreenState extends State<AppLockScreen> {
             ),
 
             child:
-            const Icon(
+            Icon(
               Icons
                   .lock_outline_rounded,
 
@@ -457,7 +439,7 @@ class _AppLockScreenState extends State<AppLockScreen> {
             16,
           ),
 
-          const Text(
+          Text(
             'Collection Book Locked',
 
             textAlign:
@@ -482,7 +464,7 @@ class _AppLockScreenState extends State<AppLockScreen> {
             6,
           ),
 
-          const Text(
+          Text(
             'Enter your app PIN to continue to your ledger.',
 
             textAlign:
@@ -506,7 +488,7 @@ class _AppLockScreenState extends State<AppLockScreen> {
             24,
           ),
 
-          _buildPinField(),
+          _buildPinField(khadi, khadiLine, indigoDeep, muted, turmeric),
 
           if (_errorText != null) ...[
             const SizedBox(
@@ -520,7 +502,7 @@ class _AppLockScreenState extends State<AppLockScreen> {
                   .center,
 
               children: [
-                const Icon(
+                Icon(
                   Icons
                       .error_outline_rounded,
 
@@ -546,7 +528,7 @@ class _AppLockScreenState extends State<AppLockScreen> {
                         .center,
 
                     style:
-                    const TextStyle(
+                    TextStyle(
                       color:
                       madder,
 
@@ -677,7 +659,7 @@ class _AppLockScreenState extends State<AppLockScreen> {
 
             Row(
               children: [
-                const Expanded(
+                Expanded(
                   child:
                   Divider(
                     color:
@@ -717,7 +699,7 @@ class _AppLockScreenState extends State<AppLockScreen> {
                   ),
                 ),
 
-                const Expanded(
+                Expanded(
                   child:
                   Divider(
                     color:
@@ -745,7 +727,7 @@ class _AppLockScreenState extends State<AppLockScreen> {
 
                 icon:
                 _checkingBiometric
-                    ? const SizedBox(
+                    ? SizedBox(
                   width:
                   20,
                   height:
@@ -782,7 +764,7 @@ class _AppLockScreenState extends State<AppLockScreen> {
                   indigo,
 
                   side:
-                  const BorderSide(
+                  BorderSide(
                     color:
                     khadiLine,
                   ),
@@ -820,7 +802,7 @@ class _AppLockScreenState extends State<AppLockScreen> {
     );
   }
 
-  Widget _buildPinField() {
+  Widget _buildPinField(Color khadi, Color khadiLine, Color indigoDeep, Color muted, Color turmeric) {
     return TextField(
       controller:
       _pinController,
@@ -847,7 +829,7 @@ class _AppLockScreenState extends State<AppLockScreen> {
       TextAlign.center,
 
       style:
-      const TextStyle(
+      TextStyle(
         color:
         indigoDeep,
 
@@ -908,7 +890,7 @@ class _AppLockScreenState extends State<AppLockScreen> {
           ),
 
           borderSide:
-          const BorderSide(
+          BorderSide(
             color:
             khadiLine,
           ),
@@ -922,7 +904,7 @@ class _AppLockScreenState extends State<AppLockScreen> {
           ),
 
           borderSide:
-          const BorderSide(
+          BorderSide(
             color:
             khadiLine,
           ),
@@ -936,7 +918,7 @@ class _AppLockScreenState extends State<AppLockScreen> {
           ),
 
           borderSide:
-          const BorderSide(
+          BorderSide(
             color:
             turmeric,
 
@@ -962,7 +944,7 @@ class _AppLockScreenState extends State<AppLockScreen> {
     );
   }
 
-  Widget _buildFooter() {
+  Widget _buildFooter(Color muted) {
     return Column(
       children: [
         Row(

@@ -15,6 +15,7 @@ import 'package:share_plus/share_plus.dart';
 import 'dart:convert';
 import 'dart:io';
 import '../services/meta_analytics_service.dart';
+import '../services/theme_service.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:convert';
@@ -43,14 +44,31 @@ class _WebViewScreenState extends State<WebViewScreen> {
   bool _webViewReady = false;
   bool _showStartupSplash = true;
 
+  Color _scaffoldBgColor = const Color(0xFFEFE7D6);
+  Color _navBarColor = const Color(0xFFF7F7F7);
+  Brightness _navBarIconBrightness = Brightness.dark;
+
   static const MethodChannel pdfChannel = MethodChannel("collection_book/pdf");
 
   @override
   void initState() {
     super.initState();
+    
+    // Initialize theme-related colors early to prevent flickering
+    final isDark = ThemeService.instance.themeMode.value == ThemeMode.dark;
+    if (isDark) {
+      _scaffoldBgColor = Colors.black;
+      _navBarColor = Colors.black;
+      _navBarIconBrightness = Brightness.light;
+    } else {
+      _scaffoldBgColor = const Color(0xFFEFE7D6);
+      _navBarColor = const Color(0xFFF7F7F7);
+      _navBarIconBrightness = Brightness.dark;
+    }
+
     MetaAnalyticsService.initialize();
     controller = WebViewController()
-      ..setBackgroundColor(const Color(0xFFEFE7D6))
+      ..setBackgroundColor(isDark ? Colors.black : const Color(0xFFEFE7D6))
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setNavigationDelegate(
         NavigationDelegate(
@@ -142,6 +160,10 @@ class _WebViewScreenState extends State<WebViewScreen> {
 
 if (typeof updateRoleModeUI === 'function') {
     updateRoleModeUI();
+}
+
+if (typeof applyDarkMode === 'function' && typeof isDarkModeEnabled === 'function') {
+    applyDarkMode(isDarkModeEnabled());
 }
             """);
             _webViewReady = true;
@@ -239,14 +261,56 @@ if (typeof updateRoleModeUI === 'function') {
           final parts = payload.split("|");
 
           if (parts.length >= 2) {
-            final phone = parts[0];
+            final rawPhone = parts[0];
             final message = parts.sublist(1).join("|");
 
-            final uri = Uri.parse(
-              "https://wa.me/91$phone?text=${Uri.encodeComponent(message)}",
+            // Ensure we only have digits for the phone number
+            final phone = rawPhone.replaceAll(RegExp(r'\D'), '');
+
+            /*
+             * FIX: "Can't open link with WhatsApp Business" error.
+             *
+             * When both WhatsApp Messenger and WhatsApp Business are installed,
+             * using https://wa.me links often triggers a system verification check
+             * in the Business app, which fails if the user's primary number 
+             * isn't registered specifically with the Business version.
+             *
+             * 1. Try the direct 'whatsapp://' scheme first. This usually triggers 
+             *    the standard app chooser or opens the main Messenger app directly,
+             *    bypassing the "App Link" verification that causes the error.
+             */
+            final whatsappUri = Uri.parse(
+              "whatsapp://send?phone=91$phone&text=${Uri.encodeComponent(message)}",
             );
 
-            await launchUrl(uri, mode: LaunchMode.externalApplication);
+            /*
+             * 2. Standard fallback using api.whatsapp.com which is sometimes 
+             *    handled better than wa.me on multi-app Android setups.
+             */
+            final httpsUri = Uri.parse(
+              "https://api.whatsapp.com/send?phone=91$phone&text=${Uri.encodeComponent(message)}",
+            );
+
+            try {
+              if (await canLaunchUrl(whatsappUri)) {
+                await launchUrl(
+                  whatsappUri,
+                  mode: LaunchMode.externalApplication,
+                );
+              } else {
+                await launchUrl(
+                  httpsUri,
+                  mode: LaunchMode.externalApplication,
+                );
+              }
+            } catch (e) {
+              // Final defensive attempt
+              debugPrint('WhatsApp launch failed: $e');
+              await launchUrl(
+                httpsUri,
+                mode: LaunchMode.externalApplication,
+              );
+            }
           }
         } else if (data.startsWith("SAVEPDF:")) {
           final payload = data.replaceFirst("SAVEPDF:", "");
@@ -363,6 +427,23 @@ if (typeof updateRoleModeUI === 'function') {
                 'Could not report reset failure to WebView: $javascriptError',
               );
             }
+          }
+        } else if (data.startsWith('THEME_CHANGE:')) {
+          final theme = data.replaceFirst('THEME_CHANGE:', '').trim();
+          final isDark = theme == 'dark';
+          await ThemeService.instance.toggleTheme(isDark);
+          if (mounted) {
+            setState(() {
+              if (isDark) {
+                _scaffoldBgColor = Colors.black;
+                _navBarColor = Colors.black;
+                _navBarIconBrightness = Brightness.light;
+              } else {
+                _scaffoldBgColor = const Color(0xFFEFE7D6);
+                _navBarColor = const Color(0xFFF7F7F7);
+                _navBarIconBrightness = Brightness.dark;
+              }
+            });
           }
         } else if (data == "LOGOUT" || data == "GOTO_LOGIN") {
           await FirebaseAuth.instance.signOut();
@@ -1622,50 +1703,47 @@ if (typeof updateRoleModeUI === 'function') {
         }
       },
       child: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: const SystemUiOverlayStyle(
+        value: SystemUiOverlayStyle(
           statusBarColor: Colors.transparent,
 
           // ALWAYS WHITE
           statusBarIconBrightness: Brightness.light,
           statusBarBrightness: Brightness.dark,
 
-          // Bottom remains light
-          systemNavigationBarColor: Color(0xFFF7F7F7),
-          systemNavigationBarIconBrightness: Brightness.dark,
-          systemNavigationBarDividerColor: Color(0xFFF7F7F7),
+          systemNavigationBarColor: _navBarColor,
+          systemNavigationBarIconBrightness: _navBarIconBrightness,
+          systemNavigationBarDividerColor: _navBarColor,
         ),
 
         child: Scaffold(
-          backgroundColor: const Color(0xFFEFE7D6),
+          backgroundColor: _scaffoldBgColor,
 
-          body: SafeArea(
-            top: false,
-            child: Stack(
-              children: [
-                /*
+          body: Stack(
+            children: [
+              /*
        * WebView loads underneath.
        */
-                Positioned.fill(child: WebViewWidget(controller: controller)),
+              SafeArea(
+                top: false,
+                child: WebViewWidget(controller: controller),
+              ),
 
-                /*
+              /*
        * Splash remains on top until
        * WebView startup is complete.
        */
+              if (_showStartupSplash)
                 Positioned.fill(
                   child: IgnorePointer(
-                    ignoring: !_showStartupSplash,
-
+                    ignoring: false,
                     child: AnimatedOpacity(
-                      opacity: _showStartupSplash ? 1.0 : 0.0,
-
+                      opacity: 1.0,
                       duration: const Duration(milliseconds: 180),
-
-                      child: SplashContent(),
+                      child: const SplashContent(),
                     ),
                   ),
                 ),
-              ],
-            ),
+            ],
           ),
         ),
       ),
