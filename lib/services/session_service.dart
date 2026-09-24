@@ -52,6 +52,7 @@ class SessionService {
 
   /// Business identity of whichever business is active.
   static String? businessName;
+  static String? businessLogoUrl;
   static String? businessOwnerName;
   static String? businessOwnerPhone;
   static String? businessArea;
@@ -122,6 +123,7 @@ class SessionService {
       hasOwnerBusiness = false;
       hasEmployment = false;
       businessName = null;
+      businessLogoUrl = null;
       businessOwnerName = null;
       businessOwnerPhone = null;
       businessArea = null;
@@ -749,6 +751,11 @@ class SessionService {
               ?.toString()
               .trim();
 
+      businessLogoUrl =
+          ownProfile['logoUrl']
+              ?.toString()
+              .trim();
+
       businessArea =
           ownProfile['area']
               ?.toString()
@@ -822,6 +829,11 @@ class SessionService {
 
       businessName =
           employerProfile['shop']
+              ?.toString()
+              .trim();
+
+      businessLogoUrl =
+          employerProfile['logoUrl']
               ?.toString()
               .trim();
 

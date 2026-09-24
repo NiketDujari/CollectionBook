@@ -5,6 +5,7 @@ import 'package:collection_book/widgets/splash_content.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:flutter/services.dart';
 import '../services/firestore_service.dart';
@@ -17,9 +18,6 @@ import 'dart:io';
 import '../services/meta_analytics_service.dart';
 import '../services/theme_service.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'dart:convert';
-
 import 'package:path_provider/path_provider.dart';
 
 import 'login_screen.dart';
@@ -48,6 +46,53 @@ class _WebViewScreenState extends State<WebViewScreen> {
   Color _navBarColor = const Color(0xFFF7F7F7);
   Brightness _navBarIconBrightness = Brightness.dark;
 
+  Future<String> _getAppLogoBase64() async {
+    try {
+      final ByteData bytes = await rootBundle.load('assets/logo-text.png');
+      final buffer = bytes.buffer.asUint8List();
+      return base64Encode(buffer);
+    } catch (e) {
+      debugPrint("Error loading logo: $e");
+      return "";
+    }
+  }
+
+  Future<String> _getBusinessLogoBase64() async {
+    try {
+      String? url = SessionService.businessLogoUrl;
+      if (url == null || url.isEmpty) {
+        final box = Hive.box('collectionBook');
+        final profileJson = box.get('cb-profile-v1');
+        if (profileJson != null) {
+          final map = jsonDecode(profileJson.toString());
+          if (map is Map && map['logoUrl'] != null) {
+            url = map['logoUrl'].toString();
+          }
+        }
+      }
+
+      if (url == null || url.isEmpty) return "";
+
+      if (url.startsWith('data:image')) return url;
+
+      final client = HttpClient();
+      final request = await client.getUrl(Uri.parse(url));
+      final response = await request.close();
+      
+      if (response.statusCode == 200) {
+        final List<int> bytes = await response.fold<List<int>>(
+          [],
+          (List<int> previous, List<int> element) => previous..addAll(element),
+        );
+        final String contentType = response.headers.value(HttpHeaders.contentTypeHeader) ?? 'image/jpeg';
+        return "data:$contentType;base64,${base64Encode(bytes)}";
+      }
+    } catch (e) {
+      debugPrint("Error loading business logo: $e");
+    }
+    return "";
+  }
+
   static const MethodChannel pdfChannel = MethodChannel("collection_book/pdf");
 
   @override
@@ -73,9 +118,12 @@ class _WebViewScreenState extends State<WebViewScreen> {
       ..setNavigationDelegate(
         NavigationDelegate(
           onPageFinished: (url) async {
-            print(
+            debugPrint(
               "DEBUG: Current Customer Phone -> ${currentUser?.phoneNumber}",
             );
+
+            final String appLogoBase64 = await _getAppLogoBase64();
+            final String businessLogoBase64 = await _getBusinessLogoBase64();
 
             await controller.runJavaScript("""
             window.currentUserUid = "${currentUser?.uid ?? ''}";
@@ -112,6 +160,8 @@ class _WebViewScreenState extends State<WebViewScreen> {
     employeeName:
         ${jsonEncode(SessionService.employeeName ?? '')},
 
+    appLogo: "data:image/png;base64,$appLogoBase64",
+
     /*
      * THIS is the UID that owns all ledger data
      * in the selected mode.
@@ -124,6 +174,12 @@ class _WebViewScreenState extends State<WebViewScreen> {
 
     businessName:
         ${jsonEncode(SessionService.businessName ?? '')},
+
+    businessLogoUrl:
+        ${jsonEncode(SessionService.businessLogoUrl ?? '')},
+
+    businessLogoBase64:
+        ${jsonEncode(businessLogoBase64)},
 
     businessOwnerName:
         ${jsonEncode(SessionService.businessOwnerName ?? '')},
@@ -371,6 +427,27 @@ if (typeof applyDarkMode === 'function' && typeof isDarkModeEnabled === 'functio
           } catch (e) {
             debugPrint("Share PDF Error: $e");
           }
+        } else if (data.startsWith("SHARE_TEXT:")) {
+          final shareText = data.replaceFirst("SHARE_TEXT:", "").trim();
+          if (shareText.isNotEmpty) {
+            Share.share(shareText);
+          }
+        } else if (data.startsWith("OPEN_UPI:")) {
+          final upiUrl = data.replaceFirst("OPEN_UPI:", "").trim();
+          final uri = Uri.parse(upiUrl);
+          try {
+            if (await canLaunchUrl(uri)) {
+              await launchUrl(uri, mode: LaunchMode.externalApplication);
+            } else {
+              await launchUrl(uri, mode: LaunchMode.externalNonBrowserApplication);
+            }
+          } catch (e) {
+            debugPrint('UPI launch error: $e');
+            if (!mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Unable to open UPI application.')),
+            );
+          }
         } else if (
         data == 'RESET_ACCOUNT'
         ) {
@@ -464,6 +541,8 @@ if (typeof applyDarkMode === 'function' && typeof isDarkModeEnabled === 'functio
           final bool existsGlobally = await checkIfEmployeeExistsGlobally(
             phoneToCheck,
           );
+
+          if (!mounted) return;
 
           if (existsGlobally) {
             // 1. Show a native Flutter SnackBar guaranteed to be on top
@@ -1245,11 +1324,37 @@ if (typeof applyDarkMode === 'function' && typeof isDarkModeEnabled === 'functio
           });
 
           return;
+        } else if (data == 'PICK_LOGO') {
+          await _pickLogoForPreview();
         }
       },
     );
 
     loadHtml();
+  }
+
+  Future<void> _pickLogoForPreview() async {
+    final picker = ImagePicker();
+    try {
+      final XFile? image = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 512,
+        maxHeight: 512,
+        imageQuality: 75,
+      );
+
+      if (image == null) return;
+
+      final Uint8List bytes = await image.readAsBytes();
+      final String base64Image = base64Encode(bytes);
+      final String dataUrl = "data:image/jpeg;base64,$base64Image";
+
+      // Send the Data URL back to JS for PREVIEW only
+      await controller.runJavaScript("if(typeof onLogoUploaded === 'function') onLogoUploaded('$dataUrl');");
+    } catch (e) {
+      debugPrint("Logo pick error: $e");
+      await controller.runJavaScript("if(typeof showToast === 'function') showToast('Failed to pick logo');");
+    }
   }
 
   Future<void> _startAllRealtimeListeners() async {
@@ -1448,23 +1553,6 @@ if (typeof applyDarkMode === 'function' && typeof isDarkModeEnabled === 'functio
 
   Future<void> loadHtml() async {
     controller.loadFlutterAsset('assets/collection18.html');
-    // await FirestoreService.startRealtimeSync(
-    //   companyId: SessionService.businessUid!,
-    //   webViewController: controller,
-    //   onChanged: () async {
-    //     await controller.runJavaScript("window.refreshFromFlutter();");
-    //   },
-    // );
-  }
-
-  Future<void> _refreshData() async {
-    await FirestoreService.syncLatestData();
-
-    await controller.runJavaScript('''
-      if (typeof window.refreshFromFlutter === 'function') {
-        window.refreshFromFlutter();
-      }
-    ''');
   }
 
   Future<void> fetchAndSendContacts(WebViewController controller) async {
@@ -1526,7 +1614,7 @@ if (typeof applyDarkMode === 'function' && typeof isDarkModeEnabled === 'functio
       // 3. If the document exists, the employee is already registered to someone
       return docSnapshot.exists;
     } catch (e) {
-      print("Error checking global employee status: $e");
+      debugPrint("Error checking global employee status: $e");
       // Failsafe: block the addition if the database check fails
       return true;
     }

@@ -9,22 +9,22 @@ import 'package:collection_book/services/msg91_otp_service.dart';
 import 'package:collection_book/services/notification_service.dart';
 import 'package:collection_book/services/session_service.dart';
 import 'package:collection_book/theme/app_theme.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/services.dart';
-import 'package:hive/hive.dart';
 import 'package:collection_book/legal/legal_content.dart';
 import 'package:collection_book/screens/legal_document_screen.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:collection_book/services/app_lock_service.dart';
 import 'package:collection_book/services/app_language_service.dart';
 import 'package:collection_book/services/theme_service.dart';
+import 'package:collection_book/services/theme_service.dart';
 import 'firebase_options.dart';
 
 import 'screens/splash_screen.dart';
-import 'screens/home_screen.dart';
 
 
 @pragma('vm:entry-point')
@@ -46,6 +46,10 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await FirebaseAppCheck.instance.activate(
+  providerAndroid: const AndroidDebugProvider(),
+  providerApple: const AppleDebugProvider(),
+  );
   FirebaseFirestore.instance.settings =
   const Settings(
     persistenceEnabled: true,

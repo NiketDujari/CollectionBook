@@ -269,12 +269,82 @@ class FirestoreService {
 
         int writeCount = 0;
 
+        // Fetch current invoice counter for auto-generation
+        final businessDoc = await _db.collection('users').doc(businessUid).get();
+        int counter = 0;
+        if (businessDoc.exists) {
+          counter =
+              (businessDoc.data()?['invoiceCounter'] as num?)?.toInt() ?? 0;
+        }
+        bool counterUpdated = false;
+
         for (final rawItem in ledgerItems) {
           if (rawItem is! Map) {
             continue;
           }
 
           final Map<String, dynamic> item = Map<String, dynamic>.from(rawItem);
+
+          // Helper to format YYYY-MM-DD to DD-MM-YYYY
+          String formatDate(String? isoDate) {
+            if (isoDate == null || isoDate.toString().trim().isEmpty) {
+              final now = DateTime.now();
+              return "${now.day.toString().padLeft(2, '0')}-${now.month.toString().padLeft(2, '0')}-${now.year}";
+            }
+            final String s = isoDate.toString().split('T')[0];
+            final parts = s.split('-');
+            if (parts.length != 3) return s;
+            final year = parts[0];
+            final month = parts[1].padLeft(2, '0');
+            final day = parts[2].padLeft(2, '0');
+            return "$day-$month-$year";
+          }
+
+          // Auto-generate invoice/receipt number if not explicitly provided
+          final String? existingInvNo = item['invoiceNumber']?.toString().trim();
+          final String? existingDesc = item['description']?.toString().trim();
+
+          if (existingInvNo == null || existingInvNo.isEmpty) {
+            if (existingDesc != null && existingDesc.isNotEmpty) {
+              item['invoiceNumber'] = existingDesc;
+              if (rawItem is Map) {
+                rawItem['invoiceNumber'] = existingDesc;
+              }
+            } else {
+              counter++;
+              counterUpdated = true;
+              final generatedNo = "CB/INV/$counter";
+              item['invoiceNumber'] = generatedNo;
+              if (rawItem is Map) {
+                rawItem['invoiceNumber'] = generatedNo;
+              }
+            }
+          }
+
+          // Generate receipt numbers for payments if missing
+          if (item['payments'] is List) {
+            final List payments = List.from(item['payments']);
+            bool paymentsChanged = false;
+            for (int i = 0; i < payments.length; i++) {
+              final Map<String, dynamic> p =
+                  Map<String, dynamic>.from(payments[i]);
+              if (p['receiptNumber'] == null ||
+                  p['receiptNumber'].toString().trim().isEmpty) {
+                counter++;
+                counterUpdated = true;
+                paymentsChanged = true;
+                final dateStr = formatDate(p['date']?.toString());
+                final generatedNo = "Receipt_${counter}_$dateStr";
+                p['receiptNumber'] = generatedNo;
+                if (payments[i] is Map) {
+                  payments[i]['receiptNumber'] = generatedNo;
+                }
+              }
+            }
+            if (paymentsChanged) {
+              item['payments'] = payments;
+            }
+          }
 
           final String? entryId = item['id']?.toString();
 
@@ -318,6 +388,12 @@ class FirestoreService {
           batch.set(docRef, item, SetOptions(merge: true));
 
           writeCount++;
+        }
+
+        if (counterUpdated) {
+          batch.update(_db.collection('users').doc(businessUid), {
+            'invoiceCounter': counter,
+          });
         }
 
         if (writeCount > 0) {

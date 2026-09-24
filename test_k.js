@@ -1,0 +1,7785 @@
+  window.refreshFromFlutter = window.refreshFromFlutter || function() {};
+  window.flutterSession = window.flutterSession || { permissions: {} };
+
+  // Define shorthand globally so they are available to inline events and Flutter calls
+  window.$ = function(sel, root){ return (root||document).querySelector(sel); };
+  window.$$ = function(sel, root){ return Array.prototype.slice.call((root||document).querySelectorAll(sel)); };
+
+  (function(){
+    // Use the global versions
+    var $ = window.$;
+    var $$ = window.$$;
+
+    window.pickBusinessLogo = function() {
+        if (typeof NativeBridge !== 'undefined') {
+            window.setLogoLoading(true);
+            NativeBridge.postMessage('PICK_LOGO');
+        }
+    };
+
+    window.onLogoUploaded = function(url) {
+        var preview = document.getElementById('ob-logo-preview');
+        if (preview) {
+            // Keep loader visible until the new src fully renders
+            window.setLogoLoading(true);
+            preview.src = url;
+            preview.style.display = 'block';
+        }
+        var placeholder = document.getElementById('ob-logo-placeholder');
+        if (placeholder) {
+            placeholder.style.display = 'none';
+        }
+        var editBadge = $('#ob-logo-section .logo-edit-badge');
+        if (editBadge) editBadge.style.display = 'flex';
+        showToast('Logo uploaded. Save profile to apply changes.');
+    };
+
+    window.setLogoLoading = function(isLoading) {
+        var loader = document.getElementById('ob-logo-loader');
+        if (loader) {
+            loader.style.display = isLoading ? 'flex' : 'none';
+        }
+        var preview = document.getElementById('ob-logo-preview');
+        if (preview && !isLoading && preview.src && !preview.src.endsWith('collection18.html')) {
+            // Show preview once loading is finished AND we have a valid src
+            preview.style.display = 'block';
+        }
+        var section = document.getElementById('ob-logo-section');
+        if (section) {
+            section.style.pointerEvents = isLoading ? 'none' : 'auto';
+        }
+    };
+
+    /*
+     * Disable two-finger pinch zoom while preserving
+     * normal one-finger scrolling.
+     */
+    document.addEventListener(
+        'touchmove',
+        function(event) {
+            if (
+                event.touches &&
+                event.touches.length > 1
+            ) {
+                event.preventDefault();
+            }
+        },
+        {
+            passive: false
+        }
+    );
+
+    /*
+     * Disable native gesture zoom on iOS WebViews.
+     */
+    [
+        'gesturestart',
+        'gesturechange',
+        'gestureend'
+    ].forEach(
+        function(eventName) {
+            document.addEventListener(
+                eventName,
+                function(event) {
+                    event.preventDefault();
+                },
+                {
+                    passive: false
+                }
+            );
+        }
+    );
+    var PROFILE_KEY = 'cb-profile-v1';
+    var MYCUST_KEY = 'cb-customers-v1';
+    var LEDGER_KEY = 'cb-ledger-v1';
+    var DIR_KEY = 'cb-fraud-directory-v1';
+    var EMP_KEY = 'cb-employees-v1';
+    var ROLE_KEY = 'cb-role-mode-v1'; // 'owner' or 'employee'
+
+    var profile = null, myCustomers = [], ledger = [], directory = [], companyEmployees = [];
+    var activeTab = 'dashboard';
+    var entryType = 'debtor';
+    var selectedCustomerId = null;
+    var currentFeedbackType = 'general';
+    var manageTargetId = null;
+    var collectTargetCustId = null, collectTargetType = null;
+    var historyCustomerId = null;
+    var dirTargetId = null;
+    var currentLang = 'en', pendingLang = 'en';
+    var eventsBound = false;
+    var pdfRetryCount = 0;
+    var currentRoleMode = 'owner'; // 'owner' or 'employee'
+    var editingEntryId = null, editingPaymentId = null;
+    var currentEntryItems = [], editingItemIndex = null;
+    var currentPreviewPdf = null;
+    var currentPreviewFilename = '';
+
+    var cbTutorialSteps = [
+    { target: '#screen-dashboard .stats-grid', icon: '📊', titleKey: 'tour_step1_title', textKey: 'tour_step1_text' },
+    { target: '#tabs button[data-tab="debtors"]', icon: '💰', titleKey: 'tour_step2_title', textKey: 'tour_step2_text' },
+    { target: '#tabs button[data-tab="creditors"]', icon: '🧾', titleKey: 'tour_step3_title', textKey: 'tour_step3_text' },
+    { target: '#tabs button[data-tab="mycustomers"]', icon: '👥', titleKey: 'tour_step4_title', textKey: 'tour_step4_text' },
+    { target: '#fabBtn', icon: '➕', titleKey: 'tour_step5_title', textKey: 'tour_step5_text' },
+    { target: '#tabs button[data-tab="directory"]', icon: '🛡️', titleKey: 'tour_step6_title', textKey: 'tour_step6_text' },
+    { target: '#brandMenuBtn', icon: '⚙️', titleKey: 'tour_step7_title', textKey: 'tour_step7_text' }
+    ];
+
+    // Contact integration Global Scope for Flutter Bridge
+    window.deviceContacts = [];
+    window.contactsDenied = false;
+
+    window.updateSyncContactsButton = function() {
+        var btn = document.getElementById('sync-contacts-btn');
+        if (!btn) return;
+        if (window.contactsDenied && (!window.deviceContacts || window.deviceContacts.length === 0)) {
+            btn.style.display = 'inline';
+        } else {
+            btn.style.display = 'none';
+        }
+    };
+
+    window.contactsPermissionDenied = function() {
+        window.contactsDenied = true;
+        window.updateSyncContactsButton();
+    };
+
+    window.receiveAllDeviceContacts = function(jsonStr) {
+        try {
+            window.deviceContacts = (typeof jsonStr === 'string') ? JSON.parse(jsonStr) : jsonStr;
+            window.contactsDenied = false;
+            window.updateSyncContactsButton();
+
+            // --- SYNC LOCAL CUSTOMERS WITH PHONE CONTACT NAMES ---
+            var updatedAny = false;
+            if (Array.isArray(window.deviceContacts) && Array.isArray(myCustomers)) {
+                myCustomers.forEach(function(cust) {
+                    var custPhone = cleanPhone10(cust.phone);
+                    if (!custPhone) return;
+
+                    var match = window.deviceContacts.find(function(dc) {
+                        return dc.phone && cleanPhone10(dc.phone) === custPhone;
+                    });
+
+                    if (match && match.name && match.name.trim() !== '') {
+                        if (cust.name !== match.name.trim()) {
+                            cust.name = match.name.trim();
+                            updatedAny = true;
+                        }
+                    }
+                });
+
+                if (updatedAny) {
+                    saveCustomers();
+                    renderAll();
+
+                    // Push corrected customer list to Firestore via Native Bridge
+                    if (window.NativeBridge && typeof window.NativeBridge.postMessage === 'function') {
+                        window.NativeBridge.postMessage("SAVE_CUSTOMERS:" + JSON.stringify(myCustomers));
+                    }
+                } else {
+
+                }
+            }
+            // ----------------------------------------------------
+
+            var searchInput = document.getElementById('en-customer-search');
+            if(searchInput && searchInput.value) { searchInput.dispatchEvent(new Event('input')); }
+        } catch(e) { console.error("Error parsing contacts", e); }
+    };
+
+    const i18n = {
+      en: {
+        btn_view_inv: "View Invoice", btn_edit: "Edit",
+        guide_title: "Start Your Ledger", guide_text: "Your collection book is empty. Choose an action below to record your first transaction.", guide_btn_sale: "+ Add Sale", guide_btn_purch: "- Add Purchase",
+        app_sub: "Credit & Ledger Management", btn_setup: "Set up", nav_dash: "Dashboard", nav_collect: "To Collect", nav_pay: "To Pay", nav_cust: "Contacts", nav_fraud: "Fraud Alerts",
+        stat_rcv: "Total Receivables", stat_pay: "Total Payables", stat_ovd: "Overdue Entries", stat_cust: "Total Contacts",
+        rem_head: "Payment Reminders", rem_sub: "Overdue & due within 7 days", col_head: "To Collect", col_sub: "Contacts who need to pay you",
+        pay_head: "To Pay", pay_sub: "Suppliers & parties you owe", btn_add_entry: "New Ledger Entry", btn_add_pay: "Add Payment", btn_ledger: "Ledger",
+        type_sale: "Sale (To Collect)", type_purch: "Purchase (To Pay)", txt_balance: "Balance", txt_last: "Last", txt_entries: "entries",
+        sale: "Sale", purchase: "Purchase", payment: "Payment", btn_confirm: "Confirm", btn_del: "Delete", txt_loading: "Opening your collection book…",
+        head_preview_inv: "Invoice Preview", head_preview_receipt: "Receipt Preview", btn_view_receipt: "View Receipt", btn_receipt: "Receipt",
+        lbl_send_wa_receipt: "Generate Receipt to be shared with the contact",
+        setup_sub: "This label is stored privately and is never shared with anyone.", lbl_name: "Your Name", ph_name: "e.g. Ramesh Bhai",
+        lbl_biz: "Business Name", ph_biz: "e.g. Sharma Traders", lbl_gst: "GST Number (Optional)", ph_gst: "e.g. 29ABCDE1234F1Z5",
+        lbl_area: "City / Market Area (Optional)", ph_area: "e.g. Main Market, Delhi", btn_skip: "Cancel", btn_save_prof: "Save Profile", btn_add_cust: "+ Add Entry",
+        btn_reset: "Reset my data on this device", lbl_cust_party: "Contact / Party Name", ph_search_cust: "Search existing or add new…", lbl_phone: "Phone",
+        lbl_txn_type: "Transaction Type", lbl_gross_amt: "Gross Amount (₹)", lbl_amount_received: "Amount Received (₹)", lbl_amount_paid: "Amount Paid (₹)", lbl_payment_mode: "Mode of Payment", lbl_discount: "Discount (₹)", lbl_inv_date: "Invoice Date",
+        lbl_due_date: "Due Date (opt)", lbl_description: "Description", lbl_ref: "Ref / Invoice No.", ph_ref: "e.g. Bill No. 994", ph_item_desc: "Details of the items or services...", lbl_cust_conf: "Contact confirmed this transaction",
+        hint_cust_conf: "Uncheck if waiting for their approval.", lbl_send_wa_pdf: "Generate Invoice to be shared with the contact", btn_cancel: "Cancel", btn_save_entry: "Save Entry", lbl_amt: "Amount (₹)",
+        lbl_date: "Date", lbl_pay_ref: "Payment Ref / Note", ph_pay_ref: "e.g. UPI / Cash", lbl_pay_conf: "Payment received & confirmed",
+        hint_pay_conf: "Uncheck if waiting for funds to clear.", btn_save_pay: "Save Payment", head_manage: "Manage Contact",
+        lbl_priv_note: "Private notes (only you see this)", ph_priv_note: "Anything you don't want to share", div_trust: "Trust rating (private, for your own reference)",
+        lbl_give_rate: "Give this contact a trust rating", hint_give_rate: "Optional — not every contact needs to be rated. Stays private.",
+        lbl_mark_fraud: "Mark as confirmed fraud", hint_mark_fraud: "Forces RED regardless of score.", lbl_rep_fraud: "Report this fraud anonymously to other traders",
+        hint_rep_fraud: "Only the contact's details are shared — your name, shop and area are never shown.", lbl_inc_phone: "Include phone number, so others can verify",
+        lbl_what_happen: "What happened? (visible to other traders)", ph_what_happen: "e.g. Took delivery, stopped responding after due date", btn_save: "Save",
+        head_fraud_rep: "Fraud report", btn_close: "Close", btn_import: "Import", btn_remove: "Remove", btn_dl_pdf: "Download PDF", btn_send_pdf: "Send to Contact",
+        btn_close_ledger: "Close Ledger", head_bal_sum: "Balance Summary", sub_bal_sum: "Every contact's outstanding balance, at a glance.",
+        login_head: "Login securely to access your ledger.", ph_mobile: "Enter Mobile Number", btn_login: "Login to App",
+        notice_priv: "🔒 Your private contact book. This data is stored only under your account and is never shared — except a fraud report, which shares only the minimum needed to warn others, anonymously.",
+        notice_pub: "⚠️ Fraud alerts reported anonymously by traders in your market. No trader's name, shop or contact details are ever shown — only the flagged contact's details.",
+        ph_search_my: "Search contact name or phone…", ph_search_dir: "Search reported name or phone…", txt_all_clear: "All Clear", txt_no_rem: "No pending reminders.",
+        txt_nothing: "Nothing Here", txt_add_col: "Add a sale from the Dashboard to see pending collections here.", txt_add_pay: "Add a purchase from the Dashboard to see pending payables here.",
+        txt_no_cust: "No contacts yet", txt_tap_first: "Your contact list is empty. Add your first entry from the Dashboard.", txt_no_fraud: "No fraud reports",
+        txt_when_fraud: "When a trader reports a confirmed fraud, it appears here — anonymously.", txt_tot_col: "Total to collect", txt_tot_pay: "Total to pay",
+        txt_all_set: "All settled", txt_no_bal_now: "No outstanding balances right now.", txt_no_txn: "No transactions", txt_not_rec: "Nothing recorded for this contact yet.",
+        txt_no_notifications: "No notifications", txt_notification_hint: "Your Collection Book activity will appear here.", txt_no_pending: "No pending entries right now.",
+        txt_closing: "Closing balance", txt_txns: "Transactions", txt_view: "view →", txt_whatsapp: "WhatsApp Reminder", txt_call: "Call", txt_new_ent: "Add Sale/Purchase", txt_mng: "Manage", txt_v_rep: "View / Edit Report",
+        lbl_fraud: "fraud", lbl_risk: "risk", lbl_trusted: "trusted", lbl_watch: "watch", lbl_unrated: "unrated", tag_unc: "Unconfirmed", tag_paid: "Fully Paid", tag_part: "Partially Paid", tag_no_due: "No due date",
+        head_emp: "Manage Employees", sub_emp: "Add employees and control their ledger access.", div_add_emp: "Add New Employee",
+        lbl_emp_name: "Employee Name", ph_emp_name: "e.g. Rahul Kumar", lbl_emp_phone: "Phone Number (Login ID)",
+        lbl_perm_add: "Can Add Entries", hint_perm_add: "Allow employee to record new transactions.",
+        lbl_perm_view: "Can View Entire Ledger", hint_perm_view: "Allow employee to see full contact history.",
+        lbl_perm_del: "Can Delete Entries", hint_perm_del: "Allow employee to remove records permanently.",
+        btn_save_emp: "Save Employee", txt_no_emp: "No employees added yet.", btn_remove_emp: "Remove Employee",
+        btn_profile: "My Profile", btn_lang: "Language", btn_dark_mode: "Dark Mode", btn_mng_emp: "Manage Employees",btn_privacy: "Privacy Policy",
+btn_terms: "Terms & Conditions",
+lbl_legal: "Legal", btn_logout: "Logout", head_settings: "Settings",settings_account: "Account",
+settings_preferences: "Preferences",
+settings_business: "Business",
+settings_referral: "Referral",
+btn_referral: "Refer your contacts",
+ref_title: "Refer Collection Book",
+ref_sub: "Invite your business contacts & friends to manage credit ledgers effortlessly.",
+ref_link_lbl: "YOUR INVITE LINK",
+btn_copy: "Copy",
+btn_share_wa: "Share via WhatsApp",
+btn_share_more: "More Options",
+ref_contacts_title: "Directly Invite Contacts",
+btn_invite: "Invite",
+msg_link_copied: "Invite link copied to clipboard!",
+settings_support_app: "Support the App",
+btn_donate: "Support & Contribute",
+donate_title: "Support Collection Book",
+donate_sub: "Collection Book is 100% free & ad-free. Your small contribution helps us keep improving the app for your business!",
+donate_upi_id_lbl: "UPI ID",
+donate_phone_lbl: "GPAY / PHONEPE / PAYTM NUMBER",
+donate_select_amt: "SELECT CONTRIBUTION AMOUNT",
+btn_pay_upi: "Contribute via Any UPI App",
+donate_upi_apps_hint: "Supports Google Pay, PhonePe, Paytm, BHIM & all UPI Apps.",
+msg_upi_copied: "UPI ID copied to clipboard!",
+msg_phone_copied: "Number copied to clipboard!",
+settings_support_security: "Support & Security",
+settings_session: "Session",
+btn_security_lock: "Security & App Lock",
+btn_help_support: "Help & Support",
+help_title: "Help & Support",
+help_subtitle: "Need help with Collection Book? We're here to assist you.",
+help_email_label: "Email Support",
+help_email_hint: "Tap the email address to contact our support team.",emp_manage_contacts: 'Manage Contacts',
+feedback_title: "Feedback & Support",
+feedback_subtitle: "Tell us what you think. Your feedback helps us improve Collection Book.",
+
+feedback_bug: "Report a Bug",
+feedback_feature: "Suggest a Feature",
+feedback_general: "Give Feedback",
+feedback_rate: "Rate Collection Book",
+
+feedback_bug_title: "Report a Bug",
+feedback_feature_title: "Suggest a Feature",
+feedback_general_title: "Your Feedback",
+
+feedback_bug_hint: "Tell us what went wrong and what you were trying to do.",
+feedback_feature_hint: "Tell us what feature would make Collection Book better for you.",
+feedback_general_hint: "Tell us what you like, what you don't like, or what we can improve.",
+
+feedback_placeholder: "Write your feedback here...",
+feedback_submit: "Send Feedback",
+feedback_thanks: "Thanks! Your feedback has been received.",
+feedback_required: "Please enter some feedback.",
+
+feedback_rate_title: "Enjoying Collection Book?",
+feedback_rate_subtitle: "A quick rating helps us improve and reach more businesses.",
+feedback_rate_now: "Rate Now",
+feedback_rate_later: "Maybe Later",
+emp_manage_contacts_hint:
+    'Allow employee to add, edit and remove business contacts.',
+    notification_customer_new_entry:
+    'Added a new {entryType} entry for ₹{amount}',
+
+notification_owner_employee_new_entry:
+    'Added a new {entryType} entry for ₹{amount} for {customerName}',
+
+notification_customer_payment:
+    'Recorded a payment of ₹{amount}',
+
+notification_owner_employee_payment:
+    'Recorded a payment of ₹{amount} for {customerName}',
+    notification_customer_entry_deleted:
+    'Deleted a {entryType} entry of ₹{amount}',
+
+notification_owner_employee_entry_deleted:
+    'Deleted a {entryType} entry of ₹{amount} for {customerName}',
+
+notification_customer_payment_deleted:
+    'Deleted a payment of ₹{amount}',
+
+notification_owner_employee_payment_deleted:
+    'Deleted a payment of ₹{amount} for {customerName}',
+
+    notification_customer_contact_deleted:
+    'Deleted your ledger containing {entryCount} transactions',
+
+notification_owner_employee_contact_deleted:
+    'Deleted {customerName} and {entryCount} ledger transactions',
+
+notification_entry_type_sale:
+    'Sale',
+
+notification_entry_type_purchase:
+    'Purchase',stat_net_flow:
+    'Net Flow This Month',
+
+flow_collections_ahead:
+    'Collections are higher than sales',
+
+flow_sales_ahead:
+    'Sales are higher than collections',
+
+flow_balanced:
+    'Sales and collections are balanced',txt_ledger_creator_only:
+    'Only the ledger creator can add entries',
+    btn_add_details: "+ Add additional details (Optional)",
+btn_hide_details: "- Hide additional details",
+btn_take_tour: "Take App Tour", tour_badge: "✨ QUICK TOUR", btn_tour_skip: "Skip", btn_tour_next: "Next →", btn_tour_start: "Add my first entry →", msg_tour_skipped: "You can restart the tour from Help anytime.", tour_step1_title: "Your business at a glance", tour_step1_text: "See how much you need to collect, pay, and what needs your attention.", tour_step2_title: "Know who owes you", tour_step2_text: "All pending customer collections are organized here.", tour_step3_title: "Track what you owe", tour_step3_text: "Keep supplier and purchase dues organised in one place.", tour_step4_title: "Your customer book", tour_step4_text: "Open any contact to see their ledger, payments and history.", tour_step5_title: "Create your first ledger", tour_step5_text: "Tap here to add a customer and record your first sale or purchase.", tour_step6_title: "Check fraud alerts", tour_step6_text: "See contacts reported by businesses before you transact.", tour_step7_title: "You are ready!", tour_step7_text: "Manage your profile, employees, language, security and more from here.",
+        msg_entry_success: "Entry added successfully", msg_pay_success: "Payment added successfully", btn_great: "Great",
+        login_req_title: "Login Required", login_req_text: "Please login to perform this action and sync your data securely.", btn_later: "Later", btn_login_now: "Login Now",
+        msg_pending_one: "1 entry waiting for confirmation", msg_pending_multi: "entries waiting for confirmation",
+        head_success: "Success!", msg_action_success: "Action completed successfully.",
+        entry_sub_sale: "Record a sale to collect payment from a contact",
+        entry_sub_purch: "Record a purchase to log payment owed to a supplier",
+        entry_sub_gen: "Record a transaction to update your ledger",
+        entry_title_sale: "Record Sale",
+        entry_title_purch: "Record Purchase",
+        entry_title_gen: "New Ledger Entry",
+        entry_cat_sale: "SALES ENTRY (TO COLLECT)",
+        entry_cat_purch: "PURCHASE ENTRY (TO PAY)",
+        entry_cat_gen: "LEDGER TRANSACTION",
+        lang_title: "Select Language",
+        lang_sub: "Choose your preferred language",
+        btn_confirm_lang: "Confirm Selection",
+        btn_add_items: "+ Add Items (Optional)",
+        btn_add_more_items: "+ Add More Items",
+        lbl_item_name: "Item Name",
+        ph_item_name: "e.g. Chocolate Cake",
+        lbl_qty: "Quantity",
+        lbl_unit: "Primary Unit",
+        lbl_rate: "Rate (Price/Unit)",
+        lbl_tax_type: "Tax Option",
+        opt_without_tax: "Without Tax",
+        opt_with_tax: "With Tax",
+        lbl_item_total: "Total Amount",
+        lbl_sec_unit_enable: "Add Secondary Unit (Optional)",
+        lbl_sec_unit: "Secondary Unit",
+        lbl_conv_factor: "Conversion Factor",
+        ph_conv_factor: "1 Primary = ? Sec",
+        hint_sec_unit: "e.g. 1 Box = 10 Pcs",
+        head_add_item: "Add Item",
+        sub_add_item: "Enter item details to include in transaction",
+        btn_save_item: "Save Item",
+        lbl_added_items: "Added Items",
+        msg_item_req: "Item Name, Quantity and Rate are required"
+      },
+      hi: {
+        btn_view_inv: "चालान देखें", btn_edit: "संपादित करें",
+        guide_title: "अपना लेजर शुरू करें", guide_text: "आपकी कलेक्शन बुक खाली है। अपना पहला ग्राहक जोड़ने और लेनदेन रिकॉर्ड करने के लिए नीचे दिए गए बटन पर टैপ करें।", guide_btn_sale: "+ बिक्री जोड़ें", guide_btn_purch: "- खरीद जोड़ें",
+        app_sub: "क्रेडिट और लेजर प्रबंधन", btn_setup: "सेट अप", nav_dash: "डैशबोर्ड", nav_collect: "लेना है", nav_pay: "देना है", nav_cust: "संपर्क", nav_fraud: "धोखाधड़ी अलर्ट",
+        stat_rcv: "कुल प्राप्य राशि", stat_pay: "कुल देय राशि", stat_ovd: "बकाया प्रविष्टियां", stat_cust: "कुल संपर्क",
+        rem_head: "भुगतान अनुस्मारक", rem_sub: "बकाया और 7 दिनों के भीतर देय", col_head: "लेना है", col_sub: "संपर्क जिन्हें आपको भुगतान करना है",
+        pay_head: "देना है", pay_sub: "आपूर्तिकर्ता और पार्टियां जिन्हें आपको देना है", btn_add_entry: "नई प्रविष्टि", btn_add_pay: "भुगतान जोड़ें", btn_ledger: "लेजर",
+        type_sale: "बिक्री (लेना है)", type_purch: "खरीद (देना है)", txt_balance: "बैलेंस", txt_last: "अंतिम", txt_entries: "प्रविष्टियां",
+        sale: "बिक्री", purchase: "खरीद", payment: "भुगतान", btn_confirm: "कन्फर्म", btn_del: "हटाएं", txt_loading: "आपकी कलेक्शन बुक खुल रही है…",
+        head_preview_inv: "इनवॉइस पूर्वावलोकन", head_preview_receipt: "रसीद पूर्वावलोकन", btn_view_receipt: "रसीद देखें", btn_receipt: "रसीद",
+        lbl_send_wa_receipt: "संपर्क के साथ साझा करने के लिए रसीद बनाएं",
+        setup_sub: "यह लेबल निजी तौर पर सहेजा गया है और किसी के साथ साझा नहीं किया जाता है।", lbl_name: "आपका नाम", ph_name: "उदा. रमेश भाई",
+        lbl_biz: "व्यवसाय का नाम", ph_biz: "उदा. शर्मा ट्रेडर्स", lbl_gst: "जीएसटी नंबर (वैकल्पिक)", ph_gst: "उदा. 29ABCDE1234F1Z5",
+        lbl_area: "शहर / बाजार क्षेत्र (वैकल्पिक)", ph_area: "उदा. मुख्य बाजार, दिल्ली", btn_skip: "रद्द करें", btn_save_prof: "प्रोफ़ाइल सहेजें", btn_add_cust: "+ नई प्रविष्टि",
+        btn_reset: "इस डिवाइस पर मेरा डेटा रीसेट करें", lbl_cust_party: "संपर्क / पार्टी", ph_search_cust: "मौजूदा खोजें या नया जोड़ें…", lbl_phone: "फ़ोन",
+        lbl_txn_type: "लेनदेन का प्रकार", lbl_gross_amt: "कुल राशि (₹)", lbl_amount_received: "प्राप्त राशि (₹)", lbl_amount_paid: "भुगतान की गई राशि (₹)", lbl_payment_mode: "भुगतान का तरीका", lbl_discount: "छूट (₹)", lbl_inv_date: "चालान की तारीख",
+        lbl_due_date: "देय तिथि (वैकल्पिक)", lbl_description: "विवरण", lbl_ref: "संदर्भ / चालान संख्या", ph_ref: "उदा. बिल संख्या 994", ph_item_desc: "वस्तुओं या सेवाओं का विवरण...", lbl_cust_conf: "संपर्क ने इस लेनदेन की पुष्टि की",
+        hint_cust_conf: "यदि उनकी स्वीकृति की प्रतीक्षा है तो अनचेक करें।", lbl_send_wa_pdf: "संपर्क के साथ साझा करने के लिए चालान बनाएं", btn_cancel: "रद्द करें", btn_save_entry: "प्रविष्टि सहेजें", lbl_amt: "राशि (₹)",
+        btn_add_items: "+ वस्तुएं जोड़ें (वैकल्पिक)",
+        btn_add_more_items: "+ और वस्तुएं जोड़ें",
+        lbl_item_name: "वस्तु का नाम",
+        ph_item_name: "उदा. चॉकलेट केक",
+        lbl_qty: "मात्रा",
+        lbl_unit: "प्राथमिक इकाई",
+        lbl_rate: "दर (कीमत/इकाई)",
+        lbl_tax_type: "कर विकल्प",
+        opt_without_tax: "कर रहित (Without Tax)",
+        opt_with_tax: "कर सहित (With Tax)",
+        lbl_item_total: "कुल राशि",
+        lbl_sec_unit_enable: "द्वितीयक इकाई जोड़ें (वैकल्पिक)",
+        lbl_sec_unit: "द्वितीयक इकाई",
+        lbl_conv_factor: "रूपांतरण दर",
+        ph_conv_factor: "1 प्राथमिक = ? द्वितीयक",
+        hint_sec_unit: "उदा. 1 बॉक्स = 10 पीस",
+        head_add_item: "वस्तु जोड़ें",
+        sub_add_item: "लेनदेन में शामिल करने के लिए विवरण दर्ज करें",
+        btn_save_item: "वस्तु सहेजें",
+        lbl_added_items: "जोड़ी गई वस्तुएं",
+        msg_item_req: "वस्तु का नाम, मात्रा और दर आवश्यक हैं",
+        lbl_date: "तारीख", lbl_pay_ref: "भुगतान संदर्भ / नोट", ph_pay_ref: "उदा. यूपीआई / नकद", lbl_pay_conf: "भुगतान प्राप्त और पुष्ट",
+        hint_pay_conf: "यदि फंड क्लियर होने की प्रतीक्षा है तो अनचेक करें।", btn_save_pay: "भुगतान सहेजें", head_manage: "संपर्क प्रबंधित करें",
+        lbl_priv_note: "निजी नोट्स (केवल आप इसे देखते हैं)", ph_priv_note: "कुछ भी जो आप साझा नहीं करना चाहते हैं", div_trust: "ट्रस्ट रेटिंग (निजी, आपके अपने संदर्भ के लिए)",
+        lbl_give_rate: "इस संपर्क को एक ट्रस्ट रेटिंग दें", hint_give_rate: "वैकल्पिक - हर संपर्क को रेट करने की आवश्यकता नहीं है। निजी रहता है।",
+        lbl_mark_fraud: "कन्फर्म धोखाधड़ी के रूप में चिह्नित करें", hint_mark_fraud: "स्कोर की परवाह किए बिना RED को बाध्य करता है।", lbl_rep_fraud: "अन्य व्यापारियों को गुमनाम रूप से इस धोखाधड़ी की रिपोर्ट करें",
+        hint_rep_fraud: "केवल संपर्क का विवरण साझा किया जाता है - आपका नाम, दुकान और क्षेत्र कभी नहीं दिखाया जाता है।", lbl_inc_phone: "फ़ोन नंबर शामिल करें, ताकि अन्य लोग सत्यापित कर सकें",
+        lbl_what_happen: "क्या हुआ? (अन्य व्यापारियों को दिखाई देता है)", ph_what_happen: "उदा. डिलीवरी ली, देय तिथि के बाद जवाब देना बंद कर दिया", btn_save: "सहेजें",
+        head_fraud_rep: "धोखाधड़ी की रिपोर्ट", btn_close: "बंद करें", btn_import: "आयात करें", btn_remove: "हटाएं", btn_dl_pdf: "पीडीएफ डाउनलोड करें", btn_send_pdf: "संपर्क को भेजें",
+        btn_close_ledger: "लेजर बंद करें", head_bal_sum: "बैलेंस सारांश", sub_bal_sum: "हर संपर्क का बकाया बैलेंस, एक नज़र में।",
+        login_head: "अपने लेजर तक पहुंचने के लिए सुरक्षित रूप से लॉगिन करें।", ph_mobile: "मोबाइल नंबर दर्ज करें", btn_login: "ऐप में लॉगिन करें",
+        notice_priv: "🔒 आपकी निजी संपर्क बुक। यह डेटा केवल आपके खाते में संग्रहीत है और कभी साझा नहीं किया जाता है — सिवाय धोखाधड़ी रिपोर्ट के, जो दूसरों को चेतावनी देने के लिए केवल न्यूनतम साझा करता है, गुमनाम रूप से।",
+        notice_pub: "⚠️ आपके बाजार में व्यापारियों द्वारा गुमनाम रूप से रिपोर्ट किए गए धोखाधड़ी अलर्ट। किसी व्यापारी का नाम, दुकान या संपर्क विवरण कभी नहीं दिखाया जाता है — केवल चिह्नित संपर्क का विवरण।",
+        ph_search_my: "संपर्क का नाम या फोन खोजें…", ph_search_dir: "रिपोर्ट किया गया नाम या फोन खोजें…", txt_all_clear: "सब साफ़", txt_no_rem: "कोई लंबित अनुस्मारक नहीं।",
+        txt_nothing: "यहाँ कुछ नहीं", txt_add_col: "बकाया राशि देखने के लिए डैशबोर्ड से बिक्री (Sale) जोड़ें।", txt_add_pay: "देय राशि देखने के लिए डैशबोर्ड से खरीद (Purchase) जोड़ें।",
+        txt_no_cust: "अभी तक कोई संपर्क नहीं", txt_tap_first: "आपकी संपर्क सूची खाली है। डैशबोर्ड से अपनी पहली प्रविष्टि जोड़ें।", txt_no_fraud: "कोई धोखाधड़ी रिपोर्ट नहीं",
+        txt_when_fraud: "जब कोई व्यापारी कन्फर्म धोखाधड़ी की रिपोर्ट करता है, तो यह यहाँ दिखाई देता है — गुमनाम रूप से।", txt_tot_col: "कुल लेना है", txt_tot_pay: "कुल देना है",
+        txt_all_set: "सब तय", txt_no_bal_now: "अभी कोई बकाया बैलेंस नहीं है।", txt_no_txn: "कोई लेनदेन नहीं", txt_not_rec: "अभी तक इस संपर्क के लिए कुछ भी दर्ज नहीं किया गया है।",
+        txt_no_notifications: "कोई सूचना नहीं", txt_notification_hint: "आपकी कलेक्शन बुक की गतिविधियाँ यहाँ दिखाई देंगी।", txt_no_pending: "अभी कोई लंबित प्रविष्टि नहीं है।",
+        txt_closing: "क्लोजिंग बैलेंस", txt_txns: "लेनदेन", txt_view: "देखें →", txt_whatsapp: "व्हाट्सएप रिमांडर", txt_call: "कॉल करें", txt_new_ent: "बिक्री/खरीद जोड़ें",       btn_save_emp: "कर्मचारी सहेजें", txt_no_emp: "अभी तक कोई कर्मचारी नहीं जोड़ा गया।", btn_remove_emp: "कर्मचारी हटाएँ",
+        btn_profile: "मेरी प्रोफ़ाइल", btn_lang: "भाषा", btn_dark_mode: "डार्क मोड", btn_mng_emp: "कर्मचारी प्रबंधित करें", btn_privacy: "गोपनीयता नीति",txt_mng: "प्रबंधित करें", txt_v_rep: "रिपोर्ट देखें / संपादित करें",
+        lbl_fraud: "धोखाधड़ी", lbl_risk: "जोखिम", lbl_trusted: "विश्वसनीय", lbl_watch: "देखें", lbl_unrated: "अनरेटेड", tag_unc: "अपुष्ट", tag_paid: "पूरी तरह से भुगतान किया", tag_part: "आंशिक भुगतान", tag_no_due: "कोई देय तिथि नहीं",
+        head_emp: "कर्मचारी प्रबंधित करें", sub_emp: "कर्मचारी जोड़ें और उनके लेजर एक्सेस को नियंत्रित करें।", div_add_emp: "नया कर्मचारी जोड़ें",
+        lbl_emp_name: "कर्मचारी का नाम", ph_emp_name: "उदा. राहुल कुमार", lbl_emp_phone: "फ़ोन नंबर (लॉगिन आईडी)",
+        lbl_perm_add: "प्रविष्टियां जोड़ सकते हैं", hint_perm_add: "कर्मचारी को नए लेनदेन रिकॉर्ड करने की अनुमति दें।",
+        lbl_perm_view: "पूरा लेजर देख सकते हैं", hint_perm_view: "कर्मचारी को पूरा संपर्क इतिहास देखने की अनुमति दें।",
+        lbl_perm_del: "प्रविष्टियां हटा सकते हैं", hint_perm_del: "कर्मचारी को स्थायी रूप से रिकॉर्ड हटाने की अनुमति दें।",
+btn_terms: "नियम एवं शर्तें",
+lbl_legal: "कानूनी",btn_logout: "लॉग आउट", head_settings: "सेटिंग्स",settings_account: "खाता",
+settings_preferences: "प्राथमिकताएँ",
+settings_business: "व्यवसाय",
+settings_referral: "रेफरल",
+btn_referral: "अपने संपर्कों को रेफर करें",
+ref_title: "Collection Book रेफर करें",
+ref_sub: "व्यापारिक संपर्कों और दोस्तों को आसानी से खाता प्रबंधित करने के लिए आमंत्रित करें।",
+ref_link_lbl: "आपका आमंत्रण लिंक",
+btn_copy: "कॉपी करें",
+btn_share_wa: "व्हाट्सएप पर शेयर करें",
+btn_share_more: "अन्य विकल्प",
+ref_contacts_title: "संपर्कों को आमंत्रित करें",
+btn_invite: "आमंत्रित करें",
+msg_link_copied: "आमंत्रण लिंक कॉपी हो गया!",
+settings_support_app: "ऐप का समर्थन करें",
+btn_donate: "सहायता और योगदान करें",
+donate_title: "Collection Book को सहयोग दें",
+donate_sub: "Collection Book 100% मुफ़्त और विज्ञापन-मुक्त है। आपका योगदान आपके व्यवसाय के लिए ऐप को बेहतर बनाने में मदद करता है!",
+donate_upi_id_lbl: "यूपीआई आईडी",
+donate_phone_lbl: "गूगल पे / फोनपे / पेटीएम नंबर",
+donate_select_amt: "योगदान राशि चुनें",
+btn_pay_upi: "किसी भी यूपीआई ऐप से योगदान करें",
+donate_upi_apps_hint: "गूगल पे, फोनपे, पेटीएम, भीम और सभी यूपीआई ऐप्स समर्थित हैं।",
+msg_upi_copied: "यूपीआई आईडी कॉपी हो गई!",
+msg_phone_copied: "नंबर कॉपी हो गया!",
+settings_support_security: "सहायता और सुरक्षा",
+settings_session: "सत्र",
+btn_security_lock: "सुरक्षा और ऐप लॉक",
+btn_help_support: "सहायता और समर्थन",
+help_title: "सहायता और समर्थन",
+help_subtitle: "Collection Book से संबंधित सहायता चाहिए? हम आपकी मदद के लिए यहाँ हैं।",
+help_email_label: "ईमेल सहायता",
+help_email_hint: "हमारी सहायता टीम से संपर्क करने के लिए ईमेल पते पर टैप करें।",emp_manage_contacts: 'संपर्क प्रबंधित करें',
+feedback_title: "प्रतिक्रिया और सहायता",
+feedback_subtitle: "हमें बताएं कि आप क्या सोचते हैं। आपकी प्रतिक्रिया हमें Collection Book को बेहतर बनाने में मदद करती है।",
+
+feedback_bug: "समस्या की रिपोर्ट करें",
+feedback_feature: "नई सुविधा का सुझाव दें",
+feedback_general: "प्रतिक्रिया दें",
+feedback_rate: "Collection Book को रेट करें",
+
+feedback_bug_title: "समस्या की रिपोर्ट करें",
+feedback_feature_title: "नई सुविधा का सुझाव दें",
+feedback_general_title: "आपकी प्रतिक्रिया",
+
+feedback_bug_hint: "हमें बताएं कि क्या समस्या हुई और आप क्या करने की कोशिश कर रहे थे।",
+feedback_feature_hint: "हमें बताएं कि कौन-सी सुविधा Collection Book को आपके लिए बेहतर बना सकती है।",
+feedback_general_hint: "हमें बताएं कि आपको क्या पसंद है, क्या पसंद नहीं है, या हम क्या बेहतर कर सकते हैं।",
+
+feedback_placeholder: "अपनी प्रतिक्रिया यहां लिखें...",
+feedback_submit: "प्रतिक्रिया भेजें",
+feedback_thanks: "धन्यवाद! आपकी प्रतिक्रिया प्राप्त हो गई है।",
+feedback_required: "कृपया अपनी प्रतिक्रिया दर्ज करें।",
+
+feedback_rate_title: "क्या आपको Collection Book पसंद आ रहा है?",
+feedback_rate_subtitle: "एक छोटी-सी रेटिंग हमें बेहतर बनने और अधिक व्यवसायों तक पहुंचने में मदद करती है।",
+feedback_rate_now: "अभी रेट करें",
+feedback_rate_later: "शायद बाद में",
+emp_manage_contacts_hint:
+    'कर्मचारी को व्यावसायिक संपर्क जोड़ने, संपादित करने और हटाने की अनुमति दें।',
+    notification_customer_new_entry:
+    '₹{amount} की नई {entryType} प्रविष्टि जोड़ी गई',
+
+notification_owner_employee_new_entry:
+    '{customerName} के लिए ₹{amount} की नई {entryType} प्रविष्टि जोड़ी गई',
+
+notification_customer_payment:
+    '₹{amount} का भुगतान दर्ज किया गया',
+
+notification_owner_employee_payment:
+    '{customerName} के लिए ₹{amount} का भुगतान दर्ज किया गया',
+
+    notification_customer_entry_deleted:
+    '₹{amount} की {entryType} प्रविष्टि हटाई गई',
+
+notification_owner_employee_entry_deleted:
+    '{customerName} के लिए ₹{amount} की {entryType} प्रविष्टि हटाई गई',
+
+notification_customer_payment_deleted:
+    '₹{amount} का भुगतान हटाया गया',
+
+notification_owner_employee_payment_deleted:
+    '{customerName} के लिए ₹{amount} का भुगतान हटाया गया',
+
+    notification_customer_contact_deleted:
+    'आपका लेजर जिसमें {entryCount} लेनदेन थे, हटा दिया गया',
+
+notification_owner_employee_contact_deleted:
+    '{customerName} और {entryCount} लेजर लेनदेन हटा दिए गए',
+
+notification_entry_type_sale:
+    'बिक्री',
+
+notification_entry_type_purchase:
+    'खरीद',stat_net_flow:
+    'इस महीने का नेट फ्लो',
+
+flow_collections_ahead:
+    'कलेक्शन बिक्री से अधिक है',
+
+flow_sales_ahead:
+    'बिक्री कलेक्शन से अधिक है',
+
+flow_balanced:
+    'बिक्री और कलेक्शन बराबर हैं',txt_ledger_creator_only:
+    'केवल लेजर बनाने वाला व्यक्ति ही प्रविष्टियां जोड़ सकता है',
+    btn_add_details: "+ अतिरिक्त विवरण जोड़ें (वैकल्पिक)",
+btn_hide_details: "- अतिरिक्त विवरण छिपाएं",
+btn_take_tour: "ऐप टूर लें", tour_badge: "✨ त्वरित टूर", btn_tour_skip: "छोड़ें", btn_tour_next: "अगला →", btn_tour_start: "पहली प्रविष्टि जोड़ें →", msg_tour_skipped: "आप सहायता से कभी भी टूर फिर से शुरू कर सकते हैं।", tour_step1_title: "एक नज़र में आपका व्यवसाय", tour_step1_text: "देखें कि आपको कितना लेना है, देना है, और कहाँ ध्यान देने की आवश्यकता है।", tour_step2_title: "जानें कि कौन आपका कर्जदार है", tour_step2_text: "सभी लंबित ग्राहक संग्रहण यहाँ व्यवस्थित हैं।", tour_step3_title: "आप पर जो बकाया है उसे ट्रैक करें", tour_step3_text: "आपूर्तिकर्ता और खरीद के बकाये को एक ही स्थान पर व्यवस्थित रखें।", tour_step4_title: "आपकी ग्राहक पुस्तिका", tour_step4_text: "उनका लेजर, भुगतान और इतिहास देखने के लिए किसी भी संपर्क को खोलें।", tour_step5_title: "अपना पहला लेजर बनाएं", tour_step5_text: "ग्राहक जोड़ने और अपनी पहली बिक्री या खरीद दर्ज करने के लिए यहाँ टैप करें।", tour_step6_title: "धोखाधड़ी अलर्ट जांचें", tour_step6_text: "लेनदेन करने से पहले व्यवसायों द्वारा रिपोर्ट किए गए संपर्क देखें।", tour_step7_title: "आप तैयार हैं!", tour_step7_text: "यहाँ से अपनी प्रोफ़ाइल, कर्मचारी, भाषा, सुरक्षा और बहुत कुछ प्रबंधित करें।",
+        msg_entry_success: "प्रविष्टि सफलतापूर्वक जोड़ी गई", msg_pay_success: "भुगतान सफलतापूर्वक जोड़ा गया", btn_great: "बढ़िया",
+        login_req_title: "लॉगिन आवश्यक है", login_req_text: "कृपया इस क्रिया को करने और अपने डेटा को सुरक्षित रूप से सिंक करने के लिए लॉगिन करें।", btn_later: "बाद में", btn_login_now: "अभी लॉगिन करें",
+        msg_pending_one: "1 प्रविष्टि पुष्टि की प्रतीक्षा में है", msg_pending_multi: "प्रविष्टियां पुष्टि की प्रतीक्षा में हैं",
+        head_success: "सफलता!", msg_action_success: "कार्रवाई सफलतापूर्वक पूरी हुई।",
+        entry_sub_sale: "ग्राहक से भुगतान लेने के लिए बिक्री रिकॉर्ड करें",
+        entry_sub_purch: "आपूर्तिकर्ता का बकाया दर्ज करने के लिए खरीद रिकॉर्ड करें",
+        entry_sub_gen: "अपना लेजर अपडेट करने के लिए एक लेनदेन दर्ज करें",
+        entry_title_sale: "बिक्री प्रविष्टि",
+        entry_title_purch: "खरीद प्रविष्टि",
+        entry_title_gen: "नई प्रविष्टि",
+        entry_cat_sale: "बिक्री का रिकॉर्ड (प्राप्य)",
+        entry_cat_purch: "खरीद का रिकॉर्ड (देय)",
+        entry_cat_gen: "लेजर लेनदेन",
+        lang_title: "भाषा चुनें",
+        lang_sub: "अपनी पसंदीदा भाषा चुनें",
+        btn_confirm_lang: "चयन की पुष्टि करें"
+      },
+      bn: {
+        btn_view_inv: "চালান দেখুন", btn_edit: "সম্পাদনা করুন",
+        guide_title: "আপনার লেজার শুরু করুন", guide_text: "আপনার কালেকশন বুক খালি আছে। লেনদেন রেকর্ড করতে নিচের একটি বোতাম ট্যাপ করুন।", guide_btn_sale: "+ বিক্রয় যোগ করুন", guide_btn_purch: "- ক্রয় যোগ করুন",
+        app_sub: "ক্রেডিট এবং লেজার ম্যানেজমেন্ট", btn_setup: "সেট আপ", nav_dash: "ড্যাশবোর্ড", nav_collect: "পাওনা", nav_pay: "দেনা", nav_cust: "পরিচিতি", nav_fraud: "জালিয়াতি সতর্কতা",
+        stat_rcv: "মোট প্রাপ্য", stat_pay: "নমোট প্রদেয়", stat_ovd: "বকেয়া এন্ট্রি", stat_cust: "মোট পরিচিতি",
+        rem_head: "পেমেন্ট রিমাইন্ডার", rem_sub: "বকেয়া এবং 7 দিনের মধ্যে দেয়", col_head: "পাওনা", col_sub: "পরিচিতি যারা আপনাকে পেমেন্ট করবে",
+        pay_head: "দেনা", pay_sub: "সরবরাহকারী এবং পার্টি যাদের আপনি দেবেন", btn_add_entry: "নতুন এন্ট্রি", btn_add_pay: "পেমেন্ট যোগ করুন", btn_ledger: "লেজার",
+        type_sale: "বিক্রয় (পাওনা)", type_purch: "ক্রয় (দেনা)", txt_balance: "ব্যালেন্স", txt_last: "শেষ", txt_entries: "এন্ট্রি",
+        sale: "বিক্রয়", purchase: "ক্রয়", payment: "পেমেন্ট",        btn_confirm: "নিশ্চিত করুন", btn_del: "মুছে ফেলুন", txt_loading: "আপনার কালেকশন বুক খুলছে…",
+        head_preview_inv: "ইনভয়েস প্রিভিউ", head_preview_receipt: "মানি রসিদ প্রিভিউ", btn_view_receipt: "রসিদ দেখুন", btn_receipt: "রসিদ",
+        lbl_send_wa_receipt: "পরিচিতির সাথে শেয়ার করার জন্য রসিদ তৈরি করুন",
+        setup_sub: "এই লেবেলটি ব্যক্তিগতভাবে সংরক্ষিত এবং কারো সাথে ভাগ করা হয় আদি।", lbl_name: "আপনার নাম", ph_name: "উদাঃ রমেশ ভাই",
+        lbl_biz: "ব্যবসার নাম", ph_biz: "উদাঃ শর্মা ট্রেডার্স", lbl_gst: "জিএসটি নম্বর (ঐচ্ছিক)", ph_gst: "উদাঃ 29ABCDE1234F1Z5",
+        lbl_area: "শহর / বাজার এলাকা (ঐচ্ছিক)", ph_area: "উদাঃ মেইন মার্কেট, দিল্লি", btn_skip: "বাতিল করুন", btn_save_prof: "প্রোফাইল সংরক্ষণ করুন", btn_add_cust: "+ নতুন এন্ট্রি",
+        btn_reset: "এই ডিভাইসে আমার ডেটা রিসেট করুন", lbl_cust_party: "পরিচিতি / পার্টি", ph_search_cust: "বিদ্যমান খুঁজুন বা নতুন যোগ করুন…", lbl_phone: "ফোন",
+        lbl_txn_type: "লেনদেনের ধরন", lbl_gross_amt: "মোট পরিমাণ (₹)", lbl_amount_received: "প্রাপ্ত পরিমাণ (₹)", lbl_amount_paid: "পরিশোধিত পরিমাণ (₹)", lbl_payment_mode: "পেমেন্ট মাধ্যম", lbl_discount: "ছাড় (₹)", lbl_inv_date: "ইনভয়েস তারিখ",
+        lbl_due_date: "দেয় তারিখ (ঐচ্ছিক)", lbl_description: "বিবরণ", lbl_ref: "রেফারেন্স / ইনভয়েস নং", ph_ref: "উদাঃ বিল নং 994", ph_item_desc: "পণ্য বা পরিষেবার বিবরণ...", lbl_cust_conf: "পরিচিতি এই লেনদেন নিশ্চিত করেছেন",
+        hint_cust_conf: "তাদের অনুমোদনের জন্য অপেক্ষা করলে আনচেক করুন।", lbl_send_wa_pdf: "পরিচিতির সাথে শেয়ার করার জন্য চালান তৈরি করুন", btn_cancel: "বাতিল করুন", btn_save_entry: "এন্ট্রি সংরক্ষণ করুন", lbl_amt: "পরিমাণ (₹)",
+        lbl_date: "তারিখ", lbl_pay_ref: "পেমেন্ট রেফারেন্স / নোট", ph_pay_ref: "উদাঃ ইউপিআই / নগদ", lbl_pay_conf: "পেমেন্ট প্রাপ্ত এবং নিশ্চিত",
+        hint_pay_conf: "তহবিল ক্লিয়ার হওয়ার জন্য অপেক্ষা করলে আনচেক করুন।", btn_save_pay: "পেমেন্ট সংরক্ষণ করুন", head_manage: "পরিচিতি পরিচালনা করুন",
+        lbl_priv_note: "ব্যক্তিগত নোট (শুধুমাত্র আপনি এটি দেখেন)", ph_priv_note: "আপনি যা শেয়ার করতে চান না", div_trust: "ট্রাস্ট রেটিং (ব্যক্তিগত, আপনার নিজস্ব রেফারেন্সের জন্য)",
+        lbl_give_rate: "এই পরিচিতিকে একটি ট্রাস্ট রেটিং দিন", hint_give_rate: "ঐচ্ছিক - প্রতিটি পরিচিতিকে রেট দেওয়ার প্রয়োজন নেই। ব্যক্তিগত থাকে।",
+        lbl_mark_fraud: "নিশ্চিত জালিয়াতি হিসাবে চিহ্নিত করুন", hint_mark_fraud: "স্কোর নির্বিশেষে RED কে বাধ্য করে।", lbl_rep_fraud: "অন্যান্য ব্যবসায়ীদের কাছে বেনামে এই জালিয়াতির রিপোর্ট করুন",
+        hint_rep_fraud: "শুধুমাত্র পরিচিতির বিবরণ শেয়ার করা হয় - আপনার নাম, দোকান এবং এলাকা কখনো দেখানো হয় না।", lbl_inc_phone: "ফোন নম্বর অন্তর্ভুক্ত করুন, যাতে অন্যরা যাচাই করতে পারে",
+        lbl_what_happen: "কি হয়েছে? (অন্যান্য ব্যবসায়ীদের কাছে দৃশ্যমান)", ph_what_happen: "উদাঃ ডেলিভারি নিয়েছে, দেয় তারিখের পর সাড়া দেওয়া বন্ধ করে দিয়েছে", btn_save: "সংরক্ষণ করুন",
+        head_fraud_rep: "জালিয়াতি রিপোর্ট", btn_close: "বন্ধ করুন", btn_import: "আমদানি করুন", btn_remove: "সরান", btn_dl_pdf: "পিডিএফ ডাউনলোড করুন", btn_send_pdf: "পরিচিতিকে পাঠান",
+        btn_close_ledger: "লেজার বন্ধ করুন", head_bal_sum: "ব্যালেন্স সারাংশ", sub_bal_sum: "এক নজরে প্রতিটি পরিচিতির বকেয়া ব্যালেন্স।",
+        login_head: "আপনার লেজারে প্রবেশ করতে নিরাপদে লগইন করুন।", ph_mobile: "মোবাইল নম্বর লিখুন", btn_login: "অ্যাপে লগইন করুন",
+        notice_priv: "🔒 আপনার ব্যক্তিগত পরিচিতি বই। এই ডেটা শুধুমাত্র আপনার অ্যাকাউন্টে সংরক্ষিত এবং কখনোই শেয়ার করা হয় না — জালিয়াতি রিপোর্ট ছাড়া, যা শুধুমাত্র অন্যদের সতর্ক করার জন্য বেনামে ন্যূনতম শেয়ার করে।",
+        notice_pub: "⚠️ আপনার বাজারে ব্যবসায়ীদের দ্বারা বেনামে রিপোর্ট করা জালিয়াতি সতর্কতা। কোনো ব্যবসায়ীর নাম, দোকান বা যোগাযোগের বিবরণ কখনোই দেখানো হয় পরিচয় — শুধুমাত্র চিহ্নিত পরিচিতির বিবরণ।",
+        ph_search_my: "পরিচিতির নাম বা ফোন খুঁজুন…", ph_search_dir: "রিপোর্ট করা নাম বা ফোন খুঁজুন…", txt_all_clear: "সব পরিষ্কার", txt_no_rem: "কোনো পেন্ডিং রিমাইন্ডার নেই।",
+        txt_nothing: "এখানে কিছু নেই", txt_add_col: "বকেয়া পাওনা দেখতে ড্যাশবোর্ড থেকে একটি বিক্রয় যোগ করুন।", txt_add_pay: "বকেয়া দেনা দেখতে ড্যাশবোর্ড থেকে একটি ক্রয় যোগ করুন।",
+        txt_no_cust: "এখনও কোনো পরিচিতি নেই", txt_tap_first: "আপনার পরিচিতি তালিকা খালি। ড্যাশবোর্ড থেকে আপনার প্রথম এন্ট্রি যোগ করুন।", txt_no_fraud: "কোনো জালিয়াতি রিপোর্ট নেই",
+        txt_when_fraud: "যখন কোনো ব্যবসায়ী নিশ্চিত জালিয়াতির রিপোর্ট করেন, তখন এটি এখানে বেনামে প্রদর্শিত হয়।", txt_tot_col: "মোট পাওনা", txt_tot_pay: "মোট দেনা",
+        txt_all_set: "সব ঠিক আছে", txt_no_bal_now: "এখন কোনো বকেয়া ব্যালেন্স নেই।", txt_no_txn: "কোনো লেনদেন নেই", txt_not_rec: "এই পরিচিতির জন্য এখনও কিছু রেকর্ড করা হয়নি।",
+        txt_no_notifications: "কোনো বিজ্ঞপ্তি নেই", txt_notification_hint: "আপনার কালেকশন বুক অ্যাক্টিভিটি এখানে প্রদর্শিত হবে।", txt_no_pending: "এখন কোনো পেন্ডিং এন্ট্রি নেই।",
+        txt_closing: "ক্লোজিং ব্যালেন্স", txt_txns: "লেনদেন", txt_view: "দেখুন →", txt_whatsapp: "হোয়াটসঅ্যাপ রিমাইন্ডার", txt_call: "কল করুন", txt_new_ent: "বিক্রয়/ক্রয় যোগ করুন", txt_mng: "পরিচালনা করুন", txt_v_rep: "রিপোর্ট দেখুন / সম্পাদনা করুন",
+        lbl_fraud: "জালিয়াতি", lbl_risk: "ঝুঁকি", lbl_trusted: "বিশ্বস্ত", lbl_watch: "নজর রাখুন", lbl_unrated: "আনরেটেড", tag_unc: "অনিশ্চিত", tag_paid: "সম্পূর্ণ পেমেন্ট করা হয়েছে", tag_part: "আংশিক পেমেন্ট", tag_no_due: "কোনো দেয় তারিখ নেই",
+        head_emp: "कर्मচারী পরিচালনা করুন", sub_emp: "कर्मচারী যোগ করুন এবং তাদের লেজার অ্যাক্সেস নিয়ন্ত্রণ করুন।", div_add_emp: "নতুন কর্মচারী যোগ করুন",
+        lbl_emp_name: "কর্মচারীর নাম", ph_emp_name: "উদাঃ রাহুল কুমার", lbl_emp_phone: "ফোন নম্বর (লॉगইন আইডি)",
+        lbl_perm_add: "এন্ট্রি যোগ করতে পারবেন", hint_perm_add: "কর্মচারীকে নতুন লেনদেন রেকর্ড করার অনুমতি দিন।",
+        lbl_perm_view: "সম্পূর্ণ লেজার দেখতে পারবেন", hint_perm_view: "কর্মচারীকে সম্পূর্ণ পরিচিতির ইতিহাস দেখার অনুমতি দিন।",
+        lbl_perm_del: "এন্ট্রি মুছতে পারবেন", hint_perm_del: "কর্মচারীকে স্থায়ীভাবে রেকর্ড মুছে ফেলার অনুমতি দিন।",
+        btn_save_emp: "কর্মচারী সংরক্ষণ করুন", txt_no_emp: "এখনও কোনো কর্মচারী যোগ করা হয়নি।", btn_remove_emp: "কর্মচারী সরান",
+        btn_profile: "আমার প্রোফাইল", btn_lang: "ভাষা", btn_dark_mode: "ডার্ক মোড", btn_mng_emp: "কর্মচারী পরিচালনা করুন", btn_privacy: "গোপনীয়তা নীতি",
+btn_terms: "শর্তাবলী",
+lbl_legal: "আইনি",btn_logout: "লগ আউট", head_settings: "সেটিংস",settings_account: "অ্যাকাউন্ট",
+settings_preferences: "পছন্দসমূহ",
+settings_business: "ব্যবসা",
+settings_referral: "রেফারেল",
+btn_referral: "আপনার পরিচিতিদের রেফার করুন",
+ref_title: "Collection Book রেফার করুন",
+ref_sub: "সহজে লেজার পরিচালনা করতে আপনার ব্যবসার পরিচিতি ও বন্ধুদের আমন্ত্রণ জানান।",
+ref_link_lbl: "আপনার আমন্ত্রণ লিঙ্ক",
+btn_copy: "কপি করুন",
+btn_share_wa: "হোয়াটসঅ্যাপে শেয়ার করুন",
+btn_share_more: "অন্যান্য বিকল্প",
+ref_contacts_title: "পরিচিতিদের আমন্ত্রণ জানান",
+btn_invite: "আমন্ত্রণ জানান",
+msg_link_copied: "আমন্ত্রণ লিঙ্ক কপি করা হয়েছে!",
+settings_support_app: "অ্যাপকে সমর্থন করুন",
+btn_donate: "সহায়তা ও অবদান রাখুন",
+donate_title: "Collection Book-কে সমর্থন করুন",
+donate_sub: "Collection Book ১০০% বিনামূল্যে এবং বিজ্ঞাপন-মুক্ত। আপনার অবদান ব্যবসার জন্য অ্যাপটি আরও উন্নত করতে সাহায্য করে!",
+donate_upi_id_lbl: "ইউপিআই আইডি",
+donate_phone_lbl: "গুগল পে / ফোনপে / পেটিএম নম্বর",
+donate_select_amt: "অবদানের পরিমাণ নির্বাচন করুন",
+btn_pay_upi: "যেকোনো ইউপিআই অ্যাপের মাধ্যমে অবদান রাখুন",
+donate_upi_apps_hint: "গুগল পে, ফোনপে, পেটিএম, ভিম এবং সমস্ত ইউপিআই অ্যাপ সমর্থিত।",
+msg_upi_copied: "ইউপিআই আইডি কপি করা হয়েছে!",
+msg_phone_copied: "নম্বর কপি করা হয়েছে!",
+settings_support_security: "সহায়তা ও নিরাপত্তা",
+settings_session: "সেশন",
+btn_security_lock: "নিরাপত্তা ও অ্যাপ লক",btn_help_support: "সহায়তা ও সাপোর্ট",
+help_title: "সহায়তা ও সাপোর্ট",
+help_subtitle: "Collection Book ব্যবহার করতে সাহায্য দরকার? আমরা আপনাকে সহায়তা করতে প্রস্তুত।",
+help_email_label: "ইমেল সাপোর্ট",
+help_email_hint: "আমাদের সাপোর্ট টিমের সাথে যোগাযোগ করতে ইমেল ঠিকানায় ট্যাপ করুন।",emp_manage_contacts: 'পরিচিতি পরিচালনা করুন',
+feedback_title: "মতামত ও সহায়তা",
+feedback_subtitle: "আপনার মতামত আমাদের জানান। আপনার মতামত Collection Book-কে আরও উন্নত করতে সাহায্য করে।",
+
+feedback_bug: "সমস্যার রিপোর্ট করুন",
+feedback_feature: "নতুন ফিচারের পরামর্শ দিন",
+feedback_general: "মতামত দিন",
+feedback_rate: "Collection Book-কে রেটিং দিন",
+
+feedback_bug_title: "সমস্যার রিপোর্ট করুন",
+feedback_feature_title: "নতুন ফিচারের পরামর্শ দিন",
+feedback_general_title: "আপনার মতামত",
+
+feedback_bug_hint: "কী সমস্যা হয়েছে এবং আপনি কী করার চেষ্টা করছিলেন তা আমাদের জানান।",
+feedback_feature_hint: "কোন ফিচারটি Collection Book-কে আপনার জন্য আরও ভালো করে তুলবে তা আমাদের জানান।",
+feedback_general_hint: "আপনার কী ভালো লাগে, কী ভালো লাগে না, অথবা আমরা কী উন্নত করতে পারি তা আমাদের জানান।",
+
+feedback_placeholder: "আপনার মতামত এখানে লিখুন...",
+feedback_submit: "মতামত পাঠান",
+feedback_thanks: "ধন্যবাদ! আপনার মতামত আমরা পেয়েছি।",
+feedback_required: "অনুগ্রহ করে আপনার মতামত লিখুন।",
+
+feedback_rate_title: "আপনার কি Collection Book ভালো লাগছে?",
+feedback_rate_subtitle: "একটি ছোট রেটিং আমাদের আরও উন্নতি করতে এবং আরও বেশি ব্যবসার কাছে পৌঁছাতে সাহায্য করে।",
+feedback_rate_now: "এখনই রেট করুন",
+feedback_rate_later: "হয়তো পরে",
+emp_manage_contacts_hint:
+    'কর্মচারীকে ব্যবসায়িক পরিচিতি যোগ, সম্পাদনা এবং মুছে ফেলার অনুমতি দিন।',
+    notification_customer_new_entry:
+    '₹{amount}-এর একটি নতুন {entryType} এন্ট্রি যোগ করা হয়েছে',
+
+notification_owner_employee_new_entry:
+    '{customerName}-এর জন্য ₹{amount}-এর একটি নতুন {entryType} এন্ট্রি যোগ করা হয়েছে',
+
+notification_customer_payment:
+    '₹{amount} পেমেন্ট রেকর্ড করা হয়েছে',
+
+notification_owner_employee_payment:
+    '{customerName}-এর জন্য ₹{amount} পেমেন্ট রেকর্ড করা হয়েছে',
+
+    notification_customer_entry_deleted:
+    '₹{amount}-এর {entryType} এন্ট্রি মুছে ফেলা হয়েছে',
+
+notification_owner_employee_entry_deleted:
+    '{customerName}-এর জন্য ₹{amount}-এর {entryType} এন্ট্রি মুছে ফেলা হয়েছে',
+
+notification_customer_payment_deleted:
+    '₹{amount} পেমেন্ট মুছে ফেলা হয়েছে',
+
+notification_owner_employee_payment_deleted:
+    '{customerName}-এর জন্য ₹{amount} পেমেন্ট মুছে ফেলা হয়েছে',
+
+    notification_customer_contact_deleted:
+    'আপনার {entryCount}টি লেনদেনসহ লেজার মুছে ফেলা হয়েছে',
+
+notification_owner_employee_contact_deleted:
+    '{customerName} এবং {entryCount}টি লেজার লেনদেন মুছে ফেলা হয়েছে',
+
+notification_entry_type_sale:
+    'বিক্রয়',
+
+notification_entry_type_purchase:
+    'ক্রয়',stat_net_flow:
+    'এই মাসের নেট ফ্লো',
+
+flow_collections_ahead:
+    'সংগ্রহ বিক্রয়ের চেয়ে বেশি',
+
+flow_sales_ahead:
+    'বিক্রয় সংগ্রহের চেয়ে বেশি',
+
+flow_balanced:
+    'বিক্রয় এবং সংগ্রহ সমান',txt_ledger_creator_only:
+    'শুধুমাত্র লেজার নির্মাতা এন্ট্রি যোগ করতে পারবেন',
+    btn_add_details: "+ অতিরিক্ত বিবরণ যোগ করুন (ঐচ্ছিক)",
+btn_hide_details: "- অতিরিক্ত বিবরণ লুকান",
+btn_take_tour: "অ্যাপ ট্যুর নিন", tour_badge: "✨ কুইক ট্যুর", btn_tour_skip: "এড়িয়ে যান", btn_tour_next: "পরবর্তী →", btn_tour_start: "আমার প্রথম এন্ট্রি যোগ করুন →", msg_tour_skipped: "আপনি যেকোনো সময় হেল্প থেকে ট্যুর পুনরায় শুরু করতে পারেন।", tour_step1_title: "এক নজরে আপনার ব্যবসা", tour_step1_text: "দেখুন আপনার কত পাওনা আছে, কত দিতে হবে और কোথায় মনোযোগ দেওয়া প্রয়োজন।", tour_step2_title: "জানুন কে আপনার কাছে ঋণী", tour_step2_text: "গ্রাহকদের সমস্ত বকেয়া সংগ্রহ এখানে সাজানো আছে।", tour_step3_title: "আপনার দেনা ট্র্যাক করুন", tour_step3_text: "সরবরাহকারী এবং ক্রয়ের বকেয়া এক জায়গায় গুছিয়ে রাখুন।", tour_step4_title: "আপনার গ্রাহক বই", tour_step4_text: "যেকোনো পরিচিতির লেজার, পেমেন্ট এবং ইতিহাস দেখতে সেটি খুলুন।", tour_step5_title: "আপনার প্রথম লেজার তৈরি করুন", tour_step5_text: "একটি পরিচিতি যোগ করতে এবং আপনার প্রথম বিক্রয় বা ক্রয় রেকর্ড করতে এখানে ট্যাপ করুন।", tour_step6_title: "জালিয়াতি সতর্কতা পরীক্ষা করুন", tour_step6_text: "লেনদেন করার আগে অন্যান্য ব্যবসার দ্বারা রিপোর্ট করা পরিচিতিগুলি দেখুন।", tour_step7_title: "আপনি প্রস্তুত!", tour_step7_text: "এখান থেকে আপনার প্রোফাইল, কর্মচারী, ভাষা, নিরাপত্তা এবং আরও অনেক কিছু পরিচালনা করুন।",
+        msg_entry_success: "এন্ট্রি সফলভাবে যোগ করা হয়েছে", msg_pay_success: "পেমেন্ট সফলভাবে যোগ করা হয়েছে", btn_great: "চমৎকার",
+        login_req_title: "লগইন প্রয়োজন", login_req_text: "এই কাজটি করতে এবং আপনার ডেটা সুরক্ষিতভাবে সিঙ্ক করতে অনুগ্রহ করে লগইন করুন।", btn_later: "পরে", btn_login_now: "এখনই লগইন করুন",
+        msg_pending_one: "১টি এন্ট্রি নিশ্চিতকরণের জন্য অপেক্ষা করছে", msg_pending_multi: "টি এন্ট্রি নিশ্চিতকরণের জন্য অপেক্ষা করছে",
+        head_success: "সফল হয়েছে!", msg_action_success: "কাজটি সফলভাবে সম্পন্ন হয়েছে।",
+        entry_sub_sale: "গ্রাহকের কাছ থেকে টাকা আদায় করতে একটি বিক্রয় রেকর্ড করুন",
+        entry_sub_purch: "সরবরাহকারীর দেনা ট্র্যাক করতে একটি ক্রয় রেকর্ড করুন",
+        entry_sub_gen: "আপনার লেজার আপডেট করতে একটি লেনদেন রেকর্ড করুন",
+        entry_title_sale: "বিক্রয় এন্ট্রি",
+        entry_title_purch: "ক্রয় এন্ট্রি",
+        entry_title_gen: "নতুন এন্ট্রি",
+        entry_cat_sale: "বিক্রয় রেকর্ড (পাওনা)",
+        entry_cat_purch: "ক্রয় রেকর্ড (দেনা)",
+        entry_cat_gen: "লেজার লেনদেন",
+        lang_title: "ভাষা নির্বাচন করুন",
+        lang_sub: "আপনার পছন্দের ভাষা চয়ন করুন",
+        btn_confirm_lang: "নির্বাচন নিশ্চিত করুন"
+      },
+      mr: {
+        btn_view_inv: "बीजक पहा", btn_edit: "संपादित करा",
+        guide_title: "तुमचे लेजर सुरू करा", guide_text: "तुमची कलेक्शन बुक रिकामी आहे. तुमचा पहिला व्यवहार रेकॉर्ड करण्यासाठी खालीलपैकी एक पर्याय निवडा.", guide_btn_sale: "+ विक्री जोडा", guide_btn_purch: "- खरेदी जोडा",
+        app_sub: "क्रेडिट आणि लेजर व्यवस्थापन", btn_setup: "सेट अप", nav_dash: "डॅशबोर्ड", nav_collect: "येणे बाकी", nav_pay: "देणे बाकी", nav_cust: "संपर्क", nav_fraud: "फसवणूक अलर्ट",
+        stat_rcv: "एकूण येणे", stat_pay: "एकूण देणे", stat_ovd: "थकीत नोंदी", stat_cust: "एकूण संपर्क",
+        rem_head: "पेमेंट रिमाइंडर्स", rem_sub: "थकीत आणि ७ दिवसांत येणारे", col_head: "येणे बाकी", col_sub: "ज्यांच्याकडून पैसे घ्यायचे आहेत",
+        pay_head: "देणे बाकी", pay_sub: "ज्यांना पैसे द्यायचे आहेत", btn_add_entry: "नवीन नोंद", btn_add_pay: "पेमेंट जोडा", btn_ledger: "लेजर",
+        type_sale: "विक्री (येणे)", type_purch: "खरेदी (देणे)", txt_balance: "बॅलन्स", txt_last: "शेवटच्या", txt_entries: "नोंदी",
+        sale: "विक्री", purchase: "खरेदी", payment: "पेमेंट", btn_confirm: "निश्चित करा", btn_del: "काढून टाका", txt_loading: "तुमचे लेजर उघडत आहे...",
+        head_preview_inv: "इनव्हॉइस पूर्वावलोकन", head_preview_receipt: "पावती पूर्वावलोकन", btn_view_receipt: "पावती पहा", btn_receipt: "पावती",
+        lbl_send_wa_receipt: "संपर्काशी शेअर करण्यासाठी पावती तयार करा",
+        setup_sub: "हे नाव खाजगी ठेवले जाते आणि कोणाशीही शेअर केले जात नाही.", lbl_name: "तुमचे नाव", ph_name: "उदा. रमेश भाई",
+        lbl_biz: "व्यवसायाचे नाव", ph_biz: "उदा. शर्मा ट्रेडर्स", lbl_gst: "जीएसटी नंबर (पर्यायी)", ph_gst: "उदा. 29ABCDE1234F1Z5",
+        lbl_area: "शहर / बाजार परिसर (पर्यायी)", ph_area: "उदा. मुख्य बाजार, मुंबई", btn_skip: "रद्द करा", btn_save_prof: "प्रोफाईल जतन करा", btn_add_cust: "+ नोंद जोडा",
+        btn_reset: "या डिव्हाइसवरील माझा डेटा रिसेट करा", lbl_cust_party: "संपर्क / पार्टी", ph_search_cust: "शोध किंवा नवीन जोडा...", lbl_phone: "फोन",
+        lbl_txn_type: "व्यवहाराचा प्रकार", lbl_gross_amt: "एकूण रक्कम (₹)", lbl_amount_received: "प्राप्त रक्कम (₹)", lbl_amount_paid: "दिलेली रक्कम (₹)", lbl_payment_mode: "पेमेंटची पद्धत", lbl_discount: "सवलत (₹)", lbl_inv_date: "इनव्हॉइस तारीख",
+        lbl_due_date: "देय तारीख (पर्यायी)", lbl_description: "वर्णन", lbl_ref: "संदर्भ / बिल क्रमांक", ph_ref: "उदा. बिल नंबर ९९४", ph_item_desc: "वस्तू किंवा सेवांचे तपशील...", lbl_cust_conf: "संपर्काने या व्यवहाराची पुष्टी केली",
+        hint_cust_conf: "மஞ்சூரிची प्रतीक्षा असल्यास अनचेक करा.", lbl_send_wa_pdf: "संपर्काशी शेअर करण्यासाठी बीजक तयार करा", btn_cancel: "रद्द करा", btn_save_entry: "नोंद जतन करा", lbl_amt: "रक्कम (₹)",
+        lbl_date: "तारीख", lbl_pay_ref: "पेमेंट संदर्भ / टीप", ph_pay_ref: "उदा. UPI / रोख", lbl_pay_conf: "पेमेंट प्राप्त आणि पुष्टी",
+        hint_pay_conf: "पैसे जमा होण्याची प्रतीक्षा असल्यास अनचेक करा.", btn_save_pay: "पेमेंट जतन करा", head_manage: "संपर्क व्यवस्थापित करा",
+        lbl_priv_note: "खाजगी नोट्स (केवळ तुम्हाला दिसतात)", ph_priv_note: "काहीही जे तुम्हाला शेअर करायचे नाही", div_trust: "विश्वासार्हता रेटिंग (खाजगी)",
+        lbl_give_rate: "या संपर्काला रेटिंग द्या", hint_give_rate: "पर्यायी — खाजगी राहते.",
+        lbl_mark_fraud: "फसवणूक म्हणून चिन्हांकित करा", hint_mark_fraud: "स्कोर काहीही असला तरी लाल दाखवते.", lbl_rep_fraud: "इतर व्यापाऱ्यांना कळवा",
+        hint_rep_fraud: "केवळ संपर्काचे तपशील शेअर केले जातात — तुमचे नाव कधीही दाखवले जात नाही.", lbl_inc_phone: "फोन नंबर समाविष्ट करा",
+        lbl_what_happen: "काय झाले? (इतर व्यापाऱ्यांना दिसते)", ph_what_happen: "उदा. डिलिव्हरी घेतली, संपर्क बंद केला", btn_save: "जतन करा",
+        head_fraud_rep: "फसवणूक अहवाल", btn_close: "बंद करा", btn_import: "इंपोर्ट", btn_remove: "काढून टाका", btn_dl_pdf: "PDF डाउनलोड करा", btn_send_pdf: "संपर्काला पाठवा",
+        btn_close_ledger: "लेजर बंद करा", head_bal_sum: "बॅलन्स सारांश", sub_bal_sum: "प्रत्येक संपर्काचा बॅलन्स एका नजरेत.",
+        login_head: "तुमच्या लेजरमध्ये प्रवेश करण्यासाठी लॉग इन करा.", ph_mobile: "मोबाईल नंबर टाका", btn_login: "लॉग इन करा",
+        notice_priv: "🔒 तुमचे खाजगी लेजर. हा डेटा कोणाशीही शेअर केला जात नाही.",
+        notice_pub: "⚠️ व्यापाऱ्यांनी दिलेले फसवणूक इशारे. कोणाचेही वैयक्तिक तपशील दाखवले जात नाहीत.",
+        ph_search_my: "नाव किंवा फोन शोधा...", ph_search_dir: "रिपोर्ट केलेले नाव शोधा...", txt_all_clear: "सर्व क्लियर", txt_no_rem: "कोणीही रिमाइंडर नाही.",
+        txt_nothing: "येथे काहीही नाही", txt_add_col: "बॅलन्स पाहण्यासाठी डॅशबोर्डवरून विक्री जोडा.", txt_add_pay: "बॅलन्स पाहण्यासाठी डॅशबोर्डवरून खरेदी जोडा.",
+        txt_no_cust: "अद्याप कोणीही संपर्क नाही", txt_tap_first: "तुमची संपर्क यादी रिकामी आहे.", txt_no_fraud: "कोणीही फसवणूक अहवाल नाही",
+        txt_when_fraud: "जेव्हा एखादा व्यापारी फसवणुकीची तक्रार करतो, तेव्हा ती येथे दिसते.", txt_tot_col: "एकूण येणे", txt_tot_pay: "एकूण देणे",
+        txt_all_set: "सर्व सेट", txt_no_bal_now: "सध्या कोणताही बॅलन्स नाही.", txt_no_txn: "कोणताही व्यवहार नाही", txt_not_rec: "या संपर्कासाठी काहीही रेकॉर्ड केलेले नाही.",
+        txt_no_notifications: "कोणतीही सूचना नाही", txt_notification_hint: "तुमची हालचाल येथे दिसेल.", txt_no_pending: "सध्या काहीही प्रलंबित नाही.",
+        txt_closing: "अंतिम बॅलन्स", txt_txns: "व्यवहार", txt_view: "पहा →", txt_whatsapp: "WhatsApp रिमाइंडर", txt_call: "कॉल", txt_new_ent: "+ विक्री/खरेदी जोडा", txt_mng: "व्यवस्थापित करा", txt_v_rep: "अहवाल पहा/संपादित करा",
+        lbl_fraud: "फसवणूक", lbl_risk: "जोखीम", lbl_trusted: "विश्वसनीय", lbl_watch: "नजर ठेवा", lbl_unrated: "रेट केलेले नाही", tag_unc: "अपुष्ट", tag_paid: "पूर्ण पेमेंट", tag_part: "अंशतः पेमेंट", tag_no_due: "तारीख नाही",
+        head_emp: "कर्मचारी व्यवस्थापित करा", sub_emp: "कर्मचारी जोडा आणि त्यांचे प्रवेश नियंत्रण करा.", div_add_emp: "नवीन कर्मचारी जोडा",
+        lbl_emp_name: "कर्मचाऱ्याचे नाव", ph_emp_name: "उदा. राहुल कुमार", lbl_emp_phone: "फोन नंबर (लॉगिन ID)",
+        lbl_perm_add: "नोंदी जोडू शकतात", hint_perm_add: "कर्मचाऱ्याला नवीन व्यवहार नोंदवण्याची परवानगी द्या.",
+        lbl_perm_view: "पूर्ण लेजर पाहू शकतात", hint_perm_view: "कर्मचाऱ्याला संपूर्ण इतिहास पाहण्याची परवानगी द्या.",
+        lbl_perm_del: "नोंदी डिलीट करू शकतात", hint_perm_del: "कर्मचाऱ्याला नोंदी कायमच्या काढून टाकण्याची परवानगी द्या.",
+        btn_save_emp: "कर्मचारी जतन करा", txt_no_emp: "अद्याप कोणी कर्मचारी नाही.", btn_remove_emp: "कर्मचारी काढा",
+        btn_profile: "माझी प्रोफाईल", btn_lang: "भाषा", btn_dark_mode: "डार्क मोड", btn_mng_emp: "कर्मचारी व्यवस्थापन", btn_privacy: "गोपनीयता धोरण",
+        btn_terms: "नियम आणि अटी", lbl_legal: "कायदेशीर", btn_logout: "लॉग आउट", head_settings: "सेटिंग्ज", settings_account: "खाते",
+        settings_preferences: "प्राधान्ये", settings_business: "व्यवसाय",
+settings_referral: "रेफरल", btn_referral: "तुमच्या संपर्कांना रेफर करा", ref_title: "Collection Book रेफर करा", ref_sub: "सहज लेजर व्यवस्थापनासाठी तुमच्या व्यापारी संपर्कांना आणि मित्रांना आमंत्रित करा.", ref_link_lbl: "तुमची आमंत्रण लिंक", btn_copy: "कॉपी करा", btn_share_wa: "WhatsApp वर शेअर करा", btn_share_more: "इतर पर्याय", ref_contacts_title: "संपर्कांना आमंत्रित करा", btn_invite: "आमंत्रित करा", msg_link_copied: "आमंत्रण लिंक कॉपी झाली!",
+settings_support_app: "अॅपला पाठिंबा द्या",
+btn_donate: "मदत आणि योगदान द्या",
+donate_title: "Collection Book ला पाठिंबा द्या",
+donate_sub: "Collection Book १००% मोफत आणि जाहिरातमुक्त आहे. तुमचे छोटेसे योगदान अॅप अधिक चांगले बनवण्यास मदत करते!",
+donate_upi_id_lbl: "यूपीआय आयडी",
+donate_phone_lbl: "गुगल पे / फोनपे / पेटीएम नंबर",
+donate_select_amt: "योगदान रक्कम निवडा",
+btn_pay_upi: "कोणत्याही यूपीआय अॅपद्वारे योगदान द्या",
+donate_upi_apps_hint: "गुगल पे, फोनपे, पेटीएम, भीम आणि सर्व यूपीआय अॅप्स समर्थित.",
+msg_upi_copied: "यूपीआय आयडी कॉपी झाली!",
+msg_phone_copied: "नंबर कॉपी झाला!",
+        settings_support_security: "मदत आणि सुरक्षा", settings_session: "सत्र",
+        btn_security_lock: "सुरक्षा आणि लॉक", btn_help_support: "मदत आणि समर्थन",
+        help_title: "मदत आणि समर्थन", help_subtitle: "मदत हवी आहे का?",
+        help_email_label: "ईमेल समर्थन", help_email_hint: "आमच्या टीमशी संपर्क साधा.", emp_manage_contacts: 'संपर्क व्यवस्थापन',
+        feedback_title: "प्रतिक्रिया आणि समर्थन", feedback_subtitle: "तुमचे मत सांगा.",
+        feedback_bug: "बग रिपोर्ट करा", feedback_feature: "सुविधा सुचवा", feedback_general: "प्रतिक्रिया द्या", feedback_rate: "अॅपला रेट करा",
+        feedback_placeholder: "येथे लिहा...", feedback_submit: "प्रतिक्रिया पाठवा", feedback_thanks: "धन्यवाद!", feedback_required: "प्रतिक्रिया आवश्यक आहे.",
+        feedback_rate_title: "अॅप आवडला का?", feedback_rate_subtitle: "तुमचे रेटिंग आम्हाला मदत करते.", feedback_rate_now: "आत्ता रेट करा", feedback_rate_later: "नंतर",
+        emp_manage_contacts_hint: 'कर्मचाऱ्याला संपर्क व्यवस्थापनाची परवानगी द्या.',
+        notification_customer_new_entry: '₹{amount} ची नवीन {entryType} नोंद जोडली',
+        notification_owner_employee_new_entry: '{customerName} साठी ₹{amount} ची {entryType} नोंद जोडली',
+        notification_customer_payment: '₹{amount} चे पेमेंट नोंदवले',
+        notification_owner_employee_payment: '{customerName} साठी ₹{amount} चे पेमेंट नोंदवले',
+        notification_customer_entry_deleted: '₹{amount} ची {entryType} नोंद डिलीट केली',
+        notification_owner_employee_entry_deleted: '{customerName} साठी ₹{amount} ची {entryType} नोंद डिलीट केली',
+        notification_customer_payment_deleted: '₹{amount} चे पेमेंट डिलीट केले',
+        notification_owner_employee_payment_deleted: '{customerName} साठी ₹{amount} चे पेमेंट डिलीट केले',
+        notification_customer_contact_deleted: '{entryCount} व्यवहारांसह लेजर डिलीट केले',
+        notification_owner_employee_contact_deleted: '{customerName} आणि {entryCount} व्यवहार डिलीट केले',
+        notification_entry_type_sale: 'विक्री', notification_entry_type_purchase: 'खरेदी',
+        stat_net_flow: 'या महिन्याचा निव्वळ प्रवाह', flow_collections_ahead: 'संकलन विक्रीपेक्षा जास्त आहे', flow_sales_ahead: 'विक्री संकलनापेक्षा जास्त आहे', flow_balanced: 'विक्री आणि संकलन संतुलित आहे',
+        txt_ledger_creator_only: 'केवळ लेजर निर्माता नोंदी जोडू शकतो',
+        btn_add_details: "+ अतिरिक्त तपशील जोडा (पर्यायी)", btn_hide_details: "- तपशील लपवा",
+        btn_take_tour: "अॅप टूर घ्या", tour_badge: "✨ क्विक टूर", btn_tour_skip: "वगळा", btn_tour_next: "पुढील →", btn_tour_start: "पहिली नोंद जोडा →", msg_tour_skipped: "तुम्ही कधीही टूर पुन्हा सुरू करू शकता.",
+        tour_step1_title: "तुमचा व्यवसाय एका नजरेत", tour_step1_text: "किती पैसे घ्यायचे, द्यायचे आणि कुठे लक्ष द्यायचे ते पहा.", tour_step2_title: "कोण पैसे देणे लागतो ते ओळखा", tour_step2_text: "प्रलंबित संकलन येथे पहा.", tour_step3_title: "तुम्ही किती देणे लागता ते पहा", tour_step3_text: "पुरवठादारांचे देणे एका ठिकाणी ठेवा.", tour_step4_title: "तुमची संपर्क पुस्तिका", tour_step4_text: "इतिहास पाहण्यासाठी कोणताही संपर्क उघडा.", tour_step5_title: "पहिले लेजर तयार करा", tour_step5_text: "पहिली नोंद करण्यासाठी येथे टॅप करा.", tour_step6_title: "फसवणूक अलर्ट तपासा", tour_step6_text: "इतरांनी रिपोर्ट केलेले संपर्क पहा.", tour_step7_title: "तुम्ही तयार आहात!", tour_step7_text: "सेटिंग्जमधून सर्व काही व्यवस्थापित करा.",
+        msg_entry_success: "नोंद यशस्वीरित्या जोडली", msg_pay_success: "पेमेंट यशस्वीरित्या जोडले", btn_great: "छान",
+        login_req_title: "लॉगिन आवश्यक", login_req_text: "कृपया या कृतीसाठी लॉगिन करा.", btn_later: "नंतर", btn_login_now: "आत्ता लॉगिन करा",
+        msg_pending_one: "१ नोंद पुष्टीकरणाच्या प्रतीक्षेत", msg_pending_multi: "नोंदी पुष्टीकरणाच्या प्रतीक्षेत",
+        head_success: "यशस्वी!", msg_action_success: "कृती यशस्वीरित्या पूर्ण झाली.",
+        entry_sub_sale: "विक्री नोंदवून पैसे घ्या", entry_sub_purch: "खरेदी नोंदवून देणी व्यवस्थापित करा", entry_sub_gen: "नोंद करून लेजर अपडेट करा",
+        entry_title_sale: "विक्रीची नोंद", entry_title_purch: "खरेदीची नोंद", entry_title_gen: "नवीन लेजर नोंद",
+        entry_cat_sale: "विक्री नोंद (येणे)", entry_cat_purch: "खरेदी नोंद (देणे)", entry_cat_gen: "लेजर व्यवहार",
+        lang_title: "भाषा निवडा",
+        lang_sub: "तुमची आवडती भाषा निवडा",
+        btn_confirm_lang: "निवडीची पुष्टी करा"
+      },
+      ta: {
+        btn_view_inv: "இன்வாய்ஸைப் பார்", btn_edit: "திருத்து",
+        guide_title: "உங்கள் லெட்ஜரைத் தொடங்குங்கள்", guide_text: "உங்கள் சேகரிப்பு புத்தகம் காலியாக உள்ளது. உங்கள் முதல் பரிவர்த்தனையை பதிவு செய்ய கீழே உள்ள செயலைத் தேர்ந்தெடுக்கவும்.", guide_btn_sale: "+ விற்பனை சேர்", guide_btn_purch: "- கொள்முதல் சேர்",
+        app_sub: "கடன் மற்றும் லெட்ஜர் மேலாண்மை", btn_setup: "அமைக்கவும்", nav_dash: "டாஷ்போர்டு", nav_collect: "வசூலிக்க வேண்டியவை", nav_pay: "செலுத்த வேண்டியவை", nav_cust: "தொடர்புகள்", nav_fraud: "மோசடி எச்சரிக்கைகள்",
+        stat_rcv: "மொத்த வசூல்", stat_pay: "மொத்த நிலுவை", stat_ovd: "காலாவதியான பதிவுகள்", stat_cust: "மொத்த தொடர்புகள்",
+        rem_head: "கட்டண நினைவூட்டல்கள்", rem_sub: "காலாவதியானவை & 7 நாட்களுக்குள் வருபவை", col_head: "வசூலிக்க வேண்டியவை", col_sub: "உங்களுக்கு பணம் செலுத்த வேண்டிய தொடர்புகள்",
+        pay_head: "செலுத்த வேண்டியவை", pay_sub: "நீங்கள் பணம் செலுத்த வேண்டிய விநியோகஸ்தர்கள்", btn_add_entry: "புதிய லெட்ஜர் பதிவு", btn_add_pay: "பணம் செலுத்துதல்", btn_ledger: "லெட்ஜர்",
+        type_sale: "விற்பனை (வசூலிக்க)", type_purch: "கொள்முதல் (செலுத்த)", txt_balance: "இருப்பு", txt_last: "கடைசி", txt_entries: "பதிவுகள்",
+        sale: "விற்பனை", purchase: "கொள்முதல்", payment: "பணம் செலுத்துதல்", btn_confirm: "உறுதி செய்", btn_del: "நீக்கு", txt_loading: "உங்கள் சேகரிப்பு புத்தகத்தைத் திறக்கிறது...",
+        head_preview_inv: "இன்வாய்ஸ் மாதிரிக்காட்சி", head_preview_receipt: "ரசீது மாதிரிக்காட்சி", btn_view_receipt: "ரசீதைப் பார்", btn_receipt: "ரசீது",
+        lbl_send_wa_receipt: "தொடர்புடன் பகிர ரசீதை உருவாக்கவும்",
+        setup_sub: "இந்த லேபிள் தனிப்பட்ட முறையில் சேமிக்கப்பட்டு யாருடனும் பகிரப்படாது.", lbl_name: "உங்கள் பெயர்", ph_name: "உதாரணம்: ரமேஷ் பாய்",
+        lbl_biz: "வணிகப் பெயர்", ph_biz: "உதாரணம்: சர்மா டிரேடர்ஸ்", lbl_gst: "ஜிஎஸ்டி எண் (விருப்பத்தேர்வு)", ph_gst: "உதாரணம்: 29ABCDE1234F1Z5",
+        lbl_area: "நகரம் / சந்தைப் பகுதி (விருப்பத்தேர்வு)", ph_area: "உதாரணம்: முக்கிய சந்தை, சென்னை", btn_skip: "ரத்து செய்", btn_save_prof: "சுயவிவரத்தைச் சேமி", btn_add_cust: "+ பதிவு சேர்",
+        btn_reset: "இந்தச் சாதனத்தில் என் தரவை மீட்டமைக்கவும்", lbl_cust_party: "தொடர்பு / கட்சிப் பெயர்", ph_search_cust: "தற்போதுள்ளதைத் தேடவும் அல்லது புதிதாகச் சேர்க்கவும்...", lbl_phone: "தொலைபேசி",
+        lbl_txn_type: "பரிவர்த்தனை வகை", lbl_gross_amt: "மொத்தத் தொகை (₹)", lbl_amount_received: "பெறப்பட்ட தொகை (₹)", lbl_amount_paid: "செலுத்தப்பட்ட தொகை (₹)", lbl_payment_mode: "பணம் செலுத்தும் முறை", lbl_discount: "தள்ளுபடி (₹)", lbl_inv_date: "இன்வாய்ஸ் தேதி",
+        lbl_due_date: "காலக்கெடு தேதி (விருப்பத்தேர்வு)", lbl_ref: "குறிப்பு / இன்வாய்స్ எண்", ph_ref: "உதாரணம்: பில் எண் 994", lbl_cust_conf: "தொடர்பு இந்தப் பரிவர்த்தனையை உறுதிப்படுத்தினார்",
+        hint_cust_conf: "அவர்களின் ஒப்புதலுக்காகக் காத்திருந்தால் தேர்வுநீக்கம் செய்யவும்.", lbl_send_wa_pdf: "தொடர்புடன் பகிர இன்வாய்ஸை உருவாக்கவும்", btn_cancel: "ரத்து செய்", btn_save_entry: "பதிவைச் சேமி", lbl_amt: "தொகை (₹)",
+        lbl_date: "தேதி", lbl_pay_ref: "கட்டண குறிப்பு / குறிப்பு", ph_pay_ref: "உதாரணம்: UPI / ரொக்கம்", lbl_pay_conf: "பணம் பெறப்பட்டு உறுதிப்படுத்தப்பட்டது",
+        hint_pay_conf: "நிதி வரும் வரை காத்திருந்தால் தேர்வுநீக்கம் செய்யவும்.", btn_save_pay: "கட்டணத்தைச் சேமி", head_manage: "தொடர்பை நிர்வகி",
+        lbl_priv_note: "தனிப்பட்ட குறிப்புகள் (உங்களுக்கு மட்டுமே தெரியும்)", ph_priv_note: "நீங்கள் பகிர விரும்பாத எதுவும்", div_trust: "நம்பகத்தன்மை மதிப்பீடு (தனிப்பட்டது)",
+        lbl_give_rate: "இந்தத் தொடர்புக்கு மதிப்பீடு வழங்கவும்", hint_give_rate: "விருப்பத்தேர்வு — தனிப்பட்டதாக இருக்கும்.",
+        lbl_mark_fraud: "மோசடியாகக் குறிக்கவும்", hint_mark_fraud: "மதிப்பீடு எதுவாக இருந்தாலும் சிவப்பு நிறத்தைக் காட்டும்.", lbl_rep_fraud: "இந்த மோசடியை அனாமதேயமாக மற்ற வணிகர்களுக்கு அறிவிக்கவும்",
+        hint_rep_fraud: "தொடர்பின் விவரங்கள் மட்டுமே பகிரப்படும் — உங்கள் பெயர் ஒருபோதும் காட்டப்படாது.", lbl_inc_phone: "தொலைபேசி எண்ணைச் சேர்க்கவும்",
+        lbl_what_happen: "என்ன நடந்தது? (உதாரணம்: டெலிவரி எடுத்தார், பதிலளிக்கவில்லை)", ph_what_happen: "உதாரணம்: டெலிவரி எடுத்தார், பதிலளிக்கவில்லை", btn_save: "சேமி",
+        head_fraud_rep: "மோசடி அறிக்கை", btn_close: "மூடு", btn_import: "இறக்குமதி", btn_remove: "நீக்கு", btn_dl_pdf: "PDF பதிவிறக்கம்", btn_send_pdf: "தொடர்புக்கு அனுப்பு",
+        btn_close_ledger: "லெட்ஜரை மூடு", head_bal_sum: "இருப்புச் சுருக்கம்", sub_bal_sum: "ஒவ்வொரு தொடர்பின் நிலுவைத் தொகையும் ஒரே பார்வையில்.",
+        login_head: "உங்கள் லெட்ஜரை அணுக பாதுகாப்பாக உள்நுழையவும்.", ph_mobile: "மொபைல் எண்ணை உள்ளிடவும்", btn_login: "பயன்பாட்டில் உள்நுழையவும்",
+        notice_priv: "🔒 உங்கள் தனிப்பட்ட தொடர்புப் புத்தகம். இந்தத் தரவு உங்கள் கணக்கின் கீழ் மட்டுமே சேமிக்கப்படும்.",
+        notice_pub: "⚠️ மற்ற வணிகர்களால் அனாமதேயமாக அறிவிக்கப்பட்ட மோசடி எச்சரிக்கைகள்.",
+        ph_search_my: "பெயர் அல்லது தொலைபேசியைத் தேடவும்...", ph_search_dir: "அறிவிக்கப்பட்ட பெயரைக் கண்டறியவும்...", txt_all_clear: "அனைத்தும் முடிந்தது", txt_no_rem: "நிலுவையில் நினைவூட்டல்கள் இல்லை.",
+        txt_nothing: "இங்கே எதுவும் இல்லை", txt_add_col: "வசூலிக்க வேண்டியதைப் பார்க்க டாஷ்போர்டிலிருந்து விற்பனையைச் சேர்க்கவும்.", txt_add_pay: "செலுத்த வேண்டியதைப் பார்க்க டாஷ்போர்டிலிருந்து கொள்முதலைச் சேர்க்கவும்.",
+        txt_no_cust: "இன்னும் தொடர்புகள் இல்லை", txt_tap_first: "உங்கள் தொடர்புப் பட்டியல் காலியாக உள்ளது.", txt_no_fraud: "மோசடி அறிக்கைகள் இல்லை",
+        txt_when_fraud: "ஒரு வணிகர் மோசடியைப் பற்றி அறிவிக்கும்போது, அது இங்கே தோன்றும்.", txt_tot_col: "மொத்த வசூல்", txt_tot_pay: "மொத்த நிலுவை",
+        txt_all_set: "அனைத்தும் தீர்க்கப்பட்டது", txt_no_bal_now: "தற்போது நிலுவைத் தொகைகள் இல்லை.", txt_no_txn: "பரிவர்த்தனைகள் இல்லை", txt_not_rec: "இந்தத் தொடர்புக்கு இன்னும் எதுவும் பதிவு செய்யப்படவில்லை.",
+        txt_no_notifications: "அறிவிப்புகள் இல்லை", txt_notification_hint: "உங்கள் செயல்பாடுகள் இங்கே தோன்றும்.", txt_no_pending: "தற்போது நிலுவையில் பதிவுகள் இல்லை.",
+        txt_closing: "இறுதி இருப்பு", txt_txns: "பரிவர்த்தனைகள்", txt_view: "பார் →", txt_whatsapp: "WhatsApp நினைவூட்டல்", txt_call: "அழைப்பு", txt_new_ent: "+ விற்பனை/கொள்முதல் சேர்", txt_mng: "நிர்வகி", txt_v_rep: "அறிக்கையைப் பார் / திருத்து",
+        lbl_fraud: "மோசடி", lbl_risk: "ஆபத்து", lbl_trusted: "நம்பகமானவர்", lbl_watch: "கவனிக்கவும்", lbl_unrated: "மதிப்பிடப்படவில்லை", tag_unc: "உறுதிப்படுத்தப்படாதது", tag_paid: "முழுமையாக செலுத்தப்பட்டது", tag_part: "பகுதியளவு செலுத்தப்பட்டது", tag_no_due: "காலக்கெடு இல்லை",
+        head_emp: "ஊழியர்களை நிர்வகி", sub_emp: "ஊழியர்களைச் சேர்த்து அவர்களின் லெட்ஜர் அணுகலைக் கட்டுப்படுத்தவும்.", div_add_emp: "புதிய ஊழியரைச் சேர்க்கவும்",
+        lbl_emp_name: "ஊழியர் பெயர்", ph_emp_name: "உதாரணம்: ராகுல் குமார்", lbl_emp_phone: "தொலைபேసి எண் (உள்நுழைவு ID)",
+        lbl_perm_add: "பதிவுகளைச் சேர்க்கலாம்", hint_perm_add: "புதிய பரிவர்த்தனைகளைப் பதிவு செய்ய ஊழியரை அனுமதிக்கவும்.",
+        lbl_perm_view: "முழு லெட்ஜரையும் பார்க்கலாம்", hint_perm_view: "முழு வரலாற்றையும் பார்க்க ஊழியரை அனுமதிக்கவும்.",
+        lbl_perm_del: "பதிவுகளை நீக்கலாம்", hint_perm_del: "பதிவுகளை நிரந்தரமாக நீக்க ஊழியரை அனுமதிக்கவும்.",
+        btn_save_emp: "ஊழியரைச் சேமி", txt_no_emp: "இன்னும் ஊழியர்கள் சேர்க்கப்படவில்லை.", btn_remove_emp: "ஊழியரை நீக்கு",
+        btn_profile: "என் சுயவிவரம்", btn_lang: "மொழி", btn_dark_mode: "டார்க் மோด", btn_mng_emp: "ஊழியர்களை நிர்வகி", btn_privacy: "தனியுரிமைக் கொள்கை",
+        btn_terms: "விதிமுறைகள் & நிபந்தனைகள்", lbl_legal: "சட்டம்", btn_logout: "வெளியேறு", head_settings: "அமைப்புகள்", settings_account: "கணக்கு",
+        settings_preferences: "விருப்பத்தேர்வுகள்", settings_business: "வணிகம்",
+settings_referral: "பரிந்துரை", btn_referral: "உங்கள் தொடர்புகளைப் பரிந்துரைக்கவும்", ref_title: "Collection Book பரிந்துரைக்கவும்", ref_sub: "லெட்ஜரை எளிதாக நிர்வகிக்க உங்கள் வணிகத் தொடர்புகளையும் நண்பர்களையும் அழைக்கவும்.", ref_link_lbl: "உங்கள் அழைப்பு இணைப்பு", btn_copy: "நகலெடு", btn_share_wa: "WhatsApp வழியாகப் பகிரவும்", btn_share_more: "மேலும் விருப்பங்கள்", ref_contacts_title: "தொடர்புகளை நேரடியாக அழைக்கவும்", btn_invite: "அழைக்கவும்", msg_link_copied: "அழைப்பு இணைப்பு நகலெடுக்கப்பட்டது!",
+settings_support_app: "செயலியை ஆதரிக்கவும்",
+btn_donate: "ஆதரவு & பங்களிப்பு",
+donate_title: "Collection Book-ஐ ஆதரிக்கவும்",
+donate_sub: "Collection Book 100% இலவசம் & விளம்பரமற்றது. உங்கள் பங்களிப்பு பயன்பாட்டை மேலும் மேம்படுத்த உதவுகிறது!",
+donate_upi_id_lbl: "யுபிஐ ஐடி",
+donate_phone_lbl: "கூகிள் பே / போன்பே / பேடிஎம் எண்",
+donate_select_amt: "பங்களிப்பு தொகையைத் தேர்ந்தெடுக்கவும்",
+btn_pay_upi: "ஏதேனும் யுபிஐ செயலி மூலம் பங்களிக்கவும்",
+donate_upi_apps_hint: "கூகிள் பே, போன்பே, பேடிஎம், பீம் மற்றும் அனைத்து யுபிஐ செயலிகளையும் ஆதரிக்கிறது.",
+msg_upi_copied: "யுபிஐ ஐடி நகலெடுக்கப்பட்டது!",
+msg_phone_copied: "எண் நகலெடுக்கப்பட்டது!",
+        settings_support_security: "ஆதரவு & பாதுகாப்பு", settings_session: "அமர்வு",
+        btn_security_lock: "பாதுகாப்பு & பயன்பாட்டு பூட்டு", btn_help_support: "உதவி & ஆதரவு",
+        help_title: "உதவி & ஆதரவு", help_subtitle: "உதவி தேவையா?",
+        help_email_label: "மின்னஞ்சல் ஆதரவு", help_email_hint: "ஆதரவுக் குழுவைத் தொடர்பு கொள்ளவும்.", emp_manage_contacts: 'தொடர்புகளை நிர்வகி',
+        feedback_title: "கருத்து & ஆதரவு", feedback_subtitle: "உங்கள் எண்ணங்களைச் சொல்லுங்கள்.",
+        feedback_bug: "பிழையை அறிவிக்கவும்", feedback_feature: "வசதியை பரிந்துரைக்கவும்", feedback_general: "கருத்து தெரிவிக்கவும்", feedback_rate: "மதிப்பீடு வழங்கவும்",
+        feedback_placeholder: "உங்கள் கருத்தை இங்கே எழுதவும்...", feedback_submit: "கருத்தை அனுப்பு", feedback_thanks: "நன்றி!", feedback_required: "கருத்தைத் தெரிவிக்கவும்.",
+        feedback_rate_title: "பயன்பாடு பிடித்துள்ளதா?", feedback_rate_subtitle: "உங்கள் மதிப்பீடு எங்களுக்கு உதவும்.", feedback_rate_now: "மதிப்பிடு", feedback_rate_later: "பிறகு",
+        emp_manage_contacts_hint: 'வணிகத் தொடர்புகளை நிர்வகிக்க ஊழியரை அனுமதிக்கவும்.',
+        notification_customer_new_entry: '₹{amount} க்கு புதிய {entryType} பதிவு சேர்க்கப்பட்டது',
+        notification_owner_employee_new_entry: '{customerName} க்காக ₹{amount} க்கு புதிய {entryType} பதிவு சேர்க்கப்பட்டது',
+        notification_customer_payment: '₹{amount} கட்டணம் பதிவு செய்யப்பட்டது',
+        notification_owner_employee_payment: '{customerName} க்காக ₹{amount} கட்டணம் பதிவு செய்யப்பட்டது',
+        notification_customer_entry_deleted: '₹{amount} பெறுமானமுள்ள {entryType} பதிவு நீக்கப்பட்டது',
+        notification_owner_employee_entry_deleted: '{customerName} க்காக ₹{amount} பெறுமானமுள்ள {entryType} பதிவு நீக்கப்பட்டது',
+        notification_customer_payment_deleted: '₹{amount} கட்டணம் நீக்கப்பட்டது',
+        notification_owner_employee_payment_deleted: '{customerName} க்காக ₹{amount} கட்டணம் நீக்கப்பட்டது',
+        notification_customer_contact_deleted: '{entryCount} பரிவர்த்தனைகளைக் கொண்ட உங்கள் லெட்ஜர் நீக்கப்பட்டது',
+        notification_owner_employee_contact_deleted: '{customerName} மற்றும் {entryCount} பரிவர்த்தனைகள் நீக்கப்பட்டன',
+        notification_entry_type_sale: 'விற்பனை', notification_entry_type_purchase: 'கொள்முதல்',
+        stat_net_flow: 'இந்த மாத நிகర ஓட்டம்', flow_collections_ahead: 'வசூல் விற்பனையை விட அதிகமாக உள்ளது', flow_sales_ahead: 'விற்பனை வசூலை விட அதிகமாக உள்ளது', flow_balanced: 'விற்பனையும் வசூலும் சமமாக உள்ளன',
+        txt_ledger_creator_only: 'லெட்ஜரை உருவாக்கியவர் மட்டுமே பதிவுகளைச் சேர்க்க முடியும்',
+        btn_add_details: "+ கூடுதல் விவரங்களைச் சேர் (விருப்பத்தேர்வு)", btn_hide_details: "- விவரங்களை மறை",
+        btn_take_tour: "பயன்பாட்டு வழிகாட்டி", tour_badge: "✨ விரைவு வழிகாட்டி", btn_tour_skip: "தவிர்", btn_tour_next: "அடுத்து →", btn_tour_start: "முதல் பதிவைச் சேர் →", msg_tour_skipped: "நீங்கள் எப்போது வேண்டுமானாலும் வழிகாட்டியை மீண்டும் தொடங்கலாம்.",
+        tour_step1_title: "உங்கள் வணிகம் ஒரே பார்வையில்", tour_step1_text: "எவ்வளவு வசூலிக்க வேண்டும், செலுத்த வேண்டும் என்று பாருங்கள்.", tour_step2_title: "யார் பணம் கொடுக்க வேண்டும் என்று தெரிந்து கொள்ளுங்கள்", tour_step2_text: "நிலுவையில் உள்ள வசூல்கள் இங்கே உள்ளன.", tour_step3_title: "நீங்கள் செலுத்த வேண்டியதைக் கண்காணியுங்கள்", tour_step3_text: "விநியோகஸ்தர் நிலுவைகளை ஓரிடத்தில் வைத்திருங்கள்.", tour_step4_title: "உங்கள் தொடர்புப் புத்தகம்", tour_step4_text: "வரலாற்றைப் பார்க்க எந்தவொரு தொடர்பையும் திறக்கவும்.", tour_step5_title: "முதல் லெட்ஜரை உருவாக்குங்கள்", tour_step5_text: "முதல் பதிவைச் செய்ய இங்கே தட்டவும்.", tour_step6_title: "மோசடி எச்சரிக்கைகளைச் சரிபார்க்கவும்", tour_step6_text: "வணிகங்களால் அறிவிக்கப்பட்ட தொடர்புகளைப் பாருங்கள்.", tour_step7_title: "நீங்கள் தயார்!", tour_step7_text: "சுயவிவரம், மொழியை இங்கிருந்து நிர்வகிக்கவும்.",
+        msg_entry_success: "பதிவு வெற்றிகரமாகச் சேர்க்கப்பட்டது", msg_pay_success: "கட்டணம் வெற்றிகரமாகச் சேர்க்கப்பட்டது", btn_great: "அருமை",
+        login_req_title: "உள்நுழைவு தேவை", login_req_text: "இந்தச் செயலைச் செய்ய உள்நுழையவும்.", btn_later: "பிறகு", btn_login_now: "இப்போதே உள்நுழை",
+        msg_pending_one: "1 பதிவு உறுதிப்படுத்தலுக்காகக் காத்திருக்கிறது", msg_pending_multi: "பதிவுகள் உறுதிப்படுத்தலுக்காகக் காத்திருக்கின்றன",
+        head_success: "வெற்றி!", msg_action_success: "செயல் வெற்றிகரமாக முடிந்தது.",
+        entry_sub_sale: "பணம் வசூலிக்க விற்பனையைப் பதிவு செய்யுங்கள்", entry_sub_purch: "கொள்முதலைப் பதிவு செய்யுங்கள்", entry_sub_gen: "லெட்ஜரைப் புதுப்பிக்க ஒரு பரிவர்த்தனையைப் பதிவு செய்யுங்கள்",
+        entry_title_sale: "விற்பனைப் பதிவு", entry_title_purch: "கொள்முதல் பதிவு", entry_title_gen: "புதிய லெட்ஜர் பதிவு",
+        entry_cat_sale: "விற்பனைப் பதிவு (வசூலிக்க)", entry_cat_purch: "கொள்முதல் பதிவு (செலுத்த)",
+        entry_cat_gen: "லெட்ஜர் பரிவர்த்தனை",
+        lang_title: "மொழியைத் தேர்ந்தெடுக்கவும்",
+        lang_sub: "உங்களுக்கு விருப்பமான மொழியைத் தேர்வு செய்யவும்",
+        btn_confirm_lang: "தேர்வை உறுதிப்படுத்தவும்"
+      },
+      te: {
+        btn_view_inv: "ఇన్‌వాయిస్‌ని చూడండి", btn_edit: "సవరించు",
+        guide_title: "మీ లెడ్జర్‌ని ప్రారంభించండి", guide_text: "మీ కలెక్షన్ బుక్ ఖాళీగా ఉంది. మీ మొదటి లావాదేవీని రికార్డ్ చేయడానికి క్రింద ఉన్న చర్యను ఎంచుకోండి.", guide_btn_sale: "+ అమ్మకం జోడించు", guide_btn_purch: "- కొనుగోలు జోడించు",
+        app_sub: "క్రెడిట్ & లెడ్జర్ మేనేజ్‌మెంట్", btn_setup: "అమర్చండి", nav_dash: "డాష్‌బోర్డ్", nav_collect: "వసూలు చేయవలసినవి", nav_pay: "చెల్లించవలసినవి", nav_cust: "పరిచయాలు", nav_fraud: "మోసాల హెచ్చరికలు",
+        stat_rcv: "మొత్తం వసూళ్లు", stat_pay: "మొత్తం బకాయిలు", stat_ovd: "గడువు ముగిసిన ఎంట్రీలు", stat_cust: "మొత్తం పరిచయాలు",
+        rem_head: "చెల్లింపు రిమైండర్లు", rem_sub: "గడువు ముగిసినవి & 7 రోజులలో రావలసినవి", col_head: "వసూలు చేయవలసినవి", col_sub: "మీకు డబ్బు చెల్లించవలసిన వారు",
+        pay_head: "చెల్లించవలసినవి", pay_sub: "మీరు డబ్బు చెల్లించవలసిన సరఫరాదారులు", btn_add_entry: "కొత్త లెడ్జర్ ఎంట్రీ", btn_add_pay: "చెల్లింపు జోడించు", btn_ledger: "లెడ్జర్",
+        type_sale: "అమ్మకం (వసూలు చేయడానికి)", type_purch: "కొనుగోలు (చెల్లించడానికి)", txt_balance: "బ్యాలెన్స్", txt_last: "చివరి", txt_entries: "ఎంట్రీలు",
+        sale: "అమ్మకం", purchase: "కొనుగోలు", payment: "చెల్లింపు", btn_confirm: "ధృవీకరించు", btn_del: "తొలగించు", txt_loading: "మీ లెడ్జర్‌ని తెరుస్తోంది...",
+        head_preview_inv: "ఇన్‌వాయిస్ ప్రివ్యూ", head_preview_receipt: "రశీదు ప్రివ్యూ", btn_view_receipt: "రశీదు చూడండి", btn_receipt: "రశీదు",
+        lbl_send_wa_receipt: "కాంటాక్ట్‌తో షేర్ చేయడానికి రశీదును రూపొందించండి",
+        setup_sub: "ఈ సమాచారం వ్యక్తిగతంగా సేవ్ చేయబడుతుంది మరియు ఎవరితోనూ భాగస్వామ్యం చేయబడదు.", lbl_name: "మీ పేరు", ph_name: "ఉదా: రమేష్ భాయ్",
+        lbl_biz: "వ్యాపారం పేరు", ph_biz: "ఉదా: శర్మ ట్రేడర్స్", lbl_gst: "GST నంబర్ (ఐచ్ఛికం)", ph_gst: "ఉదా: 29ABCDE1234F1Z5",
+        lbl_area: "సిటీ / మార్కెట్ ప్రాంతం (ఐచ్ఛికం)", ph_area: "ఉదా: మెయిన్ మార్కెట్, హైదరాబాద్", btn_skip: "రద్దు చేయి", btn_save_prof: "ప్రొఫైల్‌ను సేవ్ చేయి", btn_add_cust: "+ ఎంట్రీ జోడించు",
+        btn_reset: "ఈ పరికరంలో నా డేటాను రీసెట్ చేయి", lbl_cust_party: "పరిచయం / పార్టీ పేరు", ph_search_cust: "వెతకండి లేదా కొత్తది జోడించండి...", lbl_phone: "ఫోన్",
+        lbl_txn_type: "లావాదేవీ రకం", lbl_gross_amt: "మొత్తం విలువ (₹)", lbl_amount_received: "అందుకున్న మొత్తం (₹)", lbl_amount_paid: "చెల్లించిన మొత్తం (₹)", lbl_payment_mode: "చెల్లింపు మార్గం", lbl_discount: "డిస్కౌంట్ (₹)", lbl_inv_date: "ఇన్వాయిస్ తేదీ",
+        lbl_due_date: "గడువు తేదీ (ఐచ్ఛికం)", lbl_description: "వివరణ", lbl_ref: "రిఫరెన్స్ / ఇన్వాయిస్ నంబర్", ph_ref: "ఉదా: బిల్ నంబర్ 994", ph_item_desc: "వస్తువులు లేదా సేవల వివరాలు...", lbl_cust_conf: "కస్టమర్ ఈ లావాదేవీని ధృవీకరించారు",
+        hint_cust_conf: "వారి అనుమతి కోసం వేచి ఉంటే అన్‌చెక్ చేయండి.", lbl_send_wa_pdf: "కాంటాక్ట్‌తో షేర్ చేయడానికి ఇన్‌వాయిస్‌ను రూపొందించండి", btn_cancel: "రద్దు చేయి", btn_save_entry: "ఎంట్రీని సేవ్ చేయి", lbl_amt: "మొత్తం (₹)",
+        lbl_date: "తేదీ", lbl_pay_ref: "చెల్లింపు రిఫరెన్స్ / నోట్", ph_pay_ref: "ఉదా: UPI / నగదు", lbl_pay_conf: "చెల్లింపు అందింది & ధృవీకరించబడింది",
+        hint_pay_conf: "డబ్బు జమ అయ్యే వరకు వేచి ఉంటే అన్‌చెక్ చేయండి.", btn_save_pay: "చెల్లింపును సేవ్ చేయి", head_manage: "పరిచయాన్ని నిర్వహించు",
+        lbl_priv_note: "ప్రైవేట్ నోట్స్ (మీకు మాత్రమే కనిపిస్తాయి)", ph_priv_note: "మీరు భాగస్వామ్యం చేయకూడదనుకునే ఏవైనా విషయాలు", div_trust: "నమ్మకమైన రేటింగ్ (ప్రైవేట్)",
+        lbl_give_rate: "ఈ పరిచయానికి రేటింగ్ ఇవ్వండి", hint_give_rate: "ఐచ్ఛికం — ప్రైవేట్‌గా ఉంటుంది.",
+        lbl_mark_fraud: "మోసపూరితమైనదిగా గుర్తించండి", hint_mark_fraud: "రేటింగ్‌తో సంబంధం లేకుండా ఎరుపు రంగులో చూపిస్తుంది.", lbl_rep_fraud: "ఈ మోసాన్ని ఇతర వ్యాపారులకు తెలియజేయండి",
+        hint_rep_fraud: "పరిచయం వివరాలు మాత్రమే భాగస్వామ్యం చేయబడతాయి — మీ పేరు ఎప్పుడూ చూపబడదు.", lbl_inc_phone: "ఫోన్ నంబర్‌ను చేర్చండి",
+        lbl_what_happen: "ఏం జరిగింది? (ఉదా: డెలివరీ తీసుకున్నారు, స్పందించడం లేదు)", ph_what_happen: "ఉదా: డెలివరీ తీసుకున్నారు, స్పందించడం లేదు", btn_save: "సేవ్ చేయి",
+        head_fraud_rep: "మోసం నివేదిక", btn_close: "మూసివేయి", btn_import: "ఇంపోర్ట్", btn_remove: "తొలగించు", btn_dl_pdf: "PDF డౌన్‌లోడ్", btn_send_pdf: "పరిచయానికి పంపు",
+        btn_close_ledger: "లెడ్జర్‌ను మూసివేయి", head_bal_sum: "బ్యాలెన్స్ సారాంశం", sub_bal_sum: "ప్రతి పరిచయం యొక్క బకాయిలు ఒక్క చూపులో.",
+        login_head: "మీ లెడ్జర్‌ని యాక్సెస్ చేయడానికి సురక్షితంగా లాగిన్ అవ్వండి.", ph_mobile: "మొబైల్ నంబర్‌ను నమోదు చేయండి", btn_login: "యాప్‌లోకి లాగిన్ అవ్వండి",
+        notice_priv: "🔒 మీ ప్రైవేట్ కాంటాక్ట్ బుక్. ఈ డేటా మీ ఖాతాలో మాత్రమే ఉంటుంది.",
+        notice_pub: "⚠️ ఇతర వ్యాపారులు నివేదించిన మోసాల హెచ్చరికలు.",
+        ph_search_my: "పేరు లేదా ఫోన్ కోసం వెతకండి...", ph_search_dir: "నివేదించబడిన పేరును వెతకండి...", txt_all_clear: "అంతా క్లియర్", txt_no_rem: "పెండింగ్ రిమైండర్లు లేవు.",
+        txt_nothing: "ఇక్కడ ఏమీ లేదు", txt_add_col: "బకాయిలు చూడటానికి డాష్‌బోర్డ్ నుండి అమ్మకాన్ని జోడించండి.", txt_add_pay: "బకాయిలు చూడటానికి డాష్‌బోర్డ్ నుండి కొనుగోలును జోడించండి.",
+        txt_no_cust: "ఇంకా పరిచయాలు లేవు", txt_tap_first: "మీ పరిచయాల జాబితా ఖాళీగా ఉంది.", txt_no_fraud: "మోసాల నివేదికలు లేవు",
+        txt_when_fraud: "ఎవరైనా వ్యాపారి మోసాన్ని నివేదించినప్పుడు, అది ఇక్కడ కనిపిస్తుంది.", txt_tot_col: "మొత్తం వసూళ్లు", txt_tot_pay: "మొత్తం బకాయిలు",
+        txt_all_set: "అన్నీ సెటిల్ అయ్యాయి", txt_no_bal_now: "ప్రస్తుతం బకాయిలు లేవు.", txt_no_txn: "లావాదేవీలు లేవు", txt_not_rec: "ఈ పరిచయం కోసం ఇంకా ఏమీ రికార్డ్ చేయబడలేదు.",
+        txt_no_notifications: "నోటిఫికేషన్లు లేవు", txt_notification_hint: "మీ కార్యకలాపాలు ఇక్కడ కనిపిస్తాయి.", txt_no_pending: "ప్రస్తుతం పెండింగ్ ఎంట్రీలు లేవు.",
+        txt_closing: "చివరి బ్యాలెన్స్", txt_txns: "లావాదేవీలు", txt_view: "చూడండి →", txt_whatsapp: "WhatsApp రిమైండర్", txt_call: "కాల్", txt_new_ent: "+ అమ్మకం/కొనుగోలు జోడించు", txt_mng: "నిర్వహించు", txt_v_rep: "నివేదికను చూడండి / సవరించండి",
+        lbl_fraud: "మోసం", lbl_risk: "ప్రమాదం", lbl_trusted: "నమ్మకమైన వారు", lbl_watch: "గమనించండి", lbl_unrated: "రేటింగ్ ఇవ్వలేదు", tag_unc: "ధృవీకరించబడలేదు", tag_paid: "పూర్తిగా చెల్లించారు", tag_part: "పాక్షికంగా చెల్లించారు", tag_no_due: "గడువు తేదీ లేదు",
+        head_emp: "ఉద్యోగులను నిర్వహించండి", sub_emp: "ఉద్యోగులను జోడించండి మరియు వారి లెడ్జర్ యాక్సెస్‌ను నియంత్రించండి.", div_add_emp: "కొత్త ఉద్యోగిని జోడించండి",
+        lbl_emp_name: "ఉద్యోగి పేరు", ph_emp_name: "ఉదా: రాహుల్ కుమార్", lbl_emp_phone: "ఫోన్ నంబర్ (లాగిన్ ID)",
+        lbl_perm_add: "ఎంట్రీలు జోడించవచ్చు", hint_perm_add: "కొత్త లావాదేవీలను రికార్డ్ చేయడానికి ఉద్యోగిని అనుమతించండి.",
+        lbl_perm_view: "పూర్తి లెడ్జర్‌ను చూడవచ్చు", hint_perm_view: "పూర్తి చరిత్రను చూడటానికి ఉద్యోగిని అనుమతించండి.",
+        lbl_perm_del: "ఎంట్రీలను తొలగించవచ్చు", hint_perm_del: "రికార్డులను శాశ్వతంగా తొలగించడానికి ఉద్యోగిని అనుమతించండి.",
+        btn_save_emp: "ఉద్యోగిని సేవ్ చేయి", txt_no_emp: "ఇంకా ఉద్యోగులను జోడించలేదు.", btn_remove_emp: "ఉద్యోగిని తొలగించు",
+        btn_profile: "నా ప్రొఫైల్", btn_lang: "భాష", btn_dark_mode: "డార్క్ మోడ్", btn_mng_emp: "ఉద్యోగులను నిర్వహించండి", btn_privacy: "గోప్యతా విధానం",
+        btn_terms: "నిబంధనలు & షరతులు", lbl_legal: "చట్టపరమైన", btn_logout: "లాగ్ అవుట్", head_settings: "సెట్టింగ్‌లు", settings_account: "ఖాతా",
+        settings_preferences: "ప్రాధాన్యతలు", settings_business: "వ్యాపారం",
+settings_referral: "రెఫరల్", btn_referral: "మీ పరిచయాలను రెఫర్ చేయండి", ref_title: "Collection Book రెఫర్ చేయండి", ref_sub: "లెడ్జర్‌ను సులభంగా నిర్వహించడానికి మీ వ్యాపార పరిచయాలను & స్నేహితులను ఆహ్వానించండి.", ref_link_lbl: "మీ ఆహ్వాన లింక్", btn_copy: "కాపీ చేయి", btn_share_wa: "WhatsApp ద్వారా షేర్ చేయి", btn_share_more: "మరిన్ని ఎంపికలు", ref_contacts_title: "పరిచయాలను ఆహ్వానించండి", btn_invite: "ఆహ్వానించు", msg_link_copied: "ఆహ్వాన లింక్ కాపీ చేయబడింది!",
+settings_support_app: "యాప్‌కి మద్దతు ఇవ్వండి",
+btn_donate: "మద్దతు & విరాళం",
+donate_title: "Collection Bookకి మద్దతు ఇవ్వండి",
+donate_sub: "Collection Book 100% ఉచితం & ప్రకటనలు లేనిది. మీ చిన్న విరాళం యాప్‌ను మరింత మెరుగుపరచడానికి సహాయపడుతుంది!",
+donate_upi_id_lbl: "యూపీఐ ఐడీ",
+donate_phone_lbl: "గూగుల్ పే / ఫోన్‌పే / పేటీఎం నంబర్",
+donate_select_amt: "విరాళం మొత్తాన్ని ఎంచుకోండి",
+btn_pay_upi: "ఏదైనా యూపీఐ యాప్ ద్వారా విరాళం ఇవ్వండి",
+donate_upi_apps_hint: "గూగుల్ పే, ఫోన్‌పే, పేటీఎం, భీమ్ & అన్ని యూపీఐ యాప్‌లకు సపోర్ట్ చేస్తుంది.",
+msg_upi_copied: "యూపీఐ ఐడీ కాపీ చేయబడింది!",
+msg_phone_copied: "నంబర్ కాపీ చేయబడింది!",
+        settings_support_security: "మద్దతు & భద్రత", settings_session: "సెషన్",
+        btn_security_lock: "భద్రత & యాప్ లాక్", btn_help_support: "సహాయం & మద్దతు",
+        help_title: "సహాయం & మద్దతు", help_subtitle: "సహాయం కావాలా?",
+        help_email_label: "ఇమెయిల్ మద్దతు", help_email_hint: "మద్దతు బృందాన్ని సంప్రదించండి.", emp_manage_contacts: 'పరిచయాలను నిర్వహించు',
+        feedback_title: "అభిప్రాయం & మద్దతు", feedback_subtitle: "మీ అభిప్రాయాన్ని తెలియజేయండి.",
+        feedback_bug: "బగ్‌ను నివేదించండి", feedback_feature: "ఫీచర్‌ను సూచించండి", feedback_general: "అభిప్రాయాన్ని ఇవ్వండి", feedback_rate: "యాప్‌ను రేట్ చేయండి",
+        feedback_placeholder: "మీ అభిప్రాయాన్ని ఇక్కడ రాయండి...", feedback_submit: "అభిప్రాయాన్ని పంపు", feedback_thanks: "ధన్యవాదాలు!", feedback_required: "అభిప్రాయం అవసరం.",
+        feedback_rate_title: "యాప్ నచ్చిందా?", feedback_rate_subtitle: "మీ రేటింగ్ మాకు సహాయపడుతుంది.", feedback_rate_now: "రేట్ చేయండి", feedback_rate_later: "తర్వాత",
+        emp_manage_contacts_hint: 'వ్యాపార పరిచయాలను నిర్వహించడానికి ఉద్యోగిని అనుమతించండి.',
+        notification_customer_new_entry: '₹{amount} కోసం కొత్త {entryType} ఎంట్రీ జోడించబడింది',
+        notification_owner_employee_new_entry: '{customerName} కోసం ₹{amount} కి కొత్త {entryType} ఎంట్రీ జోడించబడింది',
+        notification_customer_payment: '₹{amount} చెల్లింపు రికార్డ్ చేయబడింది',
+        notification_owner_employee_payment: '{customerName} కోసం ₹{amount} చెల్లింపు రికార్డ్ చేయబడింది',
+        notification_customer_entry_deleted: '₹{amount} విలువైన {entryType} ఎంట్రీ తొలగించబడింది',
+        notification_owner_employee_entry_deleted: '{customerName} కోసం ₹{amount} విలువైన {entryType} ఎంట్రీ తొలగించబడింది',
+        notification_customer_payment_deleted: '₹{amount} చెల్లింపు తొలగించబడింది',
+        notification_owner_employee_payment_deleted: '{customerName} కోసం ₹{amount} చెల్లింపు తొలగించబడింది',
+        notification_customer_contact_deleted: '{entryCount} లావాదేవీలతో మీ లెడ్జర్ తొలగించబడింది',
+        notification_owner_employee_contact_deleted: '{customerName} మరియు {entryCount} లావాదేవీలు తొలగించబడ్డాయి',
+        notification_entry_type_sale: 'అమ్మకం', notification_entry_type_purchase: 'కొనుగోలు',
+        stat_net_flow: 'ఈ నెల నికర ప్రవాహం', flow_collections_ahead: 'వసూళ్లు అమ్మకాల కంటే ఎక్కువగా ఉన్నాయి', flow_sales_ahead: 'అమ్మకాలు వసూళ్ల కంటే ఎక్కువగా ఉన్నాయి', flow_balanced: 'అమ్మకాలు మరియు వసూళ్లు సమంగా ఉన్నాయి',
+        txt_ledger_creator_only: 'లెడ్జర్ సృష్టించిన వారు మాత్రమే ఎంట్రీలను జోడించగలరు',
+        btn_add_details: "+ అదనపు వివరాలను జోడించు (ఐచ్ఛికం)", btn_hide_details: "- వివరాలను దాచు",
+        btn_take_tour: "యాప్ టూర్ తీసుకోండి", tour_badge: "✨ క్విక్ టూర్", btn_tour_skip: "వదిలేయండి", btn_tour_next: "తర్వాత →", btn_tour_start: "మొదటి ఎంట్రీని జోడించు →", msg_tour_skipped: "మీరు ఎప్పుడైనా మళ్ళీ టూర్ ప్రారంభించవచ్చు.",
+        tour_step1_title: "మీ వ్యాపారం ఒక్క చూపులో", tour_step1_text: "మీరు ఎంత వసూలు చేయాలో, ఎంత చెల్లించాలో చూడండి.", tour_step2_title: "ఎవరు బాకీ ఉన్నారో తెలుసుకోండి", tour_step2_text: "పెండింగ్ వసూళ్లు ఇక్కడ ఉన్నాయి.", tour_step3_title: "మీరు ఎంత బాకీ ఉన్నారో చూడండి", tour_step3_text: "సరఫరాదారుల బకాయిలను ఒకే చోట ఉంచండి.", tour_step4_title: "మీ పరిచయాల పుస్తకం", tour_step4_text: "చరిత్రను చూడటానికి ఏదైనా పరిచయాన్ని తెరవండి.", tour_step5_title: "మొదటి లెడ్జర్‌ను సృష్టించండి", tour_step5_text: "మొదటి ఎంట్రీ చేయడానికి ఇక్కడ ట్యాప్ చేయండి.", tour_step6_title: "మోసాల హెచ్చరికలను తనిఖీ చేయండి", tour_step6_text: "ఇతర వ్యాపారులు నివేదించిన పరిచయాలను చూడండి.", tour_step7_title: "మీరు సిద్ధం!", tour_step7_text: "సెట్టింగ్‌ల నుండి అన్నింటినీ నిర్వహించండి.",
+        msg_entry_success: "ఎంట్రీ విజయవంతంగా జోడించబడింది", msg_pay_success: "చెల్లింపు విజయవంతంగా జోడించబడింది", btn_great: "అద్భుతం",
+        login_req_title: "లాగాగిన్ అవసరం", login_req_text: "ఈ చర్యను చేయడానికి లాగిన్ అవ్వండి.", btn_later: "తర్వాత", btn_login_now: "ఇప్పుడే లాగిన్ అవ్వండి",
+        msg_pending_one: "1 ఎంట్రీ ధృవీకరణ కోసం వేచి ఉంది", msg_pending_multi: "ఎంట్రీలు ధృవీకరణ కోసం వేచి ఉన్నాయి",
+        head_success: "విజయం!", msg_action_success: "చర్య విజయవంతంగా పూర్తయింది.",
+        entry_sub_sale: "డబ్బు వసూలు చేయడానికి అమ్మకాన్ని రికార్డ్ చేయండి", entry_sub_purch: "కొనుగోలును రికార్డ్ చేయండి", entry_sub_gen: "లెడ్జర్‌ను అప్‌డేట్ చేయడానికి లావాదేవీని రికార్డ్ చేయండి",
+        entry_title_sale: "అమ్మకం నమోదు", entry_title_purch: "కొనుగోలు నమోదు", entry_title_gen: "కొత్త లెడ్జర్ నమోదు",
+        entry_cat_sale: "అమ్మకం నమోదు (వసూలు చేయడానికి)", entry_cat_purch: "కొనుగోలు నమోదు (చెల్లించడానికి)",
+        entry_cat_gen: "లెడ్జర్ లావాదేవీ",
+        lang_title: "భాషను ఎంచుకోండి",
+        lang_sub: "మీకు నచ్చిన భాషను ఎంచుకోండి",
+        btn_confirm_lang: "ఎంపికను ధృవీకరించండి"
+      },
+      ta: {
+        btn_view_inv: "இன்வாய்ஸைப் பார்", btn_edit: "திருத்து",
+        guide_title: "உங்கள் லெட்ஜரைத் தொடங்குங்கள்", guide_text: "உங்கள் சேகரிப்பு புத்தகம் காலியாக உள்ளது. உங்கள் முதல் பரிவர்த்தனையை பதிவு செய்ய கீழே உள்ள செயலைத் தேர்ந்தெடுக்கவும்.", guide_btn_sale: "+ விற்பனை சேர்", guide_btn_purch: "- கொள்முதல் சேர்",
+        app_sub: "கடன் மற்றும் லெட்ஜர் மேலாண்மை", btn_setup: "அமைக்கவும்", nav_dash: "டாஷ்போர்டு", nav_collect: "வசூலிக்க வேண்டியவை", nav_pay: "செலுத்த வேண்டியவை", nav_cust: "தொடர்புகள்", nav_fraud: "மோசடி எச்சரிக்கைகள்",
+        stat_rcv: "மொத்த வசூல்", stat_pay: "மொத்த நிலுவை", stat_ovd: "காலாவதியான பதிவுகள்", stat_cust: "மொத்த தொடர்புகள்",
+        rem_head: "கட்டண நினைவூட்டல்கள்", rem_sub: "காலாவதியானவை & 7 நாட்களுக்குள் வருபவை", col_head: "வசூலிக்க வேண்டியவை", col_sub: "உங்களுக்கு பணம் செலுத்த வேண்டிய தொடர்புகள்",
+        pay_head: "செலுத்த வேண்டியவை", pay_sub: "நீங்கள் பணம் செலுத்த வேண்டிய விநியோகஸ்தர்கள்", btn_add_entry: "புதிய லெட்ஜர் பதிவு", btn_add_pay: "பணம் செலுத்துதல்", btn_ledger: "லெட்ஜர்",
+        type_sale: "விற்பனை (வசூலிக்க)", type_purch: "கொள்முதல் (செலுத்த)", txt_balance: "இருப்பு", txt_last: "கடைசி", txt_entries: "பதிவுகள்",
+        sale: "விற்பனை", purchase: "கொள்முதல்", payment: "பணம் செலுத்துதல்", btn_confirm: "உறுதி செய்", btn_del: "நீக்கு", txt_loading: "உங்கள் சேகரிப்பு புத்தகத்தைத் திறக்கிறது...",
+        head_preview_inv: "இன்வாய்ஸ் மாதிரிக்காட்சி", head_preview_receipt: "ரசீது மாதிரிக்காட்சி", btn_view_receipt: "ரசீதைப் பார்", btn_receipt: "ரசீது",
+        lbl_send_wa_receipt: "தொடர்புடன் பகிர ரசீதை உருவாக்கவும்",
+        setup_sub: "இந்த லேபிள் தனிப்பட்ட முறையில் சேமிக்கப்பட்டு யாருடனும் பகிரப்படாது.", lbl_name: "உங்கள் பெயர்", ph_name: "உதாரணம்: ரமேஷ் பாய்",
+        lbl_biz: "வணிகப் பெயர்", ph_biz: "உதாரணம்: சர்மா டிரேடர்ஸ்", lbl_gst: "ஜிஎஸ்டி எண் (விருப்பத்தேர்வு)", ph_gst: "உதாரணம்: 29ABCDE1234F1Z5",
+        lbl_area: "நகரம் / சந்தைப் பகுதி (விருப்பத்தேர்வு)", ph_area: "உதாரணம்: முக்கிய சந்தை, சென்னை", btn_skip: "ரத்து செய்", btn_save_prof: "சுயவிவரத்தைச் சேமி", btn_add_cust: "+ பதிவு சேர்",
+        btn_reset: "இந்தச் சாதனத்தில் என் தரவை மீட்டமைக்கவும்", lbl_cust_party: "தொடர்பு / கட்சிப் பெயர்", ph_search_cust: "தற்போதுள்ளதைத் தேடவும் அல்லது புதிதாகச் சேர்க்கவும்...", lbl_phone: "தொலைபேசி",
+        lbl_txn_type: "பரிவர்த்தனை வகை", lbl_gross_amt: "மொத்தத் தொகை (₹)", lbl_amount_received: "பெறப்பட்ட தொகை (₹)", lbl_amount_paid: "செலுத்தப்பட்ட தொகை (₹)", lbl_payment_mode: "பணம் செலுத்தும் முறை", lbl_discount: "தள்ளுபடி (₹)", lbl_inv_date: "இன்வாய்ஸ் தேதி",
+        lbl_due_date: "காலக்கெடு தேதி (விருப்பத்தேர்வு)", lbl_description: "விளக்கம்", lbl_ref: "குறிப்பு / இன்வாய்ஸ் எண்", ph_ref: "உதாரணம்: பில் எண் 994", ph_item_desc: "பொருட்கள் அல்லது சேவைகளின் விவரங்கள்...", lbl_cust_conf: "தொடர்பு இந்தப் பரிவர்த்தனையை உறுதிப்படுத்தினார்",
+        hint_cust_conf: "அவர்களின் ஒப்புதலுக்காகக் காத்திருந்தால் தேர்வுநீக்கம் செய்யவும்.", lbl_send_wa_pdf: "தொடர்புடன் பகிர இன்வாய்ஸை உருவாக்கவும்", btn_cancel: "ரத்து செய்", btn_save_entry: "பதிவைச் சேமி", lbl_amt: "தொகை (₹)",
+        lbl_date: "தேதி", lbl_pay_ref: "கட்டண குறிப்பு / குறிப்பு", ph_pay_ref: "உதாரணம்: UPI / ரொக்கம்", lbl_pay_conf: "பணம் பெறப்பட்டு உறுதிப்படுத்தப்பட்டது",
+        hint_pay_conf: "நிதி வரும் வரை காத்திருந்தால் தேர்வுநீக்கம் செய்யவும்.", btn_save_pay: "கட்டணத்தைச் சேமி", head_manage: "தொடர்பை நிர்வகி",
+        lbl_priv_note: "தனிப்பட்ட குறிப்புகள் (உங்களுக்கு மட்டுமே தெரியும்)", ph_priv_note: "நீங்கள் பகிர விரும்பாத எதுவும்", div_trust: "நம்பகத்தன்மை மதிப்பீடு (தனிப்பட்டது)",
+        lbl_give_rate: "இந்தத் தொடர்புக்கு மதிப்பீடு வழங்கவும்", hint_give_rate: "விருப்பத்தேர்வு — தனிப்பட்டதாக இருக்கும்.",
+        lbl_mark_fraud: "மோசடியாகக் குறிக்கவும்", hint_mark_fraud: "மதிப்பீடு எதுவாக இருந்தாலும் சிவப்பு நிறத்தைக் காட்டும்.", lbl_rep_fraud: "இந்த மோசடியை அனாமதேயமாக மற்ற வணிகர்களுக்கு அறிவிக்கவும்",
+        hint_rep_fraud: "தொடர்பின் விவரங்கள் மட்டுமே பகிரப்படும் — உங்கள் பெயர் ஒருபோதும் காட்டப்படாது.", lbl_inc_phone: "தொலைபேசி எண்ணைச் சேர்க்கவும்",
+        lbl_what_happen: "என்ன நடந்தது? (மற்ற வணிகர்களுக்குத் தெரியும்)", ph_what_happen: "உதாரணம்: டெலிவரி எடுத்தார், பதிலளிக்கவில்லை", btn_save: "சேமி",
+        head_fraud_rep: "மோசடி அறிக்கை", btn_close: "மூடு", btn_import: "இறக்குமதி", btn_remove: "நீக்கு", btn_dl_pdf: "PDF பதிவிறக்கம்", btn_send_pdf: "தொடர்புக்கு அனுப்பு",
+        btn_close_ledger: "லெட்ஜரை மூடு", head_bal_sum: "இருப்புச் சுருக்கம்", sub_bal_sum: "ஒவ்வொரு தொடர்பின் நிலுவைத் தொகையும் ஒரே பார்வையில்.",
+        login_head: "உங்கள் லெட்ஜரை அணுக பாதுகாப்பாக உள்நுழையவும்.", ph_mobile: "மொபைல் எண்ணை உள்ளிடவும்", btn_login: "பயன்பாட்டில் உள்நுழையவும்",
+        notice_priv: "🔒 உங்கள் தனிப்பட்ட தொடர்புப் புத்தகம். இந்தத் தரவு உங்கள் கணக்கின் கீழ் மட்டுமே சேமிக்கப்படும்.",
+        notice_pub: "⚠️ மற்ற வணிகர்களால் அனாமதேயமாக அறிவிக்கப்பட்ட மோசடி எச்சரிக்கைகள்.",
+        ph_search_my: "பெயர் அல்லது தொலைபேசியைத் தேடவும்...", ph_search_dir: "அறிவிக்கப்பட்ட பெயரைக் கண்டறியவும்...", txt_all_clear: "அனைத்தும் முடிந்தது", txt_no_rem: "நிலுவையில் நினைவூட்டல்கள் இல்லை.",
+        txt_nothing: "இங்கே எதுவும் இல்லை", txt_add_col: "வசூலிக்க வேண்டியதைப் பார்க்க டாஷ்போர்டிலிருந்து விற்பனையைச் சேர்க்கவும்.", txt_add_pay: "செலுத்த வேண்டியதைப் பார்க்க டாஷ்போர்டிலிருந்து கொள்முதலைச் சேர்க்கவும்.",
+        txt_no_cust: "இன்னும் தொடர்புகள் இல்லை", txt_tap_first: "உங்கள் தொடர்புப் பட்டியல் காலியாக உள்ளது.", txt_no_fraud: "மோசடி அறிக்கைகள் இல்லை",
+        txt_when_fraud: "ஒரு வணிகர் மோசடியைப் பற்றி அறிவிக்கும்போது, அது இங்கே தோன்றும்.", txt_tot_col: "மொத்த வசூல்", txt_tot_pay: "மொத்த நிலுவை",
+        txt_all_set: "அனைத்தும் தீர்க்கப்பட்டது", txt_no_bal_now: "தற்போது நிலுவைத் தொகைகள் இல்லை.", txt_no_txn: "பரிவர்த்தனைகள் இல்லை", txt_not_rec: "இந்தத் தொடர்புக்கு இன்னும் எதுவும் பதிவு செய்யப்படவில்லை.",
+        txt_no_notifications: "அறிவிப்புகள் இல்லை", txt_notification_hint: "உங்கள் செயல்பாடுகள் இங்கே தோன்றும்.", txt_no_pending: "தற்போது நிலுவையில் பதிவுகள் இல்லை.",
+        txt_closing: "இறுதி இருப்பு", txt_txns: "பரிவர்த்தனைகள்", txt_view: "பார் →", txt_whatsapp: "WhatsApp நினைவூட்டல்", txt_call: "அழைப்பு", txt_new_ent: "+ விற்பனை/கொள்முதல் சேர்", txt_mng: "நிர்வகி", txt_v_rep: "அறிக்கையைப் பார் / திருத்து",
+        lbl_fraud: "மோசடி", lbl_risk: "ஆபத்து", lbl_trusted: "நம்பகமானவர்", lbl_watch: "கவனிக்கவும்", lbl_unrated: "மதிப்பிடப்படவில்லை", tag_unc: "உறுதிப்படுத்தப்படாதது", tag_paid: "முழுமையாக செலுத்தப்பட்டது", tag_part: "பகுதியளவு செலுத்தப்பட்டது", tag_no_due: "காலக்கெடு இல்லை",
+        head_emp: "ஊழியர்களை நிர்வகி", sub_emp: "ஊழியர்களைச் சேர்த்து அவர்களின் லெட்ஜர் அணுகலைக் கட்டுப்படுத்தவும்.", div_add_emp: "புதிய ஊழியரைச் சேர்க்கவும்",
+        lbl_emp_name: "ஊழியர் பெயர்", ph_emp_name: "உதாரணம்: ராகுல் குமார்", lbl_emp_phone: "தொலைபேசி எண் (உள்நுழைவு ID)",
+        lbl_perm_add: "பதிவுகளைச் சேர்க்கலாம்", hint_perm_add: "புதிய பரிவர்த்தனைகளைப் பதிவு செய்ய ஊழியரை அனுமதிக்கவும்.",
+        lbl_perm_view: "முழு லெட்ஜரையும் பார்க்கலாம்", hint_perm_view: "முழு வரலாற்றையும் பார்க்க ஊழியரை அனுமதிக்கவும்.",
+        lbl_perm_del: "பதிவுகளை நீக்கலாம்", hint_perm_del: "பதிவுகளை நிரந்தரமாக நீக்க ஊழியரை அனுமதிக்கவும்.",
+        btn_save_emp: "ஊழியரைச் சேமி", txt_no_emp: "இன்னும் ஊழியர்கள் சேர்க்கப்படவில்லை.", btn_remove_emp: "ஊழியரை நீக்கு",
+        btn_profile: "என் சுயவிவரம்", btn_lang: "மொழி", btn_dark_mode: "டார்க் மோட்", btn_mng_emp: "ஊழியர்களை நிர்வகி", btn_privacy: "தனியுரிமைக் கொள்கை",
+        btn_terms: "விதிமுறைகள் & நிபந்தனைகள்", lbl_legal: "சட்டம்", btn_logout: "வெளியேறு", head_settings: "அமைப்புகள்", settings_account: "கணக்கு",
+        settings_preferences: "விருப்பத்தேர்வுகள்", settings_business: "வணிகம்",
+settings_referral: "பரிந்துரை", btn_referral: "உங்கள் தொடர்புகளைப் பரிந்துரைக்கவும்", ref_title: "Collection Book பரிந்துரைக்கவும்", ref_sub: "லெட்ஜரை எளிதாக நிர்வகிக்க உங்கள் வணிகத் தொடர்புகளையும் நண்பர்களையும் அழைக்கவும்.", ref_link_lbl: "உங்கள் அழைப்பு இணைப்பு", btn_copy: "நகலெடு", btn_share_wa: "WhatsApp வழியாகப் பகிரவும்", btn_share_more: "மேலும் விருப்பங்கள்", ref_contacts_title: "தொடர்புகளை நேரடியாக அழைக்கவும்", btn_invite: "அழைக்கவும்", msg_link_copied: "அழைப்பு இணைப்பு நகலெடுக்கப்பட்டது!",
+settings_support_app: "செயலியை ஆதரிக்கவும்",
+btn_donate: "ஆதரவு & பங்களிப்பு",
+donate_title: "Collection Book-ஐ ஆதரிக்கவும்",
+donate_sub: "Collection Book 100% இலவசம் & விளம்பரமற்றது. உங்கள் பங்களிப்பு பயன்பாட்டை மேலும் மேம்படுத்த உதவுகிறது!",
+donate_upi_id_lbl: "யுபிஐ ஐடி",
+donate_phone_lbl: "கூகிள் பே / போன்பே / பேடிஎம் எண்",
+donate_select_amt: "பங்களிப்பு தொகையைத் தேர்ந்தெடுக்கவும்",
+btn_pay_upi: "ஏதேனும் யுபிஐ செயலி மூலம் பங்களிக்கவும்",
+donate_upi_apps_hint: "கூகிள் பே, போன்பே, பேடிஎம், பீம் மற்றும் அனைத்து யுபிஐ செயலிகளையும் ஆதரிக்கிறது.",
+msg_upi_copied: "யுபிஐ ஐடி நகலெடுக்கப்பட்டது!",
+msg_phone_copied: "எண் நகலெடுக்கப்பட்டது!",
+        settings_support_security: "ஆதரவு & பாதுகாப்பு", settings_session: "அமர்வு",
+        btn_security_lock: "பாதுகாப்பு & பயன்பாட்டு பூட்டு", btn_help_support: "உதவி & ஆதரவு",
+        help_title: "உதவி & ஆதரவு", help_subtitle: "உதவி தேவையா?",
+        help_email_label: "மின்னஞ்சல் ஆதரவு", help_email_hint: "ஆதரவுக் குழுவைத் தொடர்பு கொள்ளவும்.", emp_manage_contacts: 'தொடர்புகளை நிர்வகி',
+        feedback_title: "கருத்து & ஆதரவு", feedback_subtitle: "உங்கள் எண்ணங்களைச் சொல்லுங்கள்.",
+        feedback_bug: "பிழையை அறிவிக்கவும்", feedback_feature: "வசதியை பரிந்துரைக்கவும்", feedback_general: "கருத்து தெரிவிக்கவும்", feedback_rate: "மதிப்பீடு வழங்கவும்",
+        feedback_placeholder: "உங்கள் கருத்தை இங்கே எழுதவும்...", feedback_submit: "கருத்தை அனுப்பு", feedback_thanks: "நன்றி!", feedback_required: "கருத்தைத் தெரிவிக்கவும்.",
+        feedback_rate_title: "பயன்பாடு பிடித்துள்ளதா?", feedback_rate_subtitle: "உங்கள் மதிப்பீடு எங்களுக்கு உதவும்.", feedback_rate_now: "மதிப்பிடு", feedback_rate_later: "பிறகு",
+        emp_manage_contacts_hint: 'வணிகத் தொடர்புகளை நிர்வகிக்க ஊழியரை அனுமதிக்கவும்.',
+        notification_customer_new_entry: '₹{amount} க்கு புதிய {entryType} பதிவு சேர்க்கப்பட்டது',
+        notification_owner_employee_new_entry: '{customerName} க்காக ₹{amount} க்கு புதிய {entryType} பதிவு சேர்க்கப்பட்டது',
+        notification_customer_payment: '₹{amount} கட்டணம் பதிவு செய்யப்பட்டது',
+        notification_owner_employee_payment: '{customerName} க்காக ₹{amount} கட்டணம் பதிவு செய்யப்பட்டது',
+        notification_customer_entry_deleted: '₹{amount} பெறுமானமுள்ள {entryType} பதிவு நீக்கப்பட்டது',
+        notification_owner_employee_entry_deleted: '{customerName} க்காக ₹{amount} பெறுமானமுள்ள {entryType} பதிவு நீக்கப்பட்டது',
+        notification_customer_payment_deleted: '₹{amount} கட்டணம் நீக்கப்பட்டது',
+        notification_owner_employee_payment_deleted: '{customerName} க்காக ₹{amount} கட்டணம் நீக்கப்பட்டது',
+        notification_customer_contact_deleted: '{entryCount} பரிவர்த்தனைகளைக் கொண்ட உங்கள் லெட்ஜர் நீக்கப்பட்டது',
+        notification_owner_employee_contact_deleted: '{customerName} மற்றும் {entryCount} பரிவர்த்தனைகள் நீக்கப்பட்டன',
+        notification_entry_type_sale: 'விற்பனை', notification_entry_type_purchase: 'கொள்முதல்',
+        stat_net_flow: 'இந்த மாத நிகர ஓட்டம்', flow_collections_ahead: 'வசூல் விற்பனையை விட அதிகமாக உள்ளது', flow_sales_ahead: 'விற்பனை வசூலை விட அதிகமாக உள்ளது', flow_balanced: 'விற்பனையும் வசூலும் சமமாக உள்ளன',
+        txt_ledger_creator_only: 'லெட்ஜரை உருவாக்கியவர் மட்டுமே பதிவுகளைச் சேர்க்க முடியும்',
+        btn_add_details: "+ கூடுதல் விவரங்களைச் சேர் (விருப்பத்தேர்வு)", btn_hide_details: "- விவரங்களை மறை",
+        btn_take_tour: "பயன்பாட்டு வழிகாட்டி", tour_badge: "✨ விரைவு வழிகாட்டி", btn_tour_skip: "தவிர்", btn_tour_next: "அடுத்து →", btn_tour_start: "முதல் பதிவைச் சேர் →", msg_tour_skipped: "நீங்கள் எப்போது வேண்டுமானாலும் வழிகாட்டியை மீண்டும் தொடங்கலாம்.",
+        tour_step1_title: "உங்கள் வணிகம் ஒரே பார்வையில்", tour_step1_text: "எவ்வளவு வசூலிக்க வேண்டும், செலுத்த வேண்டும் என்று பாருங்கள்.", tour_step2_title: "யார் பணம் கொடுக்க வேண்டும் என்று தெரிந்து கொள்ளுங்கள்", tour_step2_text: "நிலுவையில் உள்ள வசூல்கள் இங்கே உள்ளன.", tour_step3_title: "நீங்கள் செலுத்த வேண்டியதைக் கண்காணியுங்கள்", tour_step3_text: "விநியோகஸ்தர் நிலுவைகளை ஓரிடத்தில் வைத்திருங்கள்.", tour_step4_title: "உங்கள் தொடர்புப் புத்தகம்", tour_step4_text: "வரலாற்றைப் பார்க்க எந்தவொரு தொடர்பையும் திறக்கவும்.", tour_step5_title: "முதல் லெட்ஜரை உருவாக்குங்கள்", tour_step5_text: "முதல் பதிவைச் செய்ய இங்கே தட்டவும்.", tour_step6_title: "மோசடி எச்சரிக்கைகளைச் சரிபார்க்கவும்", tour_step6_text: "வணிகங்களால் அறிவிக்கப்பட்ட தொடர்புகளைப் பாருங்கள்.", tour_step7_title: "நீங்கள் தயார்!", tour_step7_text: "சுயவிவரம், மொழியை இங்கிருந்து நிர்வகிக்கவும்.",
+        msg_entry_success: "பதிவு வெற்றிகரமாகச் சேர்க்கப்பட்டது", msg_pay_success: "கட்டணம் வெற்றிகரமாகச் சேர்க்கப்பட்டது", btn_great: "அருமை",
+        login_req_title: "உள்நுழைவு தேவை", login_req_text: "இந்தச் செயலைச் செய்ய உள்நுழையவும்.", btn_later: "பிறகு", btn_login_now: "இப்போதே உள்நுழை",
+        msg_pending_one: "1 பதிவு உறுதிப்படுத்தலுக்காகக் காத்திருக்கிறது", msg_pending_multi: "பதிவுகள் உறுதிப்படுத்தலுக்காகக் காத்திருக்கின்றன",
+        head_success: "வெற்றி!", msg_action_success: "செயல் வெற்றிகரமாக முடிந்தது.",
+        entry_sub_sale: "பணம் வசூலிக்க விற்பனையைப் பதிவு செய்யுங்கள்", entry_sub_purch: "கொள்முதலைப் பதிவு செய்யுங்கள்", entry_sub_gen: "லெட்ஜரைப் புதுப்பிக்க ஒரு பரிவர்த்தனையைப் பதிவு செய்யுங்கள்",
+        entry_title_sale: "விற்பனைப் பதிவு", entry_title_purch: "கொள்முதல் பதிவு", entry_title_gen: "புதிய லெட்ஜர் பதிவு",
+        entry_cat_sale: "விற்பனைப் பதிவு (வசூலிக்க)", entry_cat_purch: "கொள்முதல் பதிவு (செலுத்த)",
+        entry_cat_gen: "லெட்ஜர் பரிவர்த்தனை",
+        lang_title: "மொழியைத் தேர்ந்தெடுக்கவும்",
+        lang_sub: "உங்களுக்கு விருப்பமான மொழியைத் தேர்வு செய்யவும்",
+        btn_confirm_lang: "தேர்வை உறுதிப்படுத்தவும்"
+      },
+      te: {
+        btn_view_inv: "ఇన్‌వాయిస్‌ని చూడండి", btn_edit: "సవరించు",
+        guide_title: "మీ లెడ్జర్‌ని ప్రారంభించండి", guide_text: "మీ కలెక్షన్ బుక్ ఖాళీగా ఉంది. మీ మొదటి లావాదేవీని రికార్డ్ చేయడానికి క్రింద ఉన్న చర్యను ఎంచుకోండి.", guide_btn_sale: "+ అమ్మకం జోడించు", guide_btn_purch: "- కొనుగోలు జోడించు",
+        app_sub: "క్రెడిట్ & లెడ్జర్ మేనేజ్‌మెంట్", btn_setup: "అమర్చండి", nav_dash: "డాష్‌బోర్డ్", nav_collect: "వసూలు చేయవలసినవి", nav_pay: "చెల్లించవలసినవి", nav_cust: "పరిచయాలు", nav_fraud: "మోసాల హెచ్చరికలు",
+        stat_rcv: "మొత్తం వసూళ్లు", stat_pay: "మొత్తం బకాయిలు", stat_ovd: "గడువు ముగిసిన ఎంట్రీలు", stat_cust: "మొత్తం పరిచయాలు",
+        rem_head: "చెల్లింపు రిమైండర్లు", rem_sub: "గడువు ముగిసినవి & 7 రోజులలో రావలసినవి", col_head: "వసూలు చేయవలసినవి", col_sub: "మీకు డబ్బు చెల్లించవలసిన వారు",
+        pay_head: "చెల్లించవలసినవి", pay_sub: "మీరు డబ్బు చెల్లించవలసిన సరఫరాదారులు", btn_add_entry: "కొత్త లెడ్జర్ ఎంట్రీ", btn_add_pay: "చెల్లింపు జోడించు", btn_ledger: "లెడ్జర్",
+        type_sale: "అమ్మకం (వసూలు చేయడానికి)", type_purch: "కొనుగోలు (చెల్లించడానికి)", txt_balance: "బ్యాలెన్స్", txt_last: "చివరి", txt_entries: "ఎంట్రీలు",
+        sale: "అమ్మకం", purchase: "కొనుగోలు", payment: "చెల్లింపు", btn_confirm: "ధృవీకరించు", btn_del: "తొలగించు", txt_loading: "మీ లెడ్జర్‌ని తెరుస్తోంది...",
+        head_preview_inv: "ఇన్‌వాయిస్ ప్రివ్యూ", head_preview_receipt: "రశీదు ప్రివ్యూ", btn_view_receipt: "రశీదు చూడండి", btn_receipt: "రశీదు",
+        lbl_send_wa_receipt: "కాంటాక్ట్‌తో షేర్ చేయడానికి రశీదును రూపొందించండి",
+        setup_sub: "ఈ సమాచారం వ్యక్తిగతంగా సేవ్ చేయబడుతుంది మరియు ఎవరితోనూ భాగస్వామ్యం చేయబడదు.", lbl_name: "మీ పేరు", ph_name: "ఉదా: రమేష్ భాయ్",
+        lbl_biz: "వ్యాపారం పేరు", ph_biz: "ఉదా: శర్మ ట్రేడర్స్", lbl_gst: "GST నంబర్ (ఐచ్ఛికం)", ph_gst: "ఉదా: 29ABCDE1234F1Z5",
+        lbl_area: "సిటీ / మార్కెట్ ప్రాంతం (ఐచ్ఛికం)", ph_area: "ఉదా: మెయిన్ మార్కెట్, హైదరాబాద్", btn_skip: "రద్దు చేయి", btn_save_prof: "ప్రొఫైల్‌ను సేవ్ చేయి", btn_add_cust: "+ ఎంట్రీ జోడించు",
+        btn_reset: "ఈ పరికరంలో నా డేటాను రీసెట్ చేయి", lbl_cust_party: "పరిచయం / పార్టీ పేరు", ph_search_cust: "వెతకండి లేదా కొత్తది జోడించండి...", lbl_phone: "ఫోన్",
+        lbl_txn_type: "లావాదేవీ రకం", lbl_gross_amt: "మొత్తం విలువ (₹)", lbl_amount_received: "అందుకున్న మొత్తం (₹)", lbl_amount_paid: "చెల్లించిన మొత్తం (₹)", lbl_payment_mode: "చెల్లింపు మార్గం", lbl_discount: "డిస్కౌంట్ (₹)", lbl_inv_date: "ఇన్వాయిస్ తేదీ",
+        lbl_due_date: "గడువు తేదీ (ఐచ్ఛికం)", lbl_description: "వివరణ", lbl_ref: "రిఫరెన్స్ / ఇన్వాయిస్ నంబర్", ph_ref: "ఉదా: బిల్ నంబర్ 994", ph_item_desc: "వస్తువులు లేదా సేవల వివరాలు...", lbl_cust_conf: "కస్టమర్ ఈ లావాదేవీని ధృవీకరించారు",
+        hint_cust_conf: "వారి అనుమతి కోసం వేచి ఉంటే అన్‌చెక్ చేయండి.", lbl_send_wa_pdf: "కాంటాక్ట్‌తో షేర్ చేయడానికి ఇన్‌వాయిస్‌ను రూపొందించండి", btn_cancel: "రద్దు చేయి", btn_save_entry: "ఎంట్రీని సేవ్ చేయి", lbl_amt: "మొత్తం (₹)",
+        lbl_date: "తేదీ", lbl_pay_ref: "చెల్లింపు రిఫరెన్స్ / నోట్", ph_pay_ref: "ఉదా: UPI / నగదు", lbl_pay_conf: "చెల్లింపు అందింది & ధృవీకరించబడింది",
+        hint_pay_conf: "డబ్బు జమ అయ్యే వరకు వేచి ఉంటే అన్‌చెక్ చేయండి.", btn_save_pay: "చెల్లింపును సేవ్ చేయి", head_manage: "పరిచయాన్ని నిర్వహించు",
+        lbl_priv_note: "ప్రైవేట్ నోట్స్ (మీకు మాత్రమే కనిపిస్తాయి)", ph_priv_note: "మీరు భాగస్వామ్యం చేయకూడదనుకునే ఏవైనా విషయాలు", div_trust: "నమ్మకమైన రేటింగ్ (ప్రైవేట్)",
+        lbl_give_rate: "ఈ పరిచయానికి రేటింగ్ ఇవ్వండి", hint_give_rate: "ఐచ్ఛికం — ప్రైవేట్‌గా ఉంటుంది.",
+        lbl_mark_fraud: "మోసపూరితమైనదిగా గుర్తించండి", hint_mark_fraud: "రేటింగ్‌తో సంబంధం లేకుండా ఎరుపు రంగులో చూపిస్తుంది.", lbl_rep_fraud: "ఈ మోసాన్ని ఇతర వ్యాపారులకు తెలియజేయండి",
+        hint_rep_fraud: "పరిచయం వివరాలు మాత్రమే భాగస్వామ్యం చేయబడతాయి — మీ పేరు ఎప్పుడూ చూపబడదు.", lbl_inc_phone: "ఫోన్ నంబర్‌ను చేర్చండి",
+        lbl_what_happen: "ఏం జరిగింది? (ఇతర వ్యాపారులకు కనిపిస్తుంది)", ph_what_happen: "ఉదా: డెలివరీ తీసుకున్నారు, స్పందించడం లేదు", btn_save: "సేవ్ చేయి",
+        head_fraud_rep: "మోసం నివేదిక", btn_close: "మూసివేయి", btn_import: "ఇంపోర్ట్", btn_remove: "తొలగించు", btn_dl_pdf: "PDF డౌన్‌లోడ్", btn_send_pdf: "పరిచయానికి పంపు",
+        btn_close_ledger: "లెడ్జర్‌ను మూసివేయి", head_bal_sum: "బ్యాలెన్స్ సారాంశం", sub_bal_sum: "ప్రతి పరిచయం యొక్క బకాయిలు ఒక్క చూపులో.",
+        login_head: "మీ లెడ్జర్‌ని యాక్సెస్ చేయడానికి సురక్షితంగా లాగిన్ అవ్వండి.", ph_mobile: "మొబైల్ నంబర్‌ను నమోదు చేయండి", btn_login: "యాప్‌లోకి లాగిన్ అవ్వండి",
+        notice_priv: "🔒 మీ ప్రైవేట్ కాంటాక్ట్ బుక్. ఈ డేటా మీ ఖాతాలో మాత్రమే ఉంటుంది.",
+        notice_pub: "⚠️ ఇతర వ్యాపారులు నివేదించిన మోసాల హెచ్చరికలు.",
+        ph_search_my: "పేరు లేదా ఫోన్ కోసం వెతకండి...", ph_search_dir: "నివేదించబడిన పేరును వెతకండి...", txt_all_clear: "అంతా క్లియర్", txt_no_rem: "పెండింగ్ రిమైండర్లు లేవు.",
+        txt_nothing: "ఇక్కడ ఏమీ లేదు", txt_add_col: "బకాయిలు చూడటానికి డాష్‌బోర్డ్ నుండి అమ్మకాన్ని జోడించండి.", txt_add_pay: "బకాయిలు చూడటానికి డాష్‌బోర్డ్ నుండి కొనుగోలును జోడించండి.",
+        txt_no_cust: "ఇంకా పరిచయాలు లేవు", txt_tap_first: "మీ పరిచయాల జాబితా ఖాళీగా ఉంది.", txt_no_fraud: "మోసాల నివేదికలు లేవు",
+        txt_when_fraud: "ఎవరైనా వ్యాపారి మోసాన్ని నివేదించినప్పుడు, అది ఇక్కడ కనిపిస్తుంది.", txt_tot_col: "మొత్తం వసూళ్లు", txt_tot_pay: "మొత్తం బకాయిలు",
+        txt_all_set: "అన్నీ సెటిల్ అయ్యాయి", txt_no_bal_now: "ప్రస్తుతం బకాయిలు లేవు.", txt_no_txn: "లావాదేవీలు లేవు", txt_not_rec: "ఈ పరిచయం కోసం ఇంకా ఏమీ రికార్డ్ చేయబడలేదు.",
+        txt_no_notifications: "నోటిఫికేషన్లు లేవు", txt_notification_hint: "మీ కార్యకలాపాలు ఇక్కడ కనిపిస్తాయి.", txt_no_pending: "ప్రస్తుతం పెండింగ్ ఎంట్రీలు లేవు.",
+        txt_closing: "చివరి బ్యాలెన్స్", txt_txns: "లావాదేవీలు", txt_view: "చూడండి →", txt_whatsapp: "WhatsApp రిమైండర్", txt_call: "కాల్", txt_new_ent: "+ అమ్మకం/కొనుగోలు జోడించు", txt_mng: "నిర్వహించు", txt_v_rep: "నివేదికను చూడండి / సవరించండి",
+        lbl_fraud: "మోసం", lbl_risk: "ప్రమాదం", lbl_trusted: "నమ్మకమైన వారు", lbl_watch: "గమనించండి", lbl_unrated: "రేటింగ్ ఇవ్వలేదు", tag_unc: "ధృవీకరించబడలేదు", tag_paid: "పూర్తిగా చెల్లించారు", tag_part: "పాక్షికంగా చెల్లించారు", tag_no_due: "గడువు తేదీ లేదు",
+        head_emp: "ఉద్యోగులను నిర్వహించండి", sub_emp: "ఉద్యోగులను జోడించండి మరియు వారి లెడ్జర్ యాక్సెస్‌ను నియంత్రించండి.", div_add_emp: "కొత్త ఉద్యోగిని జోడించండి",
+        lbl_emp_name: "ఉద్యోగి పేరు", ph_emp_name: "ఉదా: రాహుల్ కుమార్", lbl_emp_phone: "ఫోన్ నంబర్ (లాగిన్ ID)",
+        lbl_perm_add: "ఎంట్రీలు జోడించవచ్చు", hint_perm_add: "కొత్త లావాదేవీలను రికార్డ్ చేయడానికి ఉద్యోగిని అనుమతించండి.",
+        lbl_perm_view: "పూర్తి లెడ్జర్‌ను చూడవచ్చు", hint_perm_view: "పూర్తి చరిత్రను చూడటానికి ఉద్యోగిని అనుమతించండి.",
+        lbl_perm_del: "ఎంట्रीలను తొలగించవచ్చు", hint_perm_del: "రికార్డులను శాశ్వతంగా తొలగించడానికి ఉద్యోగిని అనుమతించండి.",
+        btn_save_emp: "ఉద్యోగిని సేవ్ చేయి", txt_no_emp: "ఇంకా ఉద్యోగులను జోడించలేదు.", btn_remove_emp: "ఉద్యోగిని తొలగించు",
+        btn_profile: "నా ప్రొఫైల్", btn_lang: "భాష", btn_dark_mode: "డార్క్ మోడ్", btn_mng_emp: "ఉద్యోగులను నిర్వహించండి", btn_privacy: "గోప్యతా విధానం",
+        btn_terms: "నిబంధనలు & షరతులు", lbl_legal: "చట్టపరమైన", btn_logout: "లాగ్ అవుట్", head_settings: "సెట్టింగ్‌లు", settings_account: "ఖాతా",
+        settings_preferences: "ప్రాధాన్యతలు", settings_business: "వ్యాపారం",
+settings_referral: "రెఫరల్", btn_referral: "మీ పరిచయాలను రెఫర్ చేయండి", ref_title: "Collection Book రెఫర్ చేయండి", ref_sub: "లెడ్జర్‌ను సులభంగా నిర్వహించడానికి మీ వ్యాపార పరిచయాలను & స్నేహితులను ఆహ్వానించండి.", ref_link_lbl: "మీ ఆహ్వాన లింక్", btn_copy: "కాపీ చేయి", btn_share_wa: "WhatsApp ద్వారా షేర్ చేయి", btn_share_more: "మరిన్ని ఎంపికలు", ref_contacts_title: "పరిచయాలను ఆహ్వానించండి", btn_invite: "ఆహ్వానించు", msg_link_copied: "ఆహ్వాన లింక్ కాపీ చేయబడింది!",
+settings_support_app: "యాప్‌కి మద్దతు ఇవ్వండి",
+btn_donate: "మద్దతు & విరాళం",
+donate_title: "Collection Bookకి మద్దతు ఇవ్వండి",
+donate_sub: "Collection Book 100% ఉచితం & ప్రకటనలు లేనిది. మీ చిన్న విరాళం యాప్‌ను మరింత మెరుగుపరచడానికి సహాయపడుతుంది!",
+donate_upi_id_lbl: "యూపీఐ ఐడీ",
+donate_phone_lbl: "గూగుల్ పే / ఫోన్‌పే / పేటీఎం నంబర్",
+donate_select_amt: "విరాళం మొత్తాన్ని ఎంచుకోండి",
+btn_pay_upi: "ఏదైనా యూపీఐ యాప్ ద్వారా విరాళం ఇవ్వండి",
+donate_upi_apps_hint: "గూగుల్ పే, ఫోన్‌పే, పేటీఎం, భీమ్ & అన్ని యూపీఐ యాప్‌లకు సపోర్ట్ చేస్తుంది.",
+msg_upi_copied: "యూపీఐ ఐడీ కాపీ చేయబడింది!",
+msg_phone_copied: "నంబర్ కాపీ చేయబడింది!",
+        settings_support_security: "మద్దతు & భద్రత", settings_session: "సెషన్",
+        btn_security_lock: "భద్రత & యాప్ లాక్", btn_help_support: "సహాయం & మద్దతు",
+        help_title: "సహాయం & మద్దతు", help_subtitle: "సహాయం కావాలా?",
+        help_email_label: "ఇమెయిల్ మద్దతు", help_email_hint: "మద్దతు బృందాన్ని సంప్రదించండి.", emp_manage_contacts: 'పరిచయాలను నిర్వహించు',
+        feedback_title: "అభిప్రాయం & మద్దతు", feedback_subtitle: "మీ అభిప్రాయాన్ని తెలియజేయండి.",
+        feedback_bug: "బగ్‌ను నివేదించండి", feedback_feature: "ఫీచర్‌ను సూచించండి", feedback_general: "అభిప్రాయాన్ని ఇవ్వండి", feedback_rate: "యాప్‌ను రేట్ చేయండి",
+        feedback_placeholder: "మీ అభిప్రायాన్ని ఇక్కడ రాయండి...", feedback_submit: "అభిప్రాయాన్ని పంపు", feedback_thanks: "ధన్యవాదాలు!", feedback_required: "అభిప్రాయం అవసరం.",
+        feedback_rate_title: "యాప్ నచ్చిందా?", feedback_rate_subtitle: "మీ రేటింగ్ మాకు సహాయపడుతుంది.", feedback_rate_now: "రేట్ చేయండి", feedback_rate_later: "తర్వాత",
+        emp_manage_contacts_hint: 'వ్యాపార పరిచయాలను నిర్వహించడానికి ఉద్యోగిని అనుమతించండి.',
+        notification_customer_new_entry: '₹{amount} కోసం కొత్త {entryType} ఎంట్రీ జోడించబడింది',
+        notification_owner_employee_new_entry: '{customerName} కోసం ₹{amount} కి కొత్త {entryType} ఎంట్రీ జోడించబడింది',
+        notification_customer_payment: '₹{amount} చెల్లింపు రికార్డ్ చేయబడింది',
+        notification_owner_employee_payment: '{customerName} కోసం ₹{amount} చెల్లింపు రికార్డ్ చేయబడింది',
+        notification_customer_entry_deleted: '₹{amount} విలువైన {entryType} ఎంట్రీ తొలగించబడింది',
+        notification_owner_employee_entry_deleted: '{customerName} కోసం ₹{amount} విలువైన {entryType} ఎంట్రీ తొలగించబడింది',
+        notification_customer_payment_deleted: '₹{amount} చెల్లింపు తొలగించబడింది',
+        notification_owner_employee_payment_deleted: '{customerName} కోసం ₹{amount} చెల్లింపు తొలగించబడింది',
+        notification_customer_contact_deleted: '{entryCount} లావాదేవీలతో మీ లెడ్జర్ తొలగించబడింది',
+        notification_owner_employee_contact_deleted: '{customerName} మరియు {entryCount} లావాదేవీలు తొలగించబడ్డాయి',
+        notification_entry_type_sale: 'అమ్మకం', notification_entry_type_purchase: 'కొనుగోలు',
+        stat_net_flow: 'ఈ నెల నికర ప్రవాహం', flow_collections_ahead: 'వసూళ్లు అమ్మకాల కంటే ఎక్కువగా ఉన్నాయి', flow_sales_ahead: 'అమ్మకాలు వసూళ్ల కంటే ఎక్కువగా ఉన్నాయి', flow_balanced: 'అమ్మకాలు మరియు వసూళ్లు సమంగా ఉన్నాయి',
+        txt_ledger_creator_only: 'లెడ్జర్ సృష్టించిన వారు మాత్రమే ఎంట్రీలను జోడించగలరు',
+        btn_add_details: "+ అదనపు వివరాలను జోడించు (ఐచ్ఛికం)", btn_hide_details: "- వివరాలను దాచు",
+        btn_take_tour: "యాప్ టూర్ తీసుకోండి", tour_badge: "✨ క్విక్ టూర్", btn_tour_skip: "వదిలేయండి", btn_tour_next: "తర్వాత →", btn_tour_start: "మొదటి ఎంట్రీని జోడించు →", msg_tour_skipped: "మీరు ఎప్పుడైనా మళ్ళీ టూర్ ప్రారంభించవచ్చు.",
+        tour_step1_title: "మీ వ్యాపారం ఒక్క చూపులో", tour_step1_text: "మీరు ఎంత వసూలు చేయాలో, ఎంత చెల్లించాలో చూడండి.", tour_step2_title: "ఎవరు బాకీ ఉన్నారో తెలుసుకోండి", tour_step2_text: "పెండింగ్ వసూళ్లు ఇక్కడ ఉన్నాయి.", tour_step3_title: "మీరు ఎంత బాకీ ఉన్నారో చూడండి", tour_step3_text: "సరఫరాదారుల బకాయిలను ఒకే చోట ఉంచండి.", tour_step4_title: "మీ పరిచయాల పుస్తకం", tour_step4_text: "చరిత్రను చూడటానికి ఏదైనా పరిచయాన్ని తెరవండి.", tour_step5_title: "మొదటి లెడ్జర్‌ను సృష్టించండి", tour_step5_text: "మొదటి ఎంట్రీ చేయడానికి ఇక్కడ ట్యాప్ చేయండి.", tour_step6_title: "మోసాల హెచ్చరికలను తనిఖీ చేయండి", tour_step6_text: "ఇతర వ్యాపారులు నివేదించిన పరిచయాలను చూడండి.", tour_step7_title: "మీరు సిద్ధం!", tour_step7_text: "సెట్టింగ్‌ల నుండి అన్నింటినీ నిర్వహించండి.",
+        msg_entry_success: "ఎంట్రీ విజయవంతంగా జోడించబడింది", msg_pay_success: "చెల్లింపు విజయవంతంగా జోడించబడింది", btn_great: "అద్భుతం",
+        login_req_title: "లాగిన్ అవసరం", login_req_text: "ఈ చర్యను చేయడానికి లాగిన్ అవ్వండి.", btn_later: "తర్వాత", btn_login_now: "ఇప్పుడే లాగిన్ అవ్వండి",
+        msg_pending_one: "1 ఎంట్రీ ధృవీకరణ కోసం వేచి ఉంది", msg_pending_multi: "ఎంట్రీలు ధృవీకరణ కోసం వేచి ఉన్నాయి",
+        head_success: "విజయం!", msg_action_success: "చర్య విజయవంతంగా పూర్తయింది.",
+        entry_sub_sale: "డబ్బు వసూలు చేయడానికి అమ్మకాన్ని రికార్డ్ చేయండి", entry_sub_purch: "కొనుగోలును రికార్డ్ చేయండి", entry_sub_gen: "లెడ్జర్‌ను అప్‌డేట్ చేయడానికి లావాదేవీని రికార్డ్ చేయండి",
+        entry_title_sale: "అమ్మకం నమోదు", entry_title_purch: "కొనుగోలు నమోదు", entry_title_gen: "కొత్త లెడ్జర్ నమోదు",
+        entry_cat_sale: "అమ్మకం నమోదు (వసూలు చేయడానికి)", entry_cat_purch: "కొनुగోలు నమోదు (చెల్లించడానికి)",
+        entry_cat_gen: "లెడ్జర్ లావాదేవీ"
+      }
+    };
+
+    function t(key) { return (i18n[currentLang] && i18n[currentLang][key]) || i18n['en'][key] || key; }
+    function applyTranslations() {
+        $$('[data-i18n]').forEach(function(el){ el.textContent = t(el.dataset.i18n); });
+        $$('[data-i18n-ph]').forEach(function(el){ el.placeholder = t(el.dataset.i18nPh); });
+        var styleId = 'i18n-styles'; var styleEl = $('#'+styleId);
+        if(!styleEl) { styleEl = document.createElement('style'); styleEl.id = styleId; document.head.appendChild(styleEl); }
+        styleEl.textContent = ".stat-tile.clickable:after { content: '" + t('txt_view') + "'; }";
+    }
+
+function getEmptyIllustration(key) {
+    var paths = {
+        reminders: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/>',
+        debtors: '<circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 18V6"/>',
+        creditors: '<path d="M16 2H8a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/><path d="M12 18h.01"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/>',
+        contacts: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+        fraud: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="M12 8v4"/><path d="M12 16h.01"/>',
+        notifications: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
+        history: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>',
+        balance: '<path d="M16 16 21 7M5 7l5 9M2 7h6M16 7h6M12 2v20M7 22h10"/>'
+    };
+    return '<div class="empty-illustration"><svg viewBox="0 0 24 24">' + (paths[key] || '') + '</svg></div>';
+}
+
+function emptyStateHTML(key, titleKey, messageKey) {
+    return (
+        '<div class="empty">' +
+            getEmptyIllustration(key) +
+            '<div class="display">' + t(titleKey) + '</div>' +
+            '<div>' + t(messageKey) + '</div>' +
+        '</div>'
+    );
+}
+function setPaymentModeValue(prefix, value) {
+    var mode = value || 'Cash';
+    var hidden = $('#' + prefix + '-payment-mode');
+    var label = $('#' + prefix + 'PaymentModeLabel');
+    var dropdown = $('#' + prefix + 'PaymentModeDropdown');
+
+    if (hidden) hidden.value = mode;
+    if (label) label.textContent = mode;
+
+    if (dropdown) {
+        $$('.cb-dropdown-item', dropdown).forEach(function(item) {
+            item.classList.toggle('selected', item.dataset.value === mode);
+        });
+    }
+}
+
+function setDropdownValue(prefix, value) {
+    var val = value || '';
+    var hidden = $('#' + prefix);
+    var label = $('#' + prefix + 'Label');
+    var dropdown = $('#' + prefix + 'Dropdown');
+
+    if (hidden) hidden.value = val;
+    if (label) label.textContent = val;
+
+    if (dropdown) {
+        $$('.cb-dropdown-item', dropdown).forEach(function(item) {
+            item.classList.toggle('selected', item.dataset.value === val);
+        });
+    }
+}
+
+function updateItemCalcTotal() {
+    var qty = Number($('#item-qty') ? $('#item-qty').value : 0) || 0;
+    var rate = Number($('#item-rate') ? $('#item-rate').value : 0) || 0;
+    var total = qty * rate;
+    if ($('#item-calc-total')) $('#item-calc-total').value = '₹' + fmtMoney(total);
+}
+
+function renderEntryItemsList() {
+    var container = $('#en-items-list-container');
+    var listEl = $('#en-items-list');
+    var addBtn = $('#btn-open-add-item');
+    var grossInput = $('#en-amount');
+    if (!container || !listEl) return;
+
+    var totalSum = currentEntryItems.reduce(function(sum, item) {
+        return sum + Number(item.amount || 0);
+    }, 0);
+
+    if (currentEntryItems.length > 0) {
+        container.style.display = 'block';
+        if (addBtn) addBtn.textContent = t('btn_add_more_items');
+
+        if (grossInput) {
+            grossInput.value = totalSum;
+            grossInput.disabled = true;
+            grossInput.style.opacity = '0.85';
+            grossInput.style.background = 'var(--khadi)';
+        }
+
+        var html = '';
+        currentEntryItems.forEach(function(item, idx) {
+            var secText = (item.secUnit && item.convFactor) ? (' (' + (item.qty * item.convFactor) + ' ' + item.secUnit + ')') : '';
+            html +=
+                '<div style="display:flex; justify-content:space-between; align-items:center; padding:10px 12px; background:var(--khadi); border:1px solid var(--khadi-line); border-radius:10px;">' +
+                    '<div>' +
+                        '<div style="font-weight:700; font-size:0.9rem; color:var(--indigo);">' + escapeHTML(item.name) + '</div>' +
+                        '<div style="font-size:0.75rem; color:var(--muted);">' + item.qty + ' ' + escapeHTML(item.unit) + secText + ' x ₹' + fmtMoney(item.rate) + ' = <b style="color:var(--indigo);">₹' + fmtMoney(item.amount) + '</b></div>' +
+                    '</div>' +
+                    '<div style="display:flex; gap:6px;">' +
+                        '<button type="button" class="mini-btn ghost" data-action="edit-entry-item" data-index="' + idx + '" style="padding:4px 8px; font-size:0.75rem;">' + t('btn_edit') + '</button>' +
+                        '<button type="button" class="mini-btn danger ghost" data-action="delete-entry-item" data-index="' + idx + '" style="padding:4px 8px; font-size:0.75rem;">×</button>' +
+                    '</div>' +
+                '</div>';
+        });
+        listEl.innerHTML = html;
+    } else {
+        container.style.display = 'none';
+        listEl.innerHTML = '';
+        if (addBtn) addBtn.textContent = t('btn_add_items');
+
+        if (grossInput) {
+            grossInput.disabled = false;
+            grossInput.style.opacity = '1';
+            grossInput.style.background = '';
+        }
+    }
+}
+
+function openAddItemModal(index) {
+    editingItemIndex = (index !== null && index !== undefined) ? Number(index) : null;
+    if (editingItemIndex !== null && !isNaN(editingItemIndex) && currentEntryItems[editingItemIndex]) {
+        var item = currentEntryItems[editingItemIndex];
+        if ($('#item-name')) $('#item-name').value = item.name || '';
+        if ($('#item-qty')) $('#item-qty').value = item.qty || '';
+        setDropdownValue('item-unit', item.unit || 'Pcs');
+
+        var hasSec = Boolean(item.secUnit && item.convFactor);
+        if ($('#item-sec-unit-toggle')) $('#item-sec-unit-toggle').checked = hasSec;
+        if ($('#item-sec-unit-fields')) $('#item-sec-unit-fields').style.display = hasSec ? 'block' : 'none';
+        setDropdownValue('item-sec-unit', item.secUnit || 'Pcs');
+        if ($('#item-conv-factor')) $('#item-conv-factor').value = item.convFactor || '';
+
+        if ($('#item-rate')) $('#item-rate').value = item.rate || '';
+
+        if ($('#itemOverlayTitle')) $('#itemOverlayTitle').textContent = t('btn_edit');
+    } else {
+        if ($('#item-name')) $('#item-name').value = '';
+        if ($('#item-qty')) $('#item-qty').value = '';
+        setDropdownValue('item-unit', 'Pcs');
+
+        if ($('#item-sec-unit-toggle')) $('#item-sec-unit-toggle').checked = false;
+        if ($('#item-sec-unit-fields')) $('#item-sec-unit-fields').style.display = 'none';
+        setDropdownValue('item-sec-unit', 'Pcs');
+        if ($('#item-conv-factor')) $('#item-conv-factor').value = '';
+
+        if ($('#item-rate')) $('#item-rate').value = '';
+
+        if ($('#itemOverlayTitle')) $('#itemOverlayTitle').textContent = t('head_add_item');
+    }
+    updateItemCalcTotal();
+    openOverlay('#itemOverlay');
+}
+
+function updateEntryHeaderUI(type, isFixedHeader, customTitleKey) {
+    var title = $('#entryTitle');
+    var sub = $('#entrySubtitle');
+
+    var titleKey = 'btn_add_entry';
+    var subKey = 'entry_sub_gen';
+
+    if (!isFixedHeader && selectedCustomerId == null) {
+        if (type === 'debtor') {
+            titleKey = customTitleKey || 'entry_title_sale';
+            subKey = 'entry_sub_sale';
+        } else if (type === 'creditor') {
+            titleKey = customTitleKey || 'entry_title_purch';
+            subKey = 'entry_sub_purch';
+        }
+    }
+
+    if (title) {
+        title.textContent = t(titleKey);
+        title.dataset.i18n = titleKey;
+    }
+    if (sub) {
+        sub.textContent = t(subKey);
+        sub.dataset.i18n = subKey;
+    }
+
+    var recvLabel = $('#en-recv-label');
+    if (recvLabel) {
+        var key = (type === 'creditor') ? 'lbl_amount_paid' : 'lbl_amount_received';
+        recvLabel.dataset.i18n = key;
+        recvLabel.textContent = t(key);
+    }
+}
+
+function renderSelectedContactCard(c, allowDeselect) {
+    var note = $('#en-selected-note');
+    var searchContainer = $('#en-search-container');
+
+    if (!note || !c) return;
+
+    var selectedPhone = cleanPhone10(c.phone || '');
+
+    if (searchContainer) searchContainer.style.display = 'none';
+    note.style.display = 'block';
+
+    // Keep header fixed as "New Ledger Entry" for existing contacts
+    updateEntryHeaderUI(entryType, true);
+
+    var removeBtnHtml = allowDeselect
+        ? '<button type="button" id="en-remove-contact-btn" class="selected-contact-remove" aria-label="Remove contact">×</button>'
+        : '';
+
+    note.innerHTML =
+        '<div class="selected-contact-card" style="position: relative;">' +
+            stampHTML(c, false) +
+            '<div class="selected-contact-details">' +
+                '<div class="selected-contact-name">' +
+                    escapeHTML(c.name || 'Contact') +
+                '</div>' +
+                (selectedPhone
+                    ? '<div class="selected-contact-phone">' + escapeHTML(selectedPhone) + '</div>'
+                    : ''
+                ) +
+            '</div>' +
+            removeBtnHtml +
+        '</div>';
+
+    if (allowDeselect) {
+        safeBind('#en-remove-contact-btn', 'click', function() {
+            selectedCustomerId = null;
+            if ($('#en-selected-note')) $('#en-selected-note').style.display = 'none';
+            if ($('#en-search-container')) $('#en-search-container').style.display = 'block';
+            if ($('#en-customer-search')) {
+                $('#en-customer-search').disabled = false;
+                $('#en-customer-search').value = '';
+                $('#en-customer-search').focus();
+            }
+            updateEntryHeaderUI(entryType, false);
+        });
+    }
+}
+
+window.checkAuth = function() {
+    if (window.flutterSession) {
+        if ((window.flutterSession && (window.flutterSession && window.flutterSession.isAuthenticated))) {
+            return true;
+        }
+    }
+    openOverlay('#loginPromptOverlay');
+    return false;
+};
+
+    window.openNewEntryWith = function(type) {
+        if (!window.checkAuth()) return;
+
+        /*
+         * OWNER PROFILE CHECK
+         *
+         * If in owner mode and name is missing,
+         * force them to setup profile before
+         * creating their first entry.
+         */
+        if (
+            currentRoleMode === 'owner' &&
+            !isOwnerProfileSetup()
+        ) {
+            showToast('Please setup your business profile first');
+
+            configureProfilePopup(true);
+            openOverlay('#onboardOverlay', true);
+
+            return;
+        }
+
+        entryType = type || 'debtor';
+        selectedCustomerId = null;
+        editingEntryId = null;
+        editingPaymentId = null;
+        $('#en-save').textContent = t('btn_save_entry');
+
+        if ($('#en-search-container')) $('#en-search-container').style.display = 'block';
+        if ($('#en-customer-search')) {
+            $('#en-customer-search').value = '';
+            $('#en-customer-search').disabled = false;
+        }
+        if ($('#en-autocomplete')) $('#en-autocomplete').style.display = 'none';
+        if ($('#en-new-customer-fields')) $('#en-new-customer-fields').style.display = 'none';
+        if ($('#en-new-customer-fields-bottom')) $('#en-new-customer-fields-bottom').style.display = 'none';
+        if ($('#en-phone')) $('#en-phone').value = '';
+        if ($('#en-area')) $('#en-area').value = '';
+        if ($('#en-notes')) $('#en-notes').value = '';
+        if ($('#en-item-desc')) $('#en-item-desc').value = '';
+        if ($('#en-selected-note')) $('#en-selected-note').style.display = 'none';
+        if ($('#en-amount')) $('#en-amount').value = '';
+        if ($('#en-amount-received')) $('#en-amount-received').value = '';
+        setPaymentModeValue('en', 'Cash');
+        if ($('#en-payment-mode-group')) $('#en-payment-mode-group').style.display = 'none';
+        if ($('#en-send-wa-pdf')) $('#en-send-wa-pdf').checked = false;
+
+        if ($('#en-idate')) {
+            $('#en-idate').value = todayISO();
+            cbUpdateDateDisplay('en-idate');
+        }
+        if ($('#en-due')) {
+            $('#en-due').value = '';
+            cbUpdateDateDisplay('en-due');
+        }
+        if ($('#en-desc')) $('#en-desc').value = '';
+        if ($('#en-confirmed')) $('#en-confirmed').checked = true;
+
+        $$('.radio-opt').forEach(function(r) {
+            r.classList.toggle('selected', r.dataset.type === entryType);
+        });
+
+        // Always hide transaction type toggle when opened via openNewEntryWith
+        if ($('#en-type-field')) $('#en-type-field').style.display = 'none';
+
+        currentEntryItems = [];
+        renderEntryItemsList();
+
+        var titleKey = entryType === 'debtor' ? 'entry_title_sale' : 'entry_title_purch';
+        updateEntryHeaderUI(entryType, false, titleKey);
+
+        openOverlay('#entryOverlay');
+    };
+
+function isOwnerProfileSetup() {
+
+    return Boolean(
+        profile &&
+        (profile && profile.name) &&
+        String((profile && profile.name)).trim()
+    );
+}
+
+function getReferralMessage() {
+    var appUrl = "https://tinyurl.com/Collection-Book";
+    var bizName = (profile && (profile.shop || profile.name)) ? (profile.shop || profile.name) : "Collection Book";
+    return "Namaste! " + bizName + " invites you to manage your business credit ledger (Udhar Khata) digitally with Collection Book app.\n\nTrack collections, payables & send automatic reminders.\n\nDownload now: " + appUrl;
+}
+
+function renderReferralContacts() {
+    var query = $('#refContactSearch') ? $('#refContactSearch').value.toLowerCase().trim() : '';
+    var listEl = $('#refContactsList');
+    if (!listEl) return;
+
+    var combined = [];
+    var seenPhones = new Set();
+
+    if (Array.isArray(myCustomers)) {
+        myCustomers.forEach(function(c) {
+            if (c.isHidden) return;
+            var p = cleanPhone10(c.phone || '');
+            if (p && !seenPhones.has(p)) {
+                combined.push({ name: c.name, phone: c.phone });
+                seenPhones.add(p);
+            }
+        });
+    }
+
+    if (Array.isArray(window.deviceContacts)) {
+        window.deviceContacts.forEach(function(dc) {
+            var p = cleanPhone10(dc.phone || '');
+            if (p && !seenPhones.has(p) && dc.name) {
+                combined.push({ name: dc.name, phone: dc.phone });
+                seenPhones.add(p);
+            }
+        });
+    }
+
+    var filtered = combined.filter(function(item) {
+        if (!query) return true;
+        return (item.name || '').toLowerCase().indexOf(query) > -1 || (item.phone || '').indexOf(query) > -1;
+    });
+
+    if (filtered.length === 0) {
+        listEl.innerHTML = '<div style="font-size:.85rem; color:var(--muted); text-align:center; padding:16px;">No contacts found.</div>';
+        return;
+    }
+
+    var html = '';
+    filtered.slice(0, 40).forEach(function(c) {
+        html +=
+            '<div style="display:flex; align-items:center; justify-content:space-between; padding:10px 12px; background:var(--khadi); border:1px solid var(--khadi-line); border-radius:10px;">' +
+                '<div>' +
+                    '<div style="font-weight:700; font-size:0.9rem; color:var(--charcoal);">' + escapeHTML(c.name) + '</div>' +
+                    '<div style="font-size:0.75rem; color:var(--muted);">' + escapeHTML(cleanPhone10(c.phone)) + '</div>' +
+                '</div>' +
+                '<button type="button" class="mini-btn whatsapp" data-action="invite-contact" data-phone="' + escapeHTML(c.phone) + '">' +
+                    t('btn_invite') +
+                '</button>' +
+            '</div>';
+    });
+
+    listEl.innerHTML = html;
+}
+
+function openReferralOverlay() {
+    if ((!window.deviceContacts || window.deviceContacts.length === 0) && window.NativeBridge && typeof window.NativeBridge.postMessage === 'function') {
+        window.NativeBridge.postMessage('SYNC_CONTACTS');
+    }
+    renderReferralContacts();
+    openOverlay('#referralOverlay');
+}
+
+function openFeedbackForm(type) {
+
+    currentFeedbackType = type || 'general';
+
+    var icon = '💬';
+    var titleKey = 'feedback_general_title';
+    var subKey = 'feedback_general_hint';
+    var phKey = 'feedback_placeholder';
+
+    if (currentFeedbackType === 'bug') {
+        icon = '🐛';
+        titleKey = 'feedback_bug_title';
+        subKey = 'feedback_bug_hint';
+    } else if (currentFeedbackType === 'feature') {
+        icon = '💡';
+        titleKey = 'feedback_feature_title';
+        subKey = 'feedback_feature_hint';
+    }
+
+    var card = $('#feedbackCard');
+    if (card) {
+        card.dataset.type = currentFeedbackType;
+    }
+
+    if ($('#feedback-form-icon')) $('#feedback-form-icon').textContent = icon;
+    if ($('#feedback-form-title')) $('#feedback-form-title').textContent = t(titleKey);
+    if ($('#feedback-form-subtitle')) $('#feedback-form-subtitle').textContent = t(subKey);
+
+    if ($('#feedback-message')) {
+        $('#feedback-message').value = '';
+        $('#feedback-message').placeholder = t(phKey);
+    }
+
+    if ($('#feedback-type')) $('#feedback-type').value = currentFeedbackType;
+    if ($('#feedback-char-count')) $('#feedback-char-count').textContent = '0';
+
+    closeOverlay('#helpSupportOverlay');
+    openOverlay('#feedbackOverlay'); // No forceOpen here, just use standard bottom sheet
+
+    setTimeout(function () {
+        if ($('#feedback-message')) $('#feedback-message').focus();
+    }, 300);
+}
+
+
+var cbTutorialIndex = 0;
+
+function cbRenderTutorialStep() {
+
+    var step =
+        cbTutorialSteps[
+            cbTutorialIndex
+        ];
+
+    if (!step) {
+        cbCompleteTutorial();
+        return;
+    }
+
+    var target =
+        document.querySelector(
+            step.target
+        );
+
+    if (!target) {
+
+        cbTutorialIndex++;
+
+        cbRenderTutorialStep();
+
+        return;
+    }
+
+    /*
+     * Make sure highlighted navigation
+     * elements are visible horizontally.
+     */
+    target.scrollIntoView({
+        behavior:
+            'smooth',
+
+        block:
+            'center',
+
+        inline:
+            'center'
+    });
+
+    setTimeout(
+        function () {
+
+            cbPositionTutorial(
+                target,
+                step
+            );
+
+        },
+        280
+    );
+}
+
+function cbPositionTutorial(
+    target,
+    step
+) {
+
+    var rect =
+        target.getBoundingClientRect();
+
+    var padding = 7;
+
+    var spotlight =
+        document.getElementById(
+            'cbTutorialSpotlight'
+        );
+
+    spotlight.style.left =
+        (rect.left - padding) +
+        'px';
+
+    spotlight.style.top =
+        (rect.top - padding) +
+        'px';
+
+    spotlight.style.width =
+        (rect.width + padding * 2) +
+        'px';
+
+    spotlight.style.height =
+        (rect.height + padding * 2) +
+        'px';
+
+    document.getElementById(
+        'cbTutorialIcon'
+    ).textContent =
+        step.icon;
+
+  document.getElementById('cbTutorialTitle').textContent = t(step.titleKey);
+    document.getElementById('cbTutorialText').textContent = t(step.textKey);
+
+       var nextButton =
+    document.getElementById(
+        'cbTutorialNext'
+    );
+
+if (nextButton) {
+
+    var isLastStep =
+        cbTutorialIndex ===
+        cbTutorialSteps.length - 1;
+
+   nextButton.textContent = isLastStep ? t('btn_tour_start') : t('btn_tour_next');
+}
+
+    cbRenderTutorialProgress();
+
+    cbPositionTutorialCard(
+    rect
+);
+
+cbPositionTutorialArrow(
+    rect
+);
+}
+
+function cbPositionTutorialCard(
+    targetRect
+) {
+
+    var card =
+        document.getElementById(
+            'cbTutorialCard'
+        );
+
+    var margin = 18;
+
+    var cardHeight =
+        card.offsetHeight;
+
+    var screenHeight =
+        window.innerHeight;
+
+    var top;
+
+    if (
+        targetRect.bottom +
+        cardHeight +
+        margin <
+        screenHeight
+    ) {
+
+        top =
+            targetRect.bottom +
+            margin;
+
+    } else {
+
+        top =
+            targetRect.top -
+            cardHeight -
+            margin;
+    }
+
+    top =
+        Math.max(
+            16,
+            Math.min(
+                top,
+                screenHeight -
+                cardHeight -
+                16
+            )
+        );
+
+    card.style.top =
+        top + 'px';
+
+    card.style.left =
+        '50%';
+
+    card.style.transform =
+        'translateX(-50%)';
+}
+
+function cbPrepareTutorialStep(
+    stepIndex
+) {
+
+    switch (stepIndex) {
+
+        case 0:
+            var target = document.querySelector(step.target);
+            if (target) target.click();
+            break;
+
+        case 1:
+            var target = document.querySelector('#tabs button[data-tab="debtors"]');
+            if (target) target.click();
+            break;
+
+        case 2:
+            var target = document.querySelector('#tabs button[data-tab="creditors"]');
+            if (target) target.click();
+            break;
+
+        case 3:
+            var target = document.querySelector('#tabs button[data-tab="mycustomers"]');
+            if (target) target.click();
+            break;
+
+        case 5:
+            var target = document.querySelector('#tabs button[data-tab="directory"]');
+            if (target) target.click();
+            break;
+
+        case 6:
+            /*
+             * Return to Dashboard before
+             * explaining the menu.
+             */
+            var target = document.querySelector('#tabs button[data-tab="dashboard"]');
+            if (target) target.click();
+            break;
+    }
+}
+
+function cbNextTutorialStep() {
+
+    cbTutorialIndex++;
+
+    if (
+        cbTutorialIndex >=
+        cbTutorialSteps.length
+    ) {
+
+        cbCompleteTutorial();
+
+        return;
+    }
+
+    cbPrepareTutorialStep(
+        cbTutorialIndex
+    );
+
+    setTimeout(
+        cbRenderTutorialStep,
+        100
+    );
+}
+
+async function cbFinishAndCreateEntry() {
+
+    await cbCompleteTutorial();
+
+    var fab = document.getElementById('fabBtn');
+    if (fab) fab.click();
+}
+
+var TUTORIAL_KEY =
+    'cb-tutorial-v1';
+
+    async function cbHasCompletedTutorial() {
+
+    try {
+
+        var result =
+            await window.storage.get(
+                TUTORIAL_KEY,
+                false
+            );
+
+        return (
+            result &&
+            result.value ===
+                'completed'
+        );
+
+    } catch (e) {
+
+        console.error(
+            'Tutorial state read failed:',
+            e
+        );
+
+        return false;
+    }
+}
+
+async function cbCompleteTutorial() {
+
+    try {
+
+        await window.storage.set(
+            TUTORIAL_KEY,
+            'completed',
+            false
+        );
+
+    } catch (e) {
+
+        console.error(
+            'Tutorial state save failed:',
+            e
+        );
+    }
+
+    document.getElementById(
+        'cbTutorial'
+    ).style.display =
+        'none';
+
+    cbTutorialIndex = 0;
+}
+
+function cbStartTutorial() {
+
+    /*
+     * Owner tutorial only.
+     */
+    if (
+        currentRoleMode ===
+        'employee'
+    ) {
+        return;
+    }
+
+    /*
+     * Close any UI that may still be open.
+     *
+     * Tutorial should always begin from a
+     * clean app state.
+     */
+    document
+        .querySelectorAll(
+            '.overlay.open, ' +
+            '.custom-modal-overlay.open'
+        )
+        .forEach(
+            function (overlay) {
+                overlay.classList.remove(
+                    'open'
+                );
+            }
+        );
+
+    /*
+     * Always begin the tour from Dashboard.
+     */
+    var dashboardButton =
+        document.querySelector(
+            '#tabs ' +
+            'button[data-tab="dashboard"]'
+        );
+
+    if (dashboardButton) {
+        dashboardButton.click();
+    }
+
+    /*
+     * Put the page back at the top before
+     * measuring tutorial targets.
+     */
+    window.scrollTo({
+        top: 0,
+        behavior: 'instant'
+    });
+
+    cbTutorialIndex = 0;
+
+    /*
+     * Wait until drawer/screen transitions
+     * have finished.
+     */
+    setTimeout(
+        function () {
+
+            var tutorial =
+                document.getElementById(
+                    'cbTutorial'
+                );
+
+            if (!tutorial) {
+                return;
+            }
+
+            tutorial.style.display =
+                'block';
+
+            cbPrepareTutorialStep(0);
+
+            setTimeout(
+                cbRenderTutorialStep,
+                100
+            );
+
+        },
+        250
+    );
+}
+
+function cbRenderTutorialProgress() {
+
+    var container =
+        document.getElementById(
+            'cbTutorialProgress'
+        );
+
+    if (!container) {
+        return;
+    }
+
+    container.innerHTML = '';
+
+    for (
+        var i = 0;
+        i < cbTutorialSteps.length;
+        i++
+    ) {
+
+        var dot =
+            document.createElement(
+                'div'
+            );
+
+        dot.className =
+            'cb-tutorial-dot';
+
+        if (
+            i ===
+            cbTutorialIndex
+        ) {
+            dot.classList.add(
+                'active'
+            );
+        }
+
+        container.appendChild(
+            dot
+        );
+    }
+}
+
+function cbPositionTutorialArrow(
+    targetRect
+) {
+
+    var arrow =
+        document.getElementById(
+            'cbTutorialArrow'
+        );
+
+    if (!arrow) {
+        return;
+    }
+
+    var arrowSize = 18;
+
+    var targetCenterX =
+        targetRect.left +
+        targetRect.width / 2;
+
+    var left =
+        targetCenterX -
+        arrowSize / 2;
+
+    var targetInTopHalf =
+        targetRect.top <
+        window.innerHeight / 2;
+
+    var top;
+
+    if (targetInTopHalf) {
+
+        /*
+         * Put arrow BELOW target,
+         * pointing upward.
+         */
+        top =
+            targetRect.bottom +
+            12;
+
+        arrow.classList.add(
+            'arrow-up'
+        );
+
+        arrow.classList.remove(
+            'arrow-down'
+        );
+
+    } else {
+
+        /*
+         * Put arrow ABOVE target,
+         * pointing downward.
+         */
+        top =
+            targetRect.top -
+            30;
+
+        arrow.classList.add(
+            'arrow-down'
+        );
+
+        arrow.classList.remove(
+            'arrow-up'
+        );
+    }
+
+    left =
+        Math.max(
+            12,
+            Math.min(
+                left,
+                window.innerWidth -
+                arrowSize -
+                12
+            )
+        );
+
+    arrow.style.left =
+        left + 'px';
+
+    arrow.style.top =
+        top + 'px';
+
+    arrow.classList.add(
+        'show'
+    );
+}
+
+function configureProfilePopup(
+    firstTimeSetup
+) {
+
+    var extraFields =
+        $('#ob-extra-profile-fields');
+
+    var resetSection =
+        $('#reset-data-section');
+
+    var cancelButton =
+        $('#ob-skip');
+
+
+    /*
+     * Populate fields from current profile.
+     */
+    if ($('#ob-name')) {
+        $('#ob-name').value = profile?.name || '';
+    }
+    if ($('#ob-shop')) {
+        $('#ob-shop').value = profile?.shop || '';
+    }
+    if ($('#ob-area')) {
+        $('#ob-area').value = profile?.area || '';
+    }
+    if ($('#ob-gst')) {
+        $('#ob-gst').value = profile?.gst || '';
+    }
+
+    /*
+     * Reset logo preview to current profile logo.
+     */
+    if ($('#ob-logo-preview')) {
+        if (profile && (profile && profile.logoUrl)) {
+            // Show loader while the network image is fetching
+            window.setLogoLoading(true);
+
+            // Hide preview initially so we don't see the old/broken image while loading new one
+            $('#ob-logo-preview').style.display = 'none';
+            $('#ob-logo-preview').src = (profile && profile.logoUrl);
+
+            // Once loaded, the onload handler will call setLogoLoading(false)
+            // which we should ensure also shows the preview
+            if ($('#ob-logo-placeholder')) $('#ob-logo-placeholder').style.display = 'none';
+        } else {
+            window.setLogoLoading(false);
+            $('#ob-logo-preview').src = '';
+            $('#ob-logo-preview').style.display = 'none';
+            if ($('#ob-logo-placeholder')) $('#ob-logo-placeholder').style.display = 'flex';
+        }
+    }
+
+    /*
+     * Ensure loader is hidden when opening/resetting.
+     */
+    if (typeof window.setLogoLoading === 'function') {
+        window.setLogoLoading(false);
+    }
+
+
+    /*
+     * FIRST-TIME SETUP
+     *
+     * Only:
+     * - Your Name
+     * - Business Name
+     *
+     * Settings -> My Profile shows
+     * GST + Area as well.
+     */
+    if (extraFields) {
+        extraFields.style.display =
+            firstTimeSetup
+                ? 'none'
+                : 'block';
+    }
+
+
+    /*
+     * Reset Account is only available
+     * from normal profile settings.
+     */
+    if (resetSection) {
+        resetSection.style.display =
+            firstTimeSetup
+                ? 'none'
+                : 'block';
+    }
+
+
+    /*
+     * First-time owner setup cannot be
+     * cancelled because Name is mandatory.
+     */
+    if (cancelButton) {
+        cancelButton.style.display =
+            firstTimeSetup
+                ? 'none'
+                : '';
+    }
+
+
+    /*
+     * First-time owner profile must always
+     * be editable.
+     */
+    if (firstTimeSetup) {
+
+        if ($('#ob-name')) {
+            $('#ob-name').disabled =
+                false;
+        }
+
+        if ($('#ob-shop')) {
+            $('#ob-shop').disabled =
+                false;
+        }
+
+        if ($('#ob-area')) {
+            $('#ob-area').disabled =
+                false;
+        }
+
+        if ($('#ob-gst')) {
+            $('#ob-gst').disabled =
+                false;
+        }
+
+        if ($('#ob-logo-section')) {
+            $('#ob-logo-section').style.pointerEvents = 'auto';
+            $('#ob-logo-section').style.opacity = '1';
+            var editBadge = $('#ob-logo-section .logo-edit-badge');
+            if (editBadge) editBadge.style.display = 'flex';
+        }
+
+        return;
+    }
+
+
+    /*
+     * Normal Settings -> My Profile.
+     *
+     * Employee mode remains read-only.
+     * Owner mode is editable.
+     */
+    var employeeMode =
+        currentRoleMode === 'employee';
+
+    if ($('#ob-name')) {
+        $('#ob-name').disabled =
+            employeeMode;
+    }
+
+    if ($('#ob-shop')) {
+        $('#ob-shop').disabled =
+            employeeMode;
+    }
+
+    if ($('#ob-area')) {
+        $('#ob-area').disabled =
+            employeeMode;
+    }
+
+    if ($('#ob-gst')) {
+        $('#ob-gst').disabled =
+            employeeMode;
+    }
+
+    if ($('#ob-logo-section')) {
+        $('#ob-logo-section').style.pointerEvents = employeeMode ? 'none' : 'auto';
+        $('#ob-logo-section').style.opacity = employeeMode ? '0.6' : '1';
+
+        var editBadge = $('#ob-logo-section .logo-edit-badge');
+        if (editBadge) {
+            editBadge.style.display = employeeMode ? 'none' : 'flex';
+        }
+    }
+}
+    window.handleAndroidBack = function () {
+    // First close any currently open popup.
+    var openOverlayEl = document.querySelector(
+        '.overlay.open, .custom-modal-overlay.open'
+    );
+
+    if (openOverlayEl) {
+        openOverlayEl.classList.remove('open');
+        return 'handled';
+    }
+
+    // If not on Dashboard, navigate to Dashboard.
+    if (activeTab !== 'dashboard') {
+        activeTab = 'dashboard';
+
+        var dashboardButton =
+            document.querySelector('#tabs button[data-tab="dashboard"]');
+
+        if (dashboardButton) {
+            document.querySelectorAll('#tabs button').forEach(function (button) {
+                button.classList.toggle(
+                    'active',
+                    button === dashboardButton
+                );
+            });
+        }
+
+        document.querySelectorAll('.screen').forEach(function (screen) {
+            screen.classList.remove('active');
+        });
+
+        var dashboardScreen = document.getElementById('screen-dashboard');
+
+        if (dashboardScreen) {
+            dashboardScreen.classList.add('active');
+        }
+
+        return 'handled';
+    }
+
+    // Already on Dashboard with no popup open.
+    return 'exit';
+};
+
+    function updateLangPickerUI(lang) {
+        pendingLang = lang || currentLang;
+
+        var selectedItem = $$('.cb-dropdown-item').find(function(item) {
+            return item.dataset.lang === pendingLang;
+        });
+
+        if (selectedItem) {
+            if ($('#langDropdownLabel')) {
+                $('#langDropdownLabel').textContent = selectedItem.querySelector('span').firstChild.textContent.trim();
+            }
+            $$('.cb-dropdown-item').forEach(function(item) {
+                item.classList.toggle('selected', item === selectedItem);
+            });
+        }
+    }
+
+    window.setLanguage = async function(lang) {
+      currentLang = lang;
+      pendingLang = lang;
+      try {
+          await window.storage.set('cb-lang', lang, false);
+          await window.storage.set('cb-lang-prompted', 'true', false);
+      } catch(e){}
+
+      applyTranslations();
+      closeOverlay('#langOverlay');
+      finishBootstrap();
+    };
+
+    function closest(el, selector){
+      if(!el) return null; if(el.closest) return el.closest(selector);
+      while(el){ if(el.matches ? el.matches(selector) : false) return el; el = el.parentElement; } return null;
+    }
+    function safeBind(selector, event, cb){ var el = $(selector); if(el) el.addEventListener(event, cb); }
+    function uid(){ return 'id-' + Date.now().toString(36) + '-' + Math.random().toString(36).substring(2,9); }
+    function fmtMoney(n){ return Number(n||0).toLocaleString('en-IN', {minimumFractionDigits:0, maximumFractionDigits:2}); }
+    function todayISO() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+    // ========================================
+// COLLECTION BOOK CUSTOM DATE PICKER
+// ========================================
+
+var cbDateTargetId = null;
+var cbDateSelected = null;
+var cbDateViewDate = null;
+
+
+function cbParseISODate(value) {
+
+    if (!value) {
+        return null;
+    }
+
+    var parts = value.split('-');
+
+    if (parts.length !== 3) {
+        return null;
+    }
+
+    return new Date(
+        Number(parts[0]),
+        Number(parts[1]) - 1,
+        Number(parts[2])
+    );
+}
+
+
+function cbDateToISO(date) {
+
+    if (!date) {
+        return '';
+    }
+
+    return (
+        date.getFullYear() +
+        '-' +
+        String(
+            date.getMonth() + 1
+        ).padStart(2, '0') +
+        '-' +
+        String(
+            date.getDate()
+        ).padStart(2, '0')
+    );
+}
+
+
+function cbFormatDisplayDate(value) {
+
+    var date =
+        typeof value === 'string'
+            ? cbParseISODate(value)
+            : value;
+
+    if (!date) {
+        return '';
+    }
+
+    var months = [
+        'Jan', 'Feb', 'Mar',
+        'Apr', 'May', 'Jun',
+        'Jul', 'Aug', 'Sep',
+        'Oct', 'Nov', 'Dec'
+    ];
+
+    return (
+        String(date.getDate())
+            .padStart(2, '0') +
+        ' ' +
+        months[date.getMonth()] +
+        ' ' +
+        date.getFullYear()
+    );
+}
+
+
+function cbUpdateDateDisplay(
+    targetId
+) {
+
+    var hidden =
+        document.getElementById(
+            targetId
+        );
+
+    var display =
+        document.getElementById(
+            targetId +
+            '-display'
+        );
+
+    if (
+        !hidden ||
+        !display
+    ) {
+        return;
+    }
+
+    var valueSpan =
+        display.querySelector(
+            '.cb-date-value'
+        );
+
+    if (!valueSpan) {
+        return;
+    }
+
+    if (hidden.value) {
+
+        valueSpan.textContent =
+            cbFormatDisplayDate(
+                hidden.value
+            );
+
+    } else {
+
+        valueSpan.textContent =
+            targetId === 'en-due'
+                ? 'No due date'
+                : 'Select date';
+    }
+}
+
+
+function cbOpenDatePicker(
+    targetId
+) {
+
+    var hidden =
+        document.getElementById(
+            targetId
+        );
+
+    if (!hidden) {
+        return;
+    }
+
+    cbDateTargetId =
+        targetId;
+
+    cbDateSelected =
+        cbParseISODate(
+            hidden.value
+        );
+
+    if (!cbDateSelected) {
+
+        cbDateSelected =
+            new Date();
+    }
+
+    cbDateViewDate =
+        new Date(
+            cbDateSelected.getFullYear(),
+            cbDateSelected.getMonth(),
+            1
+        );
+
+    var display =
+        document.getElementById(
+            targetId +
+            '-display'
+        );
+
+    if (display) {
+        display.classList.add(
+            'active'
+        );
+    }
+
+    cbRenderCalendar();
+
+    var overlay =
+        document.getElementById(
+            'cbDateOverlay'
+        );
+
+    if (overlay) {
+        overlay.classList.add(
+            'open'
+        );
+    }
+}
+
+
+function cbCloseDatePicker() {
+
+    var overlay =
+        document.getElementById(
+            'cbDateOverlay'
+        );
+
+    if (overlay) {
+        overlay.classList.remove(
+            'open'
+        );
+    }
+
+    if (cbDateTargetId) {
+
+        var display =
+            document.getElementById(
+                cbDateTargetId +
+                '-display'
+            );
+
+        if (display) {
+            display.classList.remove(
+                'active'
+            );
+        }
+    }
+}
+
+
+function cbRenderCalendar() {
+
+    if (!cbDateViewDate) {
+        return;
+    }
+
+    var year =
+        cbDateViewDate.getFullYear();
+
+    var month =
+        cbDateViewDate.getMonth();
+
+    var monthNames = [
+        'January',
+        'February',
+        'March',
+        'April',
+        'May',
+        'June',
+        'July',
+        'August',
+        'September',
+        'October',
+        'November',
+        'December'
+    ];
+
+    var monthTitle =
+        document.getElementById(
+            'cbMonthTitle'
+        );
+
+    if (monthTitle) {
+
+        monthTitle.textContent =
+            monthNames[month] +
+            ' ' +
+            year;
+    }
+
+
+    var selectedText =
+        document.getElementById(
+            'cbDateSelectedText'
+        );
+
+    if (
+        selectedText &&
+        cbDateSelected
+    ) {
+
+        selectedText.textContent =
+            cbFormatDisplayDate(
+                cbDateSelected
+            );
+    }
+
+
+    var grid =
+        document.getElementById(
+            'cbCalendarGrid'
+        );
+
+    if (!grid) {
+        return;
+    }
+
+    grid.innerHTML = '';
+
+
+    var firstDay =
+        new Date(
+            year,
+            month,
+            1
+        ).getDay();
+
+    var daysInMonth =
+        new Date(
+            year,
+            month + 1,
+            0
+        ).getDate();
+
+
+    for (
+        var empty = 0;
+        empty < firstDay;
+        empty++
+    ) {
+
+        var emptyCell =
+            document.createElement(
+                'div'
+            );
+
+        emptyCell.className =
+            'cb-calendar-empty';
+
+        grid.appendChild(
+            emptyCell
+        );
+    }
+
+
+    var today =
+        new Date();
+
+
+    for (
+        var day = 1;
+        day <= daysInMonth;
+        day++
+    ) {
+
+        (function (
+            currentDay
+        ) {
+
+            var date =
+                new Date(
+                    year,
+                    month,
+                    currentDay
+                );
+
+            var button =
+                document.createElement(
+                    'button'
+                );
+
+            button.type =
+                'button';
+
+            button.className =
+                'cb-calendar-day';
+
+            button.textContent =
+                String(
+                    currentDay
+                );
+
+
+            if (
+                date.getFullYear() ===
+                    today.getFullYear() &&
+                date.getMonth() ===
+                    today.getMonth() &&
+                date.getDate() ===
+                    today.getDate()
+            ) {
+
+                button.classList.add(
+                    'today'
+                );
+            }
+
+
+            if (
+                cbDateSelected &&
+                date.getFullYear() ===
+                    cbDateSelected
+                        .getFullYear() &&
+                date.getMonth() ===
+                    cbDateSelected
+                        .getMonth() &&
+                date.getDate() ===
+                    cbDateSelected
+                        .getDate()
+            ) {
+
+                button.classList.add(
+                    'selected'
+                );
+            }
+
+
+            button.addEventListener(
+                'click',
+                function () {
+
+                    cbDateSelected =
+                        date;
+
+                    cbRenderCalendar();
+                }
+            );
+
+
+            grid.appendChild(
+                button
+            );
+
+        })(day);
+    }
+}
+
+var notificationSelectionMode =
+    false;
+
+var selectedNotificationIds =
+    new Set();
+
+
+function formatNotificationTime(value) {
+
+    if (!value) return '';
+
+    var date = new Date(value);
+
+    if (isNaN(date.getTime())) {
+        return '';
+    }
+
+    var now = new Date();
+
+    var diffMs =
+        now.getTime() -
+        date.getTime();
+
+    var diffMinutes =
+        Math.floor(
+            diffMs / 60000
+        );
+
+    if (diffMinutes < 1) {
+        return 'Just now';
+    }
+
+    if (diffMinutes < 60) {
+        return diffMinutes + 'm ago';
+    }
+
+    var diffHours =
+        Math.floor(
+            diffMinutes / 60
+        );
+
+    if (diffHours < 24) {
+        return diffHours + 'h ago';
+    }
+
+    var diffDays =
+        Math.floor(
+            diffHours / 24
+        );
+
+    if (diffDays < 7) {
+        return diffDays + 'd ago';
+    }
+
+    return formatDDMMYYYY(
+        date.toISOString()
+            .slice(0, 10)
+    );
+}
+
+
+window.setNotificationBadge =
+function(count) {
+
+    var badge =
+        document.getElementById(
+            'notificationBadge'
+        );
+
+    if (!badge) return;
+
+    count =
+        Number(count || 0);
+
+    if (count <= 0) {
+
+        badge.style.display =
+            'none';
+
+        badge.textContent =
+            '0';
+
+        return;
+    }
+
+    badge.style.display =
+        'flex';
+
+    badge.textContent =
+        count > 99
+            ? '99+'
+            : String(count);
+};
+
+window.onNotificationsDeleted =
+function(ids) {
+
+    if (!Array.isArray(ids)) {
+        return;
+    }
+
+    ids.forEach(
+        function(id) {
+
+            var item =
+                document.querySelector(
+                    '.notification-item' +
+                    '[data-notification-id="' +
+                    CSS.escape(id) +
+                    '"]'
+                );
+
+            if (item) {
+                item.remove();
+            }
+        }
+    );
+
+    selectedNotificationIds.clear();
+
+    notificationSelectionMode =
+        false;
+
+    updateNotificationSelectionUI();
+
+
+    /*
+     * If no notifications remain,
+     * show empty state.
+     */
+    var list =
+        document.getElementById(
+            'notificationList'
+        );
+
+    if (
+        list &&
+        !list.querySelector(
+            '.notification-item'
+        )
+    ) {
+
+        list.innerHTML = emptyStateHTML('notifications', 'txt_no_notifications', 'txt_notification_hint');
+    }
+
+    showToast(
+        ids.length === 1
+            ? 'Notification deleted'
+            : ids.length +
+              ' notifications deleted'
+    );
+};
+
+
+function replaceNotificationVariables(
+    template,
+    params
+) {
+    return String(template || '')
+        .replace(
+            /\{(\w+)\}/g,
+            function(match, key) {
+                if (
+                    params &&
+                    params[key] !== undefined &&
+                    params[key] !== null
+                ) {
+                    return String(
+                        params[key]
+                    );
+                }
+
+                return '';
+            }
+        );
+}
+
+
+function formatInAppNotification(
+    item
+) {
+    if (!item) {
+        return '';
+    }
+
+    /*
+     * Old notifications do not contain
+     * notificationKey and params.
+     *
+     * Keep showing their saved English message.
+     */
+    if (!item.notificationKey) {
+        return item.message || '';
+    }
+
+    var params =
+        Object.assign(
+            {},
+            item.params || {}
+        );
+
+    /*
+     * Translate only the static transaction type.
+     * Names and amounts remain unchanged.
+     */
+    if (params.entryType) {
+        var entryTypeKey =
+            'notification_entry_type_' +
+            String(
+                params.entryType
+            ).toLowerCase();
+
+        var translatedEntryType =
+            t(entryTypeKey);
+
+        if (
+            translatedEntryType &&
+            translatedEntryType !==
+                entryTypeKey
+        ) {
+            params.entryType =
+                translatedEntryType;
+        }
+    }
+
+    /*
+     * Retain the existing number formatting.
+     */
+    if (
+        params.amount !== undefined &&
+        params.amount !== null &&
+        params.amount !== ''
+    ) {
+        var numericAmount =
+            Number(params.amount);
+
+        params.amount =
+            Number.isFinite(
+                numericAmount
+            )
+                ? fmtMoney(
+                    numericAmount
+                )
+                : String(
+                    params.amount
+                );
+    }
+
+    var translationKey =
+        'notification_' +
+        item.notificationKey;
+
+    var translatedTemplate =
+        t(translationKey);
+
+    /*
+     * Unknown type or missing translation:
+     * show the English message saved in Firestore.
+     */
+    if (
+        !translatedTemplate ||
+        translatedTemplate ===
+            translationKey
+    ) {
+        return item.message || '';
+    }
+
+    return replaceNotificationVariables(
+        translatedTemplate,
+        params
+    );
+}
+
+
+window.onNotificationsLoaded =
+function(notifications) {
+
+    var list =
+        document.getElementById(
+            'notificationList'
+        );
+
+    if (!list) return;
+
+    if (
+        typeof notifications ===
+        'string'
+    ) {
+        try {
+            notifications =
+                JSON.parse(
+                    notifications
+                );
+        } catch (e) {
+            notifications = [];
+        }
+    }
+
+    if (
+        !Array.isArray(
+            notifications
+        ) ||
+        notifications.length === 0
+    ) {
+
+        list.innerHTML = emptyStateHTML('notifications', 'txt_no_notifications', 'txt_notification_hint');
+
+        return;
+    }
+
+    var html = '';
+
+    notifications.forEach(
+        function(item) {
+
+            var unread =
+                item.read !== true;
+
+           html +=
+    '<div class="notification-item ' +
+        (unread ? 'unread' : '') +
+    '" data-notification-id="' +
+        escapeHTML(item.id) +
+    '">' +
+
+        '<div ' +
+            'class="notification-select-control" ' +
+            'data-action="select-notification" ' +
+            'data-id="' +
+                escapeHTML(item.id) +
+            '">' +
+        '</div>' +
+
+        '<div class="notification-item-content">' +
+
+            '<div class="notification-item-top">' +
+
+                        '<div class="notification-item-title">' +
+
+                            (
+                                unread
+                                    ? '<span class="notification-unread-dot"></span>'
+                                    : ''
+                            ) +
+
+                            escapeHTML(
+                                item.title ||
+                                'Collection Book'
+                            ) +
+
+                        '</div>' +
+
+                        '<div class="notification-item-time">' +
+                            escapeHTML(
+                                formatNotificationTime(
+                                    item.createdAt
+                                )
+                            ) +
+                        '</div>' +
+
+                    '</div>' +
+
+                    '<div class="notification-item-message">' +
+    escapeHTML(
+        formatInAppNotification(
+            item
+        )
+    ) +
+'</div>' +
+ '</div>' +
+                '</div>';
+        }
+    );
+
+    list.innerHTML = html;
+};
+
+function updateNotificationSelectionUI() {
+
+    var screen =
+        document.getElementById(
+            'screen-notifications'
+        );
+
+    if (!screen) return;
+
+    screen.classList.toggle(
+        'notification-selection-mode',
+        notificationSelectionMode
+    );
+
+
+    var normalButton =
+        document.getElementById(
+            'notificationSelectBtn'
+        );
+
+    var selectionActions =
+        document.getElementById(
+            'notificationSelectionActions'
+        );
+
+    if (normalButton) {
+        normalButton.style.display =
+            notificationSelectionMode
+                ? 'none'
+                : 'block';
+    }
+
+    if (selectionActions) {
+        selectionActions.style.display =
+            notificationSelectionMode
+                ? 'flex'
+                : 'none';
+    }
+
+
+    document
+        .querySelectorAll(
+            '.notification-select-control'
+        )
+        .forEach(
+            function(control) {
+
+                var id =
+                    control.dataset.id;
+
+                control.classList.toggle(
+                    'selected',
+                    selectedNotificationIds
+                        .has(id)
+                );
+
+                var item =
+                    control.closest(
+                        '.notification-item'
+                    );
+
+                if (item) {
+                    item.classList.toggle(
+                        'selected',
+                        selectedNotificationIds
+                            .has(id)
+                    );
+                }
+            }
+        );
+
+
+    var deleteButton =
+        document.getElementById(
+            'notificationDeleteBtn'
+        );
+
+    if (deleteButton) {
+
+        deleteButton.disabled =
+            selectedNotificationIds
+                .size === 0;
+
+        deleteButton.textContent =
+            selectedNotificationIds.size > 0
+                ? 'Delete (' +
+                    selectedNotificationIds.size +
+                  ')'
+                : 'Delete';
+    }
+}
+    
+    // Strips non-digits and removes country prefixes (e.g. +91 / 91 / 0) to extract a clean 10-digit number
+    function cleanPhone10(phoneStr) {
+      if (!phoneStr) return '';
+      var cleaned = String(phoneStr).replace(/\D/g, '');
+      if (cleaned.length === 12 && cleaned.indexOf('91') === 0) { return cleaned.slice(2); }
+      if (cleaned.length === 11 && cleaned.indexOf('0') === 0) { return cleaned.slice(1); }
+      if (cleaned.length > 10) { return cleaned.slice(-10); }
+      return cleaned;
+    }
+    function debounce(func, wait) { var timeout; return function() { var context = this, args = arguments; clearTimeout(timeout); timeout = setTimeout(function(){ func.apply(context, args); }, wait); }; }
+    function formatDDMMYYYY(dateStr) {
+    if (!dateStr) return '';
+    // Handle both YYYY-MM-DD and potentially ISO strings
+    var s = String(dateStr).split('T')[0];
+    var parts = s.split('-');
+    if (parts.length !== 3) return s;
+
+    var y = parts[0];
+    var m = parts[1];
+    var d = parts[2];
+
+    // If already in DD-MM-YYYY format (contains dashes but first part is short)
+    if (y.length < 4 && d.length === 4) {
+        return s;
+    }
+
+    return d.padStart(2, '0') + '-' + m.padStart(2, '0') + '-' + y;
+}
+    function daysUntil(dateStr){ if(!dateStr) return null; var d = new Date(dateStr+'T00:00:00'); var tDate = new Date(); tDate.setHours(0,0,0,0); return Math.round((d-tDate)/86400000); }
+    function escapeHTML(s){ return String(s||'').replace(/[&<>"']/g, function(m){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]; }); }
+    function showToast(msg){
+      var tt = $('#toast'); if(!tt) return; tt.textContent = msg; tt.classList.add('show');
+      clearTimeout(tt._timer); tt._timer = setTimeout(function(){ tt.classList.remove('show'); }, 2800);
+    }
+    function triggerSuccess(msgKey) {
+      if($('#successPopupText')) $('#successPopupText').textContent = t(msgKey || 'msg_entry_success');
+      openOverlay('#successPopup');
+      clearTimeout(window._successTimer);
+      window._successTimer = setTimeout(function(){ closeOverlay('#successPopup'); }, 3000);
+    }
+    function openOverlay(sel, forceOpen){
+      var el = $(sel);
+      if(!el) return;
+
+      // Only apply safeguard if forceOpen is NOT true
+      if (sel === '#onboardOverlay' && !forceOpen) {
+          var hasName = Boolean(profile && (profile && profile.name) && typeof (profile && profile.name) === 'string' && (profile && profile.name).trim() !== '');
+          var hasShop = Boolean(profile && (profile && profile.shop) && typeof (profile && profile.shop) === 'string' && (profile && profile.shop).trim() !== '');
+          if (hasName && (getCurrentBusinessUid() || hasShop)) {
+              console.log("[Safeguard] Blocked accidental opening of onboarding popup for completed profile.");
+              return;
+          }
+      }
+
+      el.classList.add('open');
+    }
+    function closeOverlay(sel){
+      var el=$(sel);
+      if(el) {
+          el.classList.remove('open');
+          if (sel === '#onboardOverlay') {
+              // Reset the popup UI to match saved profile state
+              // so that partial uploads don't persist if cancelled.
+              // We pass false to configureProfilePopup to ensure all fields are handled.
+              var isFirstTime = !Boolean(profile && (profile && profile.name));
+              configureProfilePopup(isFirstTime);
+          }
+      }
+    }
+
+    function showCustomConfirm(title, message, confirmText, onConfirm) {
+      var overlay = $('#customConfirmModal');
+      if(overlay) {
+        $('#customConfirmTitle').textContent = title;
+        $('#customConfirmMessage').textContent = message;
+        var okBtn = $('#customConfirmOk');
+        okBtn.textContent = confirmText;
+        okBtn.onclick = function() {
+          closeOverlay('#customConfirmModal');
+          if(onConfirm) onConfirm();
+        };
+        $('#customConfirmCancel').onclick = function() {
+          closeOverlay('#customConfirmModal');
+        };
+        openOverlay('#customConfirmModal');
+      }
+    }
+
+    async function safeGet(key, shared){ try{ return await window.storage.get(key, shared); }catch(e){ return null; } }
+    async function reloadFromStorage() {
+        try{ var p = await safeGet(PROFILE_KEY, false); profile = p ? JSON.parse(p.value) : null; }catch(e){ profile = null; }
+        try{ var c = await safeGet(MYCUST_KEY, false); myCustomers = c ? JSON.parse(c.value) : []; }catch(e){ myCustomers = []; }
+        try{ var l = await safeGet(LEDGER_KEY, false); ledger = l ? JSON.parse(l.value) : []; }catch(e){ ledger = []; }
+        try{ var d = await safeGet(DIR_KEY, true); directory = d ? JSON.parse(d.value) : []; }catch(e){ directory = []; }
+        try{ var emp = await safeGet(EMP_KEY, false); companyEmployees = emp ? JSON.parse(emp.value) : []; }catch(e){ companyEmployees = []; }
+        try{ var r = await safeGet(ROLE_KEY, false); currentRoleMode =
+    (window.flutterSession && (window.flutterSession && window.flutterSession.mode)) ||
+    'owner'; }catch(e){ currentRoleMode = 'owner'; }
+    }
+
+ window.refreshFromFlutter =
+async function () {
+
+    await reloadFromStorage();
+
+    updateRoleModeUI();
+
+    updateProfileChip();
+
+    renderAll();
+
+
+    /*
+     * Employee mode:
+     *
+     * Never show owner profile setup.
+     */
+    if (
+        currentRoleMode === 'employee'
+    ) {
+        return;
+    }
+
+
+    /*
+     * Business Name is optional.
+     * Only Name determines whether owner
+     * setup has been completed.
+     */
+    var hasOwnerName =
+        Boolean(
+            profile &&
+            (profile && profile.name) &&
+            typeof (profile && profile.name) === 'string' &&
+            (profile && profile.name).trim() !== ''
+        );
+
+
+    if (hasOwnerName) {
+        return;
+    }
+
+
+    /*
+     * Owner mode + no owner profile.
+     *
+     * This includes an employee who has just
+     * switched to Business Owner mode.
+     */
+    configureProfilePopup(
+        true
+    );
+
+
+    openOverlay(
+        '#onboardOverlay'
+    );
+};
+
+
+   async function saveProfile() {
+    try {
+
+        /*
+         * Employee mode:
+         * employees cannot modify the business profile.
+         */
+        if (
+            currentRoleMode === 'employee'
+        ) {
+            showToast(
+                'Employee profile is managed by the business owner.'
+            );
+
+            return;
+        }
+
+
+        /*
+         * Owner mode:
+         *
+         * At this point getCurrentBusinessUid()
+         * must resolve to the authenticated
+         * user's own UID.
+         */
+        var currentUid =
+            getCurrentBusinessUid();
+
+        if (
+            !currentUid
+        ) {
+            showToast(
+                'Business account is not resolved.'
+            );
+
+            return;
+        }
+
+
+        /*
+         * Save owner profile.
+         *
+         * Flutter's StorageBridge will write this
+         * against SessionService.businessUid,
+         * which in owner mode must equal authUid.
+         */
+        await window.storage.set(
+            PROFILE_KEY,
+            JSON.stringify(profile),
+            false
+        );
+
+
+        /*
+         * For newly-created owner profiles,
+         * flutterSession may still contain the
+         * pre-switch/empty business values until
+         * the next refresh.
+         *
+         * Prefer the freshly entered profile.
+         */
+        var currentBusinessName =
+            (
+                profile &&
+                (profile && profile.shop)
+            ) ||
+            (window.flutterSession && (window.flutterSession && window.flutterSession.businessName)) ||
+            (
+                profile &&
+                (profile && profile.name)
+            ) ||
+            'Business Account';
+
+
+        var currentOwnerName =
+            (
+                profile &&
+                (profile && profile.name)
+            ) ||
+            (window.flutterSession && (window.flutterSession && window.flutterSession.businessOwnerName)) ||
+            'Business Owner';
+
+
+        /*
+         * Update business/owner labels on ledger
+         * entries owned by this business.
+         */
+        var ledgerChanged =
+            false;
+
+        for (
+            var i = 0;
+            i < ledger.length;
+            i++
+        ) {
+
+            if (
+                ledger[i].ownerUid === currentUid ||
+                !ledger[i].ownerUid
+            ) {
+
+                if (
+                    ledger[i].businessName !==
+                        currentBusinessName ||
+                    ledger[i].ownerName !==
+                        currentOwnerName
+                ) {
+
+                    ledger[i].businessName =
+                        currentBusinessName;
+
+                    ledger[i].ownerName =
+                        currentOwnerName;
+
+                    ledgerChanged =
+                        true;
+                }
+            }
+        }
+
+
+        if (
+            ledgerChanged
+        ) {
+            await saveLedger();
+
+            if (
+                window.NativeBridge &&
+                typeof window.NativeBridge
+                    .postMessage ===
+                    'function'
+            ) {
+                window.NativeBridge
+                    .postMessage(
+                        'SYNC_LEDGER'
+                    );
+            }
+        }
+
+        updateProfileReminder();
+
+    } catch (e) {
+
+        console.error(
+            'saveProfile failed:',
+            e
+        );
+
+        showToast(
+            'Unable to save profile.'
+        );
+    }
+}
+    async function saveCustomers() {
+
+    try {
+
+        await window.storage.set(
+            MYCUST_KEY,
+            JSON.stringify(
+                myCustomers
+            ),
+            false
+        );
+
+        return true;
+
+    } catch (e) {
+
+        console.error(
+            'saveCustomers failed:',
+            e
+        );
+
+        showToast(
+            'Storage limit reached! Cannot save contact.'
+        );
+
+        return false;
+    }
+}
+    function sendMetaEvent(eventName) {
+    try {
+        if (
+            window.NativeBridge &&
+            typeof window.NativeBridge.postMessage === 'function'
+        ) {
+            window.NativeBridge.postMessage(
+                'META_EVENT:' + eventName
+            );
+        }
+    } catch (error) {
+        console.error(
+            'Meta event failed:',
+            eventName,
+            error
+        );
+    }
+}
+    async function saveLedger() {
+
+    try {
+
+        await window.storage.set(
+            LEDGER_KEY,
+            JSON.stringify(
+                ledger
+            ),
+            false
+        );
+
+        return true;
+
+    } catch (e) {
+
+        console.error(
+            'saveLedger failed:',
+            e
+        );
+
+        showToast(
+            'Storage limit reached! Cannot save transaction.'
+        );
+
+        return false;
+    }
+}
+    async function saveDirectory(){ try{ await window.storage.set(DIR_KEY, JSON.stringify(directory), true); }catch(e){ showToast('Storage error saving directory.'); } }
+    async function saveEmployees(){ try{ await window.storage.set(EMP_KEY, JSON.stringify(companyEmployees), false); }catch(e){ showToast('Storage error saving employee.'); } }
+
+    function myCustById(id){ for(var i=0;i<myCustomers.length;i++){ if(myCustomers[i].id===id) return myCustomers[i]; } return null; }
+    function dirById(id){ for(var i=0;i<directory.length;i++){ if(directory[i].id===id) return directory[i]; } return null; }
+function getCurrentUserId() {
+   return getCurrentBusinessUid();
+}
+function getCurrentBusinessUid() {
+    return (
+        (window.flutterSession && (window.flutterSession && window.flutterSession.businessOwnerUid)) ||
+        (window.flutterSession && (window.flutterSession && window.flutterSession.ownerId)) ||
+        window.currentUserUid ||
+        'local_owner'
+    );
+}
+
+
+function getCurrentActor() {
+
+    var isEmployee =
+        currentRoleMode ===
+        'employee';
+
+    return {
+        uid:
+            window.currentUserUid ||
+            (window.flutterSession && (window.flutterSession && window.flutterSession.authUid)) ||
+            '',
+
+        phone:
+            cleanPhone10(
+                (window.flutterSession && (window.flutterSession && window.flutterSession.userPhone)) ||
+                ''
+            ),
+
+        name:
+            isEmployee
+                ? (
+                    (window.flutterSession && (window.flutterSession && window.flutterSession.employeeName)) ||
+                    'Employee'
+                )
+                : (
+                    (window.flutterSession && (window.flutterSession && window.flutterSession.businessOwnerName)) ||
+                    (
+                        profile
+                            ? (profile && profile.name)
+                            : ''
+                    ) ||
+                    'Business Owner'
+                ),
+
+        role:
+            isEmployee
+                ? 'employee'
+                : 'owner'
+    };
+}
+
+async function sendDeleteNotifications(
+    entry,
+    payment
+) {
+    if (
+        !entry ||
+        !window.NativeBridge ||
+        typeof window.NativeBridge.postMessage !==
+            'function'
+    ) {
+        return;
+    }
+
+    var customerPhone =
+        cleanPhone10(
+            entry.customerPhone || ''
+        );
+
+    var customerName =
+        entry.customerName ||
+        'Customer';
+
+    var businessName =
+        (window.flutterSession && window.flutterSession.businessName) ||
+        (profile && (profile && profile.shop)) ||
+        (window.flutterSession && window.flutterSession.businessOwnerName) ||
+        (profile && (profile && profile.name)) ||
+        'Collection Book';
+
+    var isPayment =
+        !!payment;
+
+    var amount =
+        isPayment
+            ? Number(payment.amount || 0)
+            : Number(
+                entry.grossAmount ||
+                entry.originalAmount ||
+                entry.amount ||
+                0
+            );
+
+    var entryType =
+        entry.type === 'debtor'
+            ? 'sale'
+            : 'purchase';
+
+    var typeText =
+        entry.type === 'debtor'
+            ? 'Sale'
+            : 'Purchase';
+
+
+    /*
+     * ------------------------------------------
+     * Notify customer
+     * ------------------------------------------
+     */
+    if (customerPhone) {
+
+        var customerMessage =
+            isPayment
+                ? (
+                    'Deleted a payment of ₹' +
+                    amount
+                )
+                : (
+                    'Deleted a ' +
+                    typeText +
+                    ' entry of ₹' +
+                    amount
+                );
+
+        window.NativeBridge.postMessage(
+            'SEND_NOTIFICATION:' +
+            JSON.stringify({
+                targetPhone:
+                    customerPhone,
+
+                senderName:
+                    businessName,
+
+                /*
+                 * Deletion should NOT trigger
+                 * WhatsApp fallback.
+                 *
+                 * This is an app notification
+                 * for registered users.
+                 */
+                whatsappConsent:
+                    false,
+
+                message:
+                    customerMessage,
+
+                notificationKey:
+                    isPayment
+                        ? 'customer_payment_deleted'
+                        : 'customer_entry_deleted',
+
+                params:
+                    isPayment
+                        ? {
+                            amount:
+                                amount
+                        }
+                        : {
+                            entryType:
+                                entryType,
+
+                            amount:
+                                amount
+                        }
+            })
+        );
+    }
+
+
+    /*
+     * ------------------------------------------
+     * If employee deleted it,
+     * notify business owner as well.
+     * ------------------------------------------
+     */
+    if (
+        currentRoleMode === 'employee' &&
+        window.flutterSession
+    ) {
+
+        var ownerPhone =
+            cleanPhone10(
+                window.flutterSession
+                    .ownerPhone ||
+                ''
+            );
+
+        var employeeName =
+            window.flutterSession
+                .employeeName ||
+            'Employee';
+
+        if (ownerPhone) {
+
+            var ownerMessage =
+                isPayment
+                    ? (
+                        'Deleted a payment of ₹' +
+                        amount +
+                        ' for ' +
+                        customerName
+                    )
+                    : (
+                        'Deleted a ' +
+                        typeText +
+                        ' entry of ₹' +
+                        amount +
+                        ' for ' +
+                        customerName
+                    );
+
+            window.NativeBridge.postMessage(
+                'SEND_NOTIFICATION:' +
+                JSON.stringify({
+                    targetPhone:
+                        ownerPhone,
+
+                    senderName:
+                        employeeName +
+                        ' (Employee)',
+
+                    whatsappConsent:
+                        false,
+
+                    message:
+                        ownerMessage,
+
+                    notificationKey:
+                        isPayment
+                            ? 'owner_employee_payment_deleted'
+                            : 'owner_employee_entry_deleted',
+
+                    params:
+                        isPayment
+                            ? {
+                                amount:
+                                    amount,
+
+                                customerName:
+                                    customerName
+                            }
+                            : {
+                                entryType:
+                                    entryType,
+
+                                amount:
+                                    amount,
+
+                                customerName:
+                                    customerName
+                            }
+                })
+            );
+        }
+    }
+}
+
+async function sendContactDeleteNotifications(
+    contact,
+    deletedEntries
+) {
+    if (
+        !contact ||
+        !window.NativeBridge ||
+        typeof window.NativeBridge.postMessage !==
+            'function'
+    ) {
+        return;
+    }
+
+    var customerPhone =
+        cleanPhone10(
+            contact.phone || ''
+        );
+
+    var customerName =
+        contact.name ||
+        'Customer';
+
+    var entryCount =
+        Array.isArray(deletedEntries)
+            ? deletedEntries.length
+            : 0;
+
+    var businessName =
+        (window.flutterSession && window.flutterSession.businessName) ||
+        (profile && (profile && profile.shop)) ||
+        (window.flutterSession && window.flutterSession.businessOwnerName) ||
+        (profile && (profile && profile.name)) ||
+        'Collection Book';
+
+
+    /*
+     * ------------------------------------------
+     * Notify customer
+     * ------------------------------------------
+     */
+    if (customerPhone) {
+
+        var customerMessage =
+            'Deleted your ledger containing ' +
+            entryCount +
+            (
+                entryCount === 1
+                    ? ' transaction'
+                    : ' transactions'
+            );
+
+        window.NativeBridge.postMessage(
+            'SEND_NOTIFICATION:' +
+            JSON.stringify({
+                targetPhone:
+                    customerPhone,
+
+                senderName:
+                    businessName,
+
+                /*
+                 * No WhatsApp fallback for
+                 * delete notifications.
+                 */
+                whatsappConsent:
+                    false,
+
+                message:
+                    customerMessage,
+
+                notificationKey:
+                    'customer_contact_deleted',
+
+                params: {
+                    entryCount:
+                        entryCount
+                }
+            })
+        );
+    }
+
+
+    /*
+     * ------------------------------------------
+     * Employee deleted contact:
+     * notify business owner too.
+     * ------------------------------------------
+     */
+    if (
+        currentRoleMode === 'employee' &&
+        window.flutterSession
+    ) {
+
+        var ownerPhone =
+            cleanPhone10(
+                window.flutterSession
+                    .ownerPhone ||
+                ''
+            );
+
+        var employeeName =
+            window.flutterSession
+                .employeeName ||
+            'Employee';
+
+        if (ownerPhone) {
+
+            var ownerMessage =
+                'Deleted ' +
+                customerName +
+                ' and ' +
+                entryCount +
+                (
+                    entryCount === 1
+                        ? ' ledger transaction'
+                        : ' ledger transactions'
+                );
+
+            window.NativeBridge.postMessage(
+                'SEND_NOTIFICATION:' +
+                JSON.stringify({
+                    targetPhone:
+                        ownerPhone,
+
+                    senderName:
+                        employeeName +
+                        ' (Employee)',
+
+                    whatsappConsent:
+                        false,
+
+                    message:
+                        ownerMessage,
+
+                    notificationKey:
+                        'owner_employee_contact_deleted',
+
+                    params: {
+                        customerName:
+                            customerName,
+
+                        entryCount:
+                            entryCount
+                    }
+                })
+            );
+        }
+    }
+}
+
+function getFraudIdentity(phone, name) {
+    var cleanPhone = cleanPhone10(phone);
+
+    // Phone is the preferred stable identity.
+    if (cleanPhone) {
+        return 'phone_' + cleanPhone;
+    }
+
+    // Fallback only when no phone is available.
+    return 'name_' + String(name || '')
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, '_');
+}
+
+function findFraudRecord(phone, name) {
+    var identity = getFraudIdentity(phone, name);
+
+    return directory.find(function (record) {
+        return record.identityKey === identity;
+    }) || null;
+}
+
+function isKnownContactFraudRecord(record) {
+    var recordPhone = cleanPhone10(record.phone);
+
+    return myCustomers.some(function (contact) {
+        if (contact.isHidden) return false;
+
+        var contactPhone = cleanPhone10(contact.phone);
+
+        // Prefer matching by phone.
+        if (recordPhone && contactPhone) {
+            return recordPhone === contactPhone;
+        }
+
+        // Name fallback only when phone is unavailable.
+        return (
+            !recordPhone &&
+            !contactPhone &&
+            String(contact.name || '').trim().toLowerCase() ===
+            String(record.name || '').trim().toLowerCase()
+        );
+    });
+}
+    function getContactType(cid) {
+        var hasDebtor = false, hasCreditor = false;
+        var currentUid = getCurrentBusinessUid();
+        for(var i=0; i<ledger.length; i++) {
+            if(ledger[i].customerId === cid && ledger[i].ownerUid === currentUid) {
+                if(ledger[i].type === 'debtor') hasDebtor = true;
+                if(ledger[i].type === 'creditor') hasCreditor = true;
+            }
+        }
+        if(hasCreditor && !hasDebtor) return 'party';
+        return 'customer';
+    }
+
+    function getCustomerDisplayName(cust, entry) {
+      var currentUid = getCurrentBusinessUid();
+      if (entry && entry.ownerUid && entry.ownerUid !== currentUid) {
+        var busName = entry.businessName || entry.companyName || entry.ownerName || entry.userName || entry.business;
+        if (busName) return busName;
+        if (entry.ownerPhone) return "Business (" + entry.ownerPhone.slice(-4) + ")";
+        return (cust && cust.name && cust.name !== 'Shared Ledger Account') ? cust.name : "Business Account";
+      }
+      return cust ? cust.name : (entry ? entry.customerName : 'Contact');
+    }
+
+    function getFlag(rec){
+      if(!rec) return 'neutral'; if(rec.fraudFlag) return 'red';
+      if(rec.rating===null || rec.rating===undefined) return 'neutral';
+      if(rec.rating<=3) return 'red'; if(rec.rating<=6) return 'amber'; return 'green';
+    }
+    function flagLabel(f){ var lbl = f==='red'?'lbl_risk':f==='green'?'lbl_trusted':f==='amber'?'lbl_watch':'lbl_unrated'; return t(lbl); }
+    function getInitials(name) {
+    var cleanName = String(name || '').trim();
+
+    if (!cleanName) {
+        return '?';
+    }
+
+    var words = cleanName
+        .split(/\s+/)
+        .filter(function(word) {
+            return word.length > 0;
+        });
+
+    if (words.length === 1) {
+        return words[0]
+            .substring(0, 2)
+            .toUpperCase();
+    }
+
+    return (
+        words[0].charAt(0) +
+        words[words.length - 1].charAt(0)
+    ).toUpperCase();
+}
+
+
+function stampHTML(rec, big) {
+
+    var flag = getFlag(rec);
+
+    var hasRating =
+        rec &&
+        rec.rating !== null &&
+        rec.rating !== undefined;
+
+    var isFraud =
+        rec &&
+        rec.fraudFlag;
+
+    /*
+     * Fraud still gets the warning symbol.
+     */
+    if (isFraud) {
+        return (
+            '<div class="stamp ' +
+            (big ? 'big ' : '') +
+            'stamp-' + flag + '">' +
+
+                '<span class="num">⚠</span>' +
+                '<span class="lbl">' +
+                    t('lbl_fraud') +
+                '</span>' +
+
+            '</div>'
+        );
+    }
+
+    /*
+     * Rated contacts continue showing their rating.
+     */
+    if (hasRating) {
+        return (
+            '<div class="stamp ' +
+            (big ? 'big ' : '') +
+            'stamp-' + flag + '">' +
+
+                '<span class="num">' +
+                    rec.rating +
+                '</span>' +
+
+                '<span class="lbl">' +
+                    flagLabel(flag) +
+                '</span>' +
+
+            '</div>'
+        );
+    }
+
+    /*
+     * Unrated contacts:
+     * show initials instead of "– / UNRATED".
+     */
+    var initials =
+        getInitials(
+            rec ? rec.name : ''
+        );
+
+    return (
+        '<div class="stamp ' +
+        (big ? 'big ' : '') +
+        'stamp-neutral initials-stamp">' +
+
+            '<span class="initials">' +
+                escapeHTML(initials) +
+            '</span>' +
+
+        '</div>'
+    );
+}
+
+    function calculateEntryState(entry){
+      if(entry.isConfirmed === false) return { paid:0, bal:0, status:'unconfirmed' };
+      var paid = 0;
+      if(entry.payments){ for(var i=0;i<entry.payments.length;i++){ if(entry.payments[i].isConfirmed !== false) paid += Number(entry.payments[i].amount||0); } }
+      var original = Number(entry.originalAmount||0);
+      var bal = original - paid;
+      var status = Math.abs(bal) < 0.005 ? 'paid' : (bal < 0 ? 'overpaid' : (paid > 0 ? 'partial' : 'pending'));
+      return { paid:paid, bal:bal, status:status };
+    }
+
+    function dueTag(entry){
+      if(entry.isConfirmed === false) return '<span class="due-tag unconfirmed">'+t('tag_unc')+'</span>';
+      var s = calculateEntryState(entry);
+      if(s.status === 'paid') return '<span class="due-tag paid">'+t('tag_paid')+'</span>';
+      if(s.status === 'overpaid') return '<span class="due-tag paid">Overpaid</span>';
+      var du = daysUntil(entry.dueDate);
+      if(du !== null && du < 0) return '<span class="due-tag overdue">'+Math.abs(du)+' day'+(Math.abs(du)===1?'':'s')+' overdue</span>';
+      if(du !== null && du <= 7) return '<span class="due-tag soon">Due in '+du+' day'+(du===1?'':'s')+'</span>';
+      if(s.status === 'partial') return '<span class="due-tag partial">'+t('tag_part')+'</span>';
+      return '<span class="due-tag later">'+t('tag_no_due')+'</span>';
+    }
+
+    function initSwipeGestures() {
+    let startX = 0;
+    let startY = 0;
+
+    const appContainer = $('#app');
+
+    appContainer.addEventListener(
+        'touchstart',
+        function (e) {
+            if (!e.changedTouches || e.changedTouches.length === 0) {
+                return;
+            }
+
+            startX = e.changedTouches[0].screenX;
+            startY = e.changedTouches[0].screenY;
+        },
+        { passive: true }
+    );
+
+    appContainer.addEventListener(
+        'touchend',
+        function (e) {
+            if (!e.changedTouches || e.changedTouches.length === 0) {
+                return;
+            }
+
+            const endX = e.changedTouches[0].screenX;
+            const endY = e.changedTouches[0].screenY;
+
+            const diffX = endX - startX;
+            const diffY = endY - startY;
+
+            // Must move horizontally by at least 70px.
+            if (Math.abs(diffX) < 70) {
+                return;
+            }
+
+            // Critical:
+            // Ignore the gesture if vertical movement is significant.
+            // Horizontal movement must clearly dominate.
+            if (Math.abs(diffY) > Math.abs(diffX) * 0.5) {
+                return;
+            }
+
+            const tabs = $$('#tabs button[data-tab]');
+
+            const activeIndex = tabs.findIndex(function (button) {
+                return button.classList.contains('active');
+            });
+
+            if (activeIndex === -1) {
+                return;
+            }
+
+            // Swipe right -> previous tab
+            if (diffX > 0 && activeIndex > 0) {
+                tabs[activeIndex - 1].click();
+            }
+
+            // Swipe left -> next tab
+            else if (
+                diffX < 0 &&
+                activeIndex < tabs.length - 1
+            ) {
+                tabs[activeIndex + 1].click();
+            }
+        },
+        { passive: true }
+    );
+}
+
+    function openPendingList() {
+      var pendingItems = [];
+      var currentUid = getCurrentBusinessUid();
+      for(var i=0; i<ledger.length; i++){
+        var l = ledger[i];
+        if(!isEntryVisibleToMe(l)) continue;
+        var c = myCustById(l.customerId);
+        if(l.isConfirmed === false) {
+          pendingItems.push({
+    type: 'bill',
+    date: l.createdAt,
+    ledgerId: l.id,
+    payId: null,
+    custName: c ? c.name : l.customerName,
+    desc: l.description || (l.type === 'debtor' ? t('sale') : t('purchase')),
+    amount: l.originalAmount,
+    amtColor: l.type === 'debtor' ? 'var(--sage)' : 'var(--madder)',
+
+    // Used only to decide whether Delete should be shown.
+    isCreator: l.ownerUid === currentUid
+});
+        }
+        if(l.payments) {
+          for(var p=0; p<l.payments.length; p++) {
+            if(l.payments[p].isConfirmed === false) {
+            pendingItems.push({
+    type: 'pay',
+    date: l.payments[p].date || l.createdAt,
+    ledgerId: l.id,
+    payId: l.payments[p].id,
+    custName: c ? c.name : l.customerName,
+    desc: l.payments[p].note || 'Payment',
+    amount: l.payments[p].amount,
+    amtColor: 'inherit',
+
+    isCreator: l.ownerUid === currentUid
+});
+            }
+          }
+        }
+      }
+      pendingItems.sort(function(a,b){ return new Date(b.date) - new Date(a.date); });
+      var pendingHtml = '';
+      if(pendingItems.length === 0) { pendingHtml = emptyStateHTML('notifications', 'txt_nothing', 'txt_no_pending'); }
+      else {
+        for(var k=0; k<pendingItems.length; k++) {
+         var pi = pendingItems[k];
+
+var btnAction =
+    pi.type === 'bill'
+        ? 'confirm-inv'
+        : 'confirm-pay';
+
+var pidAttr = pi.payId
+    ? ' data-pid="' + pi.payId + '"'
+    : '';
+
+var actionButtons =
+    '<button class="mini-btn success" ' +
+        'data-action="' + btnAction + '" ' +
+        'data-eid="' + pi.ledgerId + '"' +
+        pidAttr +
+    '>' +
+        'Accept / Confirm' +
+    '</button>';
+
+// Only the creator gets Delete.
+if (pi.isCreator) {
+    actionButtons +=
+        '<button class="mini-btn danger" ' +
+            'data-action="delete-pending" ' +
+            'data-eid="' + pi.ledgerId + '"' +
+            pidAttr +
+        '>' +
+            'Delete' +
+        '</button>';
+}
+
+pendingHtml +=
+    '<div class="card">' +
+
+        '<div class="row-top">' +
+
+            '<div>' +
+                '<div class="cust-name">' +
+                    escapeHTML(pi.custName) +
+                '</div>' +
+
+                '<div class="meta-line">' +
+                    escapeHTML(pi.desc) +
+                '</div>' +
+            '</div>' +
+
+            '<div class="amount" style="color:' + pi.amtColor + ';">' +
+                '₹' + fmtMoney(pi.amount) +
+            '</div>' +
+
+        '</div>' +
+
+        '<div class="card-actions" style="justify-content:flex-end;">' +
+            actionButtons +
+        '</div>' +
+
+    '</div>';
+        }
+      }
+      $('#pendingListContent').innerHTML = pendingHtml; openOverlay('#pendingOverlay');
+    }
+
+    function checkPendingConfirmations() {
+      var count = 0;
+      var currentUid = getCurrentBusinessUid();
+      for(var i=0; i<ledger.length; i++) {
+          var l = ledger[i];
+          if(!isEntryVisibleToMe(l)) continue;
+          if(l.isConfirmed === false) count++;
+          if(l.payments) { for(var p=0; p<l.payments.length; p++) { if(l.payments[p].isConfirmed === false) count++; } }
+      }
+      var banner = $('#sticky-pending-banner');
+      if (count > 0) {
+        if (!banner) {
+          var div = document.createElement('div'); div.id = 'sticky-pending-banner'; div.className = 'sticky-banner'; div.innerHTML = '🔔 <span style="margin-left:8px;">' + count + ' entry waiting for confirmation</span>';
+          div.addEventListener('click', openPendingList); var tabs = $('#tabs'); tabs.parentNode.insertBefore(div, tabs);
+        } else { banner.innerHTML = '🔔 <span style="margin-left:8px;">' + count + ' entry waiting for confirmation</span>'; }
+      } else if (banner) { banner.remove(); closeOverlay('#pendingOverlay'); }
+    }
+
+    function updateProfileReminder() {
+        var reminderEl = $('#profileReminder');
+        if (!reminderEl) return;
+
+        var hasName = Boolean(profile && (profile && profile.name) && (profile && profile.name).trim() !== '');
+        var sessionValid = false;
+        if (window.flutterSession) {
+            if ((window.flutterSession && (window.flutterSession && window.flutterSession.isAuthenticated))) {
+                sessionValid = true;
+            }
+        }
+        if (hasName || currentRoleMode === 'employee' || !sessionValid) {
+            reminderEl.innerHTML = '';
+            return;
+        }
+
+        reminderEl.innerHTML = `
+            <div class="incomplete-profile-banner" onclick="document.getElementById('btn-settings-profile').click()">
+                <div style="font-size: 1.2rem;">👤</div>
+                <span>Please complete your profile to enable all features.</span>
+                <div class="arrow">›</div>
+            </div>
+        `;
+    }
+
+    async function bootstrap(){
+      await reloadFromStorage();
+      updateRoleModeUI();
+      bindLoginEvents();
+      if($('#loadingScreen')) $('#loadingScreen').style.display = 'none';
+
+      try {
+          var savedLang = await safeGet('cb-lang', false);
+          if (savedLang && savedLang.value) {
+              currentLang = savedLang.value;
+          }
+      } catch(e) {}
+
+      applyTranslations();
+      finishBootstrap();
+    }
+
+    function updateRoleModeUI() {
+    if (!window.flutterSession) window.flutterSession = { permissions: {} };
+
+    var button =
+        document.getElementById(
+            'btn-settings-role'
+        );
+
+    var text =
+        document.getElementById(
+            'roleButtonText'
+        );
+
+    /*
+     * Toggle Logout button based on auth state.
+     */
+    var logoutBtn = document.getElementById('btn-settings-logout');
+    if (logoutBtn) {
+        var isAuthenticated = window.flutterSession && (window.flutterSession && (window.flutterSession && window.flutterSession.isAuthenticated));
+        var sessionSection = logoutBtn.closest('.settings-section');
+        if (sessionSection) {
+            sessionSection.style.display = isAuthenticated ? 'block' : 'none';
+        } else {
+            logoutBtn.style.display = isAuthenticated ? 'flex' : 'none';
+        }
+    }
+
+    /*
+ * An employee must always be able to enter
+ * Business Owner mode.
+ *
+ * They may not have an owner profile yet.
+ * The owner setup popup will handle that
+ * after switching.
+ */
+var canSwitch =
+    (window.flutterSession && (window.flutterSession && window.flutterSession.canSwitchRole) === true) ||
+    (window.flutterSession && (window.flutterSession && window.flutterSession.hasEmployment) === true) ||
+    currentRoleMode === 'employee';
+
+    if (!button) {
+        return;
+    }
+
+    button.style.display =
+        canSwitch
+            ? ''
+            : 'none';
+
+    if (!canSwitch) {
+        return;
+    }
+
+    if (currentRoleMode === 'employee') {
+        text.textContent =
+            'Switch to Business Owner';
+    } else {
+        text.textContent =
+            'Switch to Employee';
+    }
+
+    applyRolePermissions();
+}
+
+    function applyRolePermissions() {
+
+
+
+    document.body.classList.remove(
+        'is-employee',
+        'no-add-access',
+        'no-ledger-access',
+         'no-contact-access',
+        'no-delete-access'
+    );
+
+    if (
+        currentRoleMode !==
+        'employee'
+    ) {
+        return;
+    }
+
+    document.body.classList.add(
+        'is-employee'
+    );
+
+    var permissions =
+        (
+            window.flutterSession &&
+            (window.flutterSession && (window.flutterSession && window.flutterSession.permissions))
+        )
+            ? (window.flutterSession && (window.flutterSession && window.flutterSession.permissions))
+            : {};
+
+    /*
+     * Normalize permissions because values
+     * may arrive from Flutter/Firestore as
+     * boolean true OR string "true".
+     */
+    function hasPermission(value) {
+        return (
+            value === true ||
+            value === 'true' ||
+            value === 1 ||
+            value === '1'
+        );
+    }
+
+    var canAdd =
+        hasPermission(
+            permissions.add
+        );
+
+    var canView =
+        hasPermission(
+            permissions.view
+        );
+
+    var canManageContacts =
+     hasPermission(permissions.manageContacts);
+
+    var canDelete =
+        hasPermission(
+            permissions.del
+        );
+
+    console.log(
+        'EMPLOYEE PERMISSIONS:',
+        JSON.stringify(permissions)
+    );
+
+    console.log(
+        'NORMALIZED PERMISSIONS:',
+        {
+            add: canAdd,
+            view: canView,
+            del: canDelete
+        }
+    );
+
+    if (!canAdd) {
+        document.body.classList.add(
+            'no-add-access'
+        );
+    }
+
+    if (!canView) {
+        document.body.classList.add(
+            'no-ledger-access'
+        );
+    }
+if (!canManageContacts) {
+    document.body.classList.add(
+        'no-contact-access'
+    );
+}
+    if (!canDelete) {
+        document.body.classList.add(
+            'no-delete-access'
+        );
+    }
+}
+ async function finishBootstrap() {
+      await reloadFromStorage();
+
+      $('#app').style.display = 'block';
+      applyRolePermissions();
+
+      updateProfileChip();
+      updateProfileReminder();
+      renderAll();
+
+      if (!eventsBound) {
+          bindAllEvents();
+          initSwipeGestures();
+          eventsBound = true;
+      }
+
+      /*
+       * ==========================================
+       * 0. MIGRATION: Migrate old UID-specific prompt keys to global
+       * ==========================================
+       */
+      try {
+          var migrationUid = (window.flutterSession && (window.flutterSession && window.flutterSession.authUid)) || getCurrentBusinessUid();
+          if (migrationUid) {
+              var oldAccountKey = 'cb-lang-prompted-' + migrationUid;
+              var oldAccountRes = await safeGet(oldAccountKey, false);
+              if (oldAccountRes && oldAccountRes.value === 'true') {
+                  await window.storage.set('cb-lang-prompted', 'true', false);
+                  await window.storage.remove(oldAccountKey);
+              }
+          }
+      } catch(e) {}
+
+      /*
+       * ==========================================
+       * 1. GLOBAL LANGUAGE SELECTION (ONCE PER DEVICE)
+       * ==========================================
+       */
+      var hasPromptedLang = false;
+      try {
+          var langPromptRes = await safeGet('cb-lang-prompted', false);
+          hasPromptedLang = (langPromptRes && langPromptRes.value === 'true');
+      } catch(e) {}
+
+      if (!hasPromptedLang) {
+          updateLangPickerUI();
+          openOverlay('#langOverlay', true);
+          return;
+      }
+
+      /*
+       * ==========================================
+       * 2. FIRST-TIME OWNER PROFILE SETUP
+       * ==========================================
+       */
+
+
+/*
+ * IMPORTANT:
+ *
+ * Someone who was already registered as
+ * an employee BEFORE signing up should enter
+ * the app directly in employee mode.
+ *
+ * Do NOT ask them to create an owner profile.
+ */
+if (
+    currentRoleMode === 'employee' ||
+    !(window.flutterSession && (window.flutterSession && (window.flutterSession && window.flutterSession.isAuthenticated)))
+) {
+
+    if (
+        window.NativeBridge &&
+        typeof window.NativeBridge
+            .postMessage === 'function'
+    ) {
+        window.NativeBridge.postMessage(
+            'LOAD_NOTIFICATION_COUNT'
+        );
+    }
+
+    return;
+}
+
+
+/*
+ * Owner profile is considered set up
+ * once Your Name exists.
+ *
+ * Business Name is optional because
+ * Save Profile automatically falls back
+ * to Your Name.
+ */
+var hasOwnerName =
+    Boolean(
+        profile &&
+        (profile && profile.name) &&
+        typeof (profile && profile.name) === 'string' &&
+        (profile && profile.name).trim() !== ''
+    );
+
+
+/*
+ * Owner already configured.
+ */
+if (hasOwnerName) {
+
+    if (
+        window.NativeBridge &&
+        typeof window.NativeBridge
+            .postMessage === 'function'
+    ) {
+        window.NativeBridge.postMessage(
+            'LOAD_NOTIFICATION_COUNT'
+        );
+    }
+
+    return;
+}
+
+
+/*
+ * OWNER PROFILE DOES NOT EXIST.
+ *
+ * This covers:
+ *
+ * 1. Brand-new normal user
+ * 2. Employee switching to Owner mode
+ *    for the first time
+ */
+if ($('#ob-name')) {
+    $('#ob-name').value =
+        (profile && profile.name) || '';
+}
+
+if ($('#ob-shop')) {
+    $('#ob-shop').value =
+        (profile && profile.shop) || '';
+}
+
+if ($('#ob-area')) {
+    $('#ob-area').value =
+        (profile && profile.area) || '';
+}
+
+if ($('#ob-gst')) {
+    $('#ob-gst').value =
+        (profile && profile.gst) || '';
+}
+
+
+configureProfilePopup(
+    true
+);
+
+
+openOverlay(
+    '#onboardOverlay'
+);
+
+
+if (
+    window.NativeBridge &&
+    typeof window.NativeBridge
+        .postMessage === 'function'
+) {
+    window.NativeBridge.postMessage(
+        'FETCH_LEDGER'
+    );
+}
+
+
+if (
+    window.NativeBridge &&
+    typeof window.NativeBridge
+        .postMessage === 'function'
+) {
+    window.NativeBridge.postMessage(
+        'LOAD_NOTIFICATION_COUNT'
+    );
+}
+    }
+
+    function bindLoginEvents() {
+      safeBind('#btn-login-cancel', 'click', function(){
+          closeOverlay('#loginPromptOverlay');
+      });
+      safeBind('#btn-login-now', 'click', function(){
+          closeOverlay('#loginPromptOverlay');
+          if (window.NativeBridge && typeof window.NativeBridge.postMessage === 'function') {
+              window.NativeBridge.postMessage('GOTO_LOGIN');
+          }
+      });
+      safeBind('#login-btn', 'click', function(){
+          var phone = $('#login-phone').value.replace(/\D/g, '').trim(); if(phone.length < 10) { showToast(t('ph_mobile')); return; }
+          localStorage.setItem('cb-logged-in', 'true'); localStorage.setItem('cb-logged-in-phone', phone);
+          $('#loginScreen').style.display = 'none'; finishBootstrap();
+      });
+    }
+
+    function updateProfileChip(){ var chipText = $('#profileChipText'); if(chipText) chipText.textContent = (profile && ((profile && profile.shop) || (profile && profile.name))) ? ((profile && profile.shop) || (profile && profile.name)) : t('btn_setup'); }
+
+    function renderEmployeesList() {
+    var html = '';
+
+    for (
+        var i = 0;
+        i < companyEmployees.length;
+        i++
+    ) {
+        var e = companyEmployees[i];
+
+        var permissions =
+            e.permissions || {};
+
+        html +=
+            '<div class="card" ' +
+            'style="padding:12px; margin-bottom:8px;">' +
+
+                '<div style="' +
+                    'font-weight:600;' +
+                    'font-size:0.9rem;' +
+                '">' +
+                    escapeHTML(e.name) +
+                    ' (' +
+                    escapeHTML(e.phone) +
+                    ')' +
+                '</div>' +
+
+                '<div style="' +
+                    'font-size:0.75rem;' +
+                    'color:var(--muted);' +
+                    'margin-top:4px;' +
+                '">' +
+
+                    'Add: ' +
+                    (permissions.add ? 'Yes' : 'No') +
+
+                    ' | View Ledger: ' +
+                    (permissions.view ? 'Yes' : 'No') +
+
+                    ' | Manage Contacts: ' +
+                    (
+                        permissions.manageContacts
+                            ? 'Yes'
+                            : 'No'
+                    ) +
+
+                    ' | Delete: ' +
+                    (permissions.del ? 'Yes' : 'No') +
+
+                '</div>' +
+
+                '<div style="' +
+                    'display:flex;' +
+                    'gap:8px;' +
+                    'margin-top:8px;' +
+                '">' +
+
+                    '<button ' +
+                        'class="mini-btn ghost" ' +
+                        'style="' +
+                            'padding:6px 12px;' +
+                            'font-size:0.75rem;' +
+                        '" ' +
+                        'data-action="edit-emp" ' +
+                        'data-id="' +
+                            escapeHTML(e.id) +
+                        '">' +
+                        'Edit' +
+                    '</button>' +
+
+                    '<button ' +
+                        'class="mini-btn danger ghost" ' +
+                        'style="' +
+                            'padding:6px 12px;' +
+                            'font-size:0.75rem;' +
+                        '" ' +
+                        'data-action="delete-emp" ' +
+                        'data-id="' +
+                            escapeHTML(e.id) +
+                        '">' +
+                        t('btn_remove_emp') +
+                    '</button>' +
+
+                '</div>' +
+
+            '</div>';
+    }
+
+    if (!html) {
+        html =
+            '<div style="' +
+                'font-size:0.85rem;' +
+                'color:var(--muted);' +
+                'text-align:center;' +
+                'padding:10px;' +
+            '">' +
+                t('txt_no_emp') +
+            '</div>';
+    }
+
+    $('#employeeList').innerHTML =
+        html;
+}
+
+/*
+ * Returns true when an ISO date belongs to
+ * the current calendar month and year.
+ */
+function isDateInCurrentMonth(
+    dateValue
+) {
+    if (!dateValue) {
+        return false;
+    }
+
+    var date =
+        cbParseISODate(
+            String(dateValue)
+                .slice(0, 10)
+        );
+
+    if (
+        !date ||
+        Number.isNaN(
+            date.getTime()
+        )
+    ) {
+        return false;
+    }
+
+    var today =
+        new Date();
+
+    return (
+        date.getFullYear() ===
+            today.getFullYear() &&
+        date.getMonth() ===
+            today.getMonth()
+    );
+}
+
+    function renderAll(){
+      var receivable = 0;
+var payable = 0;
+var overdue = 0;
+var activeD = 0;
+var activeC = 0;
+var totalCustCount = 0;
+for (var j = 0; j < myCustomers.length; j++) {
+    if (isContactVisibleInMyCustomers(myCustomers[j])) {
+        totalCustCount++;
+    }
+}
+
+var guide = $('#newUserGuide');
+var actionsRow = $('#dashboardActions');
+var showGuide = (totalCustCount === 0);
+
+if (guide) {
+    guide.style.display = showGuide ? 'block' : 'none';
+}
+
+if (actionsRow) {
+    actionsRow.style.display = showGuide ? 'none' : 'flex';
+}
+
+/*
+ * Current calendar-month totals.
+ */
+var monthlySales = 0;
+var monthlyCollections = 0;
+      var cData = computeCustomerBalances();
+      for (var i = 0; i < cData.length; i++) {
+          var netReceivable = Math.max(cData[i].receivable - cData[i].payable, 0);
+          var netPayable = Math.max(cData[i].payable - cData[i].receivable, 0);
+          receivable += netReceivable; payable += netPayable;
+          if (netReceivable > 0.005) activeD++;
+          if (netPayable > 0.005) activeC++;
+      }
+     var currentUid =
+    getCurrentBusinessUid();
+
+for (
+    var k = 0;
+    k < ledger.length;
+    k++
+) {
+    var e =
+        ledger[k];
+
+    if (
+        !isEntryVisibleToMe(e)
+    ) {
+        continue;
+    }
+
+    var s =
+        calculateEntryState(e);
+
+    if (
+        e.isConfirmed !== false &&
+        s.status !== 'paid' &&
+        s.status !== 'overpaid' &&
+        e.dueDate &&
+        daysUntil(e.dueDate) < 0
+    ) {
+        overdue++;
+    }
+
+    /*
+     * Monthly Net Flow includes only sales
+     * owned by the active business.
+     *
+     * Shared entries created by another
+     * business must not be counted.
+     */
+    if (
+        e.ownerUid !== currentUid ||
+        e.type !== 'debtor'
+    ) {
+        continue;
+    }
+
+    /*
+     * Count a confirmed sale according to
+     * its selected invoice date.
+     *
+     * originalAmount is the amount remaining
+     * after discount.
+     */
+    if (
+        e.isConfirmed !== false &&
+        isDateInCurrentMonth(
+            e.invoiceDate ||
+            e.createdAt
+        )
+    ) {
+        monthlySales +=
+            Number(
+                e.originalAmount ||
+                0
+            );
+    }
+
+    /*
+     * Count confirmed collections according
+     * to the selected payment date.
+     */
+    if (
+        Array.isArray(
+            e.payments
+        )
+    ) {
+        for (
+            var paymentIndex = 0;
+            paymentIndex <
+                e.payments.length;
+            paymentIndex++
+        ) {
+            var payment =
+                e.payments[
+                    paymentIndex
+                ];
+
+            if (
+                payment.isConfirmed !==
+                    false &&
+                isDateInCurrentMonth(
+                    payment.date ||
+                    payment.createdAt
+                )
+            ) {
+                monthlyCollections +=
+                    Number(
+                        payment.amount ||
+                        0
+                    );
+            }
+        }
+    }
+}
+
+
+      if($('#statReceivable')) $('#statReceivable').textContent = '₹'+fmtMoney(receivable);
+      if($('#statPayable')) $('#statPayable').textContent = '₹'+fmtMoney(payable);
+      if($('#statOverdue')) $('#statOverdue').textContent = overdue;
+      /*
+ * Positive:
+ * collections are higher than sales.
+ *
+ * Negative:
+ * sales are higher than collections.
+ */
+var monthlyNetFlow =
+    monthlyCollections -
+    monthlySales;
+
+var netFlowTile =
+    $('#statTileNetFlow');
+
+var netFlowValue =
+    $('#statNetFlow');
+
+var netFlowHelper =
+    $('#statNetFlowHelper');
+
+if (
+    netFlowTile &&
+    netFlowValue &&
+    netFlowHelper
+) {
+    netFlowTile.classList.remove(
+        'positive',
+        'negative',
+        'neutral'
+    );
+
+    netFlowValue.textContent =
+        '₹' +
+        fmtMoney(
+            Math.abs(
+                monthlyNetFlow
+            )
+        );
+
+    if (
+        monthlyNetFlow > 0.005
+    ) {
+        netFlowTile.classList.add(
+            'positive'
+        );
+
+        netFlowHelper.textContent =
+    t(
+        'flow_collections_ahead'
+    );
+    } else if (
+        monthlyNetFlow < -0.005
+    ) {
+        netFlowTile.classList.add(
+            'negative'
+        );
+
+       netFlowHelper.textContent =
+    t(
+        'flow_sales_ahead'
+    );
+    } else {
+        netFlowTile.classList.add(
+            'neutral'
+        );
+
+        netFlowHelper.textContent =
+            t(
+                'flow_balanced'
+            );
+    }
+}
+      if($('#countDebtors')) $('#countDebtors').textContent = activeD;
+      if($('#countCreditors')) $('#countCreditors').textContent = activeC;
+      if($('#countMyCustomers')) $('#countMyCustomers').textContent = totalCustCount;
+      var visibleFraudCount = directory.filter(function (record) {
+    var reporterUids = Array.isArray(record.reporterUids)
+        ? record.reporterUids
+        : [];
+
+    var reportCount = Number(
+        record.reportCount || reporterUids.length || 0
+    );
+
+    // Same conditions used by renderDirectory().
+    return (
+        reportCount >= 3 &&
+        isKnownContactFraudRecord(record)
+    );
+}).length;
+
+if ($('#countDirectory')) {
+    $('#countDirectory').textContent = visibleFraudCount;
+}
+
+      renderLists(); renderMyCustomers(); renderDirectory(); checkPendingConfirmations();
+    }
+
+function isEntryVisibleToMe(entry) {
+
+    var currentUid =
+        getCurrentBusinessUid();
+
+    var entryPhone =
+        (entry.customerPhone || '')
+            .replace(/\D/g, '')
+            .slice(-10);
+
+        // HYPER-AGGRESSIVE HIDE: If ANY contact with this ID or Phone is hidden, hide the transaction globally
+        for (var i = 0; i < myCustomers.length; i++) {
+            var c = myCustomers[i];
+            var cPhone = (c.phone || '').replace(/\D/g, '').slice(-10);
+            var isMatch = (c.id === (entry.customerId || entry.id)) || (entryPhone && cPhone && entryPhone === cPhone);
+            if (isMatch && c.isHidden) return false;
+        }
+
+        if (entry.ownerUid === currentUid) return true; // Visible to Creator
+
+        var myPhone = '';
+
+if (window.flutterSession) {
+
+    /*
+     * Employee mode represents the employer's
+     * business, so shared-ledger visibility must
+     * use the employer/business owner's phone.
+     */
+    if (
+        currentRoleMode ===
+        'employee'
+    ) {
+        myPhone =
+            (window.flutterSession && (window.flutterSession && window.flutterSession.ownerPhone)) ||
+            '';
+    } else {
+        myPhone =
+            (window.flutterSession && window.flutterSession.userPhone) ||
+            (window.flutterSession && (window.flutterSession && window.flutterSession.ownerPhone)) ||
+            '';
+    }
+}
+
+if (!myPhone) {
+    myPhone =
+        localStorage.getItem(
+            'cb-logged-in-phone'
+        ) || '';
+}
+        var cleanMyPhone = myPhone.replace(/\D/g, '').slice(-10);
+
+        if (cleanMyPhone && entryPhone && cleanMyPhone === entryPhone) {
+            return true; // Visible to Viewer
+        }
+
+        return false;
+    }
+
+    function isContactVisibleInMyCustomers(c) {
+        if (!c || c.isHidden) return false;
+
+        var currentUid = getCurrentBusinessUid();
+
+        // 1. If I created this contact
+        if (!c.creatorUid || c.creatorUid === currentUid) {
+            return true;
+        }
+
+        // 2. If this contact is associated with a shared ledger entry visible to me
+        var cPhone = cleanPhone10(c.phone || '');
+
+        var isSharedBusiness = ledger.some(function (lx) {
+            if (!isEntryVisibleToMe(lx)) return false;
+
+            // Match by customerId
+            if (lx.customerId === c.id) return true;
+
+            // Match by phone number (owner or customer phone)
+            if (cPhone) {
+                var ownerP = cleanPhone10(lx.ownerPhone || '');
+                var custP = cleanPhone10(lx.customerPhone || '');
+
+                if (cPhone === ownerP || cPhone === custP) {
+                    return true;
+                }
+            }
+
+            return false;
+        });
+
+        return isSharedBusiness;
+    }
+
+    function entryDateForSort(entry){ return entry.invoiceDate || entry.createdAt.slice(0,10); }
+
+    function renderLists(){
+      var cData = computeCustomerBalances();
+      cData.forEach(function(c) { c.netReceivable = Math.max(c.receivable - c.payable, 0); c.netPayable = Math.max(c.payable - c.receivable, 0); });
+      var dQuery = $('#debtorSearch') ? $('#debtorSearch').value.toLowerCase().trim() : '';
+      var cQuery = $('#creditorSearch') ? $('#creditorSearch').value.toLowerCase().trim() : '';
+
+      var dList = cData.filter(function(c){
+        if (c.netReceivable <= 0.005) return false;
+        if (!dQuery) return true;
+        var name = (c.customer.name || '').toLowerCase();
+        var phone = (c.customer.phone || '').toLowerCase();
+        var area = (c.customer.area || '').toLowerCase();
+        return name.indexOf(dQuery) > -1 || phone.indexOf(dQuery) > -1 || area.indexOf(dQuery) > -1;
+      });
+
+      var cList = cData.filter(function(c){
+        if (c.netPayable <= 0.005) return false;
+        if (!cQuery) return true;
+        var name = (c.customer.name || '').toLowerCase();
+        var phone = (c.customer.phone || '').toLowerCase();
+        var area = (c.customer.area || '').toLowerCase();
+        return name.indexOf(cQuery) > -1 || phone.indexOf(cQuery) > -1 || area.indexOf(cQuery) > -1;
+      });
+
+      dList.sort(function(a, b) { return (a.customer.name||'').toLowerCase().localeCompare((b.customer.name||'').toLowerCase()); });
+      cList.sort(function(a, b) { return (a.customer.name||'').toLowerCase().localeCompare((b.customer.name||'').toLowerCase()); });
+
+      var rList=[];
+      var currentUid = getCurrentBusinessUid();
+      for(var i=0;i<ledger.length;i++){
+        var l = ledger[i];
+        if(!isEntryVisibleToMe(l)) continue;
+        var du = daysUntil(l.dueDate);
+        var s = calculateEntryState(l);
+        if(l.type==='debtor' && s.status!=='paid' && s.status!=='overpaid' && l.isConfirmed!==false && l.dueDate && du!==null && du<=7) rList.push(l);
+      }
+      rList.sort(function(a,b){ var d1=daysUntil(a.dueDate), d2=daysUntil(b.dueDate); return (d1!==null?d1:999) - (d2!==null?d2:999); });
+
+     window.updateLedgerFromFlutter = function(jsonString) {
+        try {
+          var rawData = (typeof jsonString === 'string') ? JSON.parse(jsonString) : jsonString;
+          ledger = Array.isArray(rawData) ? rawData : [];
+          window.ledger = ledger;
+
+          if (Array.isArray(ledger)) {
+            ledger.forEach(function(entry) {
+              var cid = entry.customerId || entry.id;
+             var isOwner = (entry.ownerUid === currentUid);
+
+var cPhone = isOwner
+    ? cleanPhone10(entry.customerPhone)
+    : cleanPhone10(entry.ownerPhone);
+
+              // Find existing contact by ID or clean 10-digit Phone
+              var existingCust = myCustomers.find(function(c) {
+                  var p = cleanPhone10(c.phone);
+                  return (c.id === cid) || (cPhone && p && cPhone === p);
+              });
+
+
+
+// For the creator, the contact is the customer.
+// For the viewer/customer, the contact is the business/owner.
+var displayName = isOwner
+    ? (
+        entry.customerName ||
+        "Shared Contact"
+    )
+    : (
+        entry.businessName ||
+        entry.ownerName ||
+        "Business Account"
+    );
+
+// Use the correct phone depending on which side is viewing.
+var displayPhone = isOwner
+    ? cleanPhone10(entry.customerPhone)
+    : cleanPhone10(entry.ownerPhone);
+/*
+ * Restore a contact previously hidden by the viewer
+ * when the ledger owner creates a new entry after
+ * the contact was hidden.
+ *
+ * Do not restore from old entries returned during
+ * an ordinary realtime refresh.
+ */
+if (
+    existingCust &&
+    existingCust.isHidden === true &&
+    !isOwner
+) {
+    var hiddenAtTime =
+        existingCust.hiddenAt
+            ? new Date(
+                existingCust.hiddenAt
+            ).getTime()
+            : 0;
+
+    var entryCreatedAtTime =
+        entry.createdAt
+            ? new Date(
+                entry.createdAt
+            ).getTime()
+            : 0;
+
+    var hasValidHiddenTime =
+        Number.isFinite(
+            hiddenAtTime
+        ) &&
+        hiddenAtTime > 0;
+
+    var hasValidEntryTime =
+        Number.isFinite(
+            entryCreatedAtTime
+        ) &&
+        entryCreatedAtTime > 0;
+
+    if (
+        hasValidHiddenTime &&
+        hasValidEntryTime &&
+        entryCreatedAtTime >
+            hiddenAtTime
+    ) {
+        existingCust.isHidden =
+            false;
+
+        existingCust.hiddenAt =
+            null;
+
+        existingCust.updatedAt =
+            new Date()
+                .toISOString();
+    }
+}
+if (!existingCust) {
+
+    // For the owner, a device-contact name may override customerName.
+    // For the viewer, prefer the ledger's business/owner name.
+    var devMatch = null;
+
+    if (isOwner && displayPhone && window.deviceContacts) {
+        devMatch = window.deviceContacts.find(function (dc) {
+            return cleanPhone10(dc.phone) === displayPhone;
+        });
+    }
+
+    var finalName = (
+        isOwner &&
+        devMatch &&
+        devMatch.name &&
+        devMatch.name.trim() !== ''
+    )
+        ? devMatch.name.trim()
+        : displayName;
+
+    myCustomers.push({
+        id: cid,
+        name: finalName,
+        creatorUid: entry.ownerUid,
+        phone: displayPhone || "",
+        area: "",
+        privateNotes: isOwner
+            ? "Shared contact entry"
+            : "Shared business ledger",
+        rating: null,
+        fraudFlag: false,
+        isHidden: false
+    });
+}
+              // SAFEGUARD: Never re-assign 'existingCust.name = displayName' here!
+            });
+            saveCustomers();
+          }
+          if (typeof renderAll === 'function') renderAll();
+        } catch (err) { console.error("Failed to parse ledger update from Flutter:", err); }
+      };
+
+      /*
+ * A shared-ledger viewer can see the ledger,
+ * but only its creator can add entries.
+ */
+function ledgerCreatorHelperHTML(
+    isCreator
+) {
+    if (isCreator) {
+        return '';
+    }
+
+    return (
+        '<div class="ledger-read-only-helper">' +
+            '* ' +
+            escapeHTML(
+                t(
+                    'txt_ledger_creator_only'
+                )
+            ) +
+        '</div>'
+    );
+}
+
+
+      function genGroupedHtml(dataList, isRcv) {
+        if(!dataList.length) return emptyStateHTML(isRcv ? 'debtors' : 'creditors', 'txt_nothing', isRcv ? 'txt_add_col' : 'txt_add_pay');
+        var h=''; var bName = profile && (profile && profile.shop) ? (profile && profile.shop) : 'Us';
+
+        for(var j=0;j<dataList.length;j++){
+          var d = dataList[j]; var c = d.customer; var amt = isRcv ? d.netReceivable : d.netPayable;
+          var ledgerData =
+    buildLedgerRows(
+        c.id
+    );
+
+var recent =
+    ledgerData.rows
+        .slice()
+        .sort(
+            function(a, b) {
+                var aTime =
+                    a.ts
+                        ? new Date(
+                            a.ts
+                        ).getTime()
+                        : 0;
+
+                var bTime =
+                    b.ts
+                        ? new Date(
+                            b.ts
+                        ).getTime()
+                        : 0;
+
+                if (
+                    !Number.isFinite(
+                        aTime
+                    )
+                ) {
+                    aTime = 0;
+                }
+
+                if (
+                    !Number.isFinite(
+                        bTime
+                    )
+                ) {
+                    bTime = 0;
+                }
+
+                return (
+                    bTime -
+                    aTime
+                );
+            }
+        )
+        .slice(
+            0,
+            3
+        );
+
+var recentHtml = '';
+
+          if(recent.length > 0) {
+             recentHtml = '<div class="quality-line" style="margin-top:10px; background:var(--khadi); padding:10px 14px; border-radius:10px;"><div style="font-size:0.7rem; color:var(--muted); margin-bottom:8px; text-transform:uppercase; font-weight:700; letter-spacing:0.04em;">' + t('txt_last') + ' ' + recent.length + ' ' + t('txt_entries') + '</div>';
+             for(var r=0; r<recent.length; r++) {
+                var row = recent[r]; var rColor =
+    row.isDr
+        ? 'var(--madder)'
+        : 'var(--sage)';
+                var sign;
+
+if (!row.isBill) {
+    sign = t('payment');
+} else {
+    sign = row.type === 'debtor'
+        ? t('sale')
+        : t('purchase');
+}
+                recentHtml += '<div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:0.85rem;"><span>' + escapeHTML(formatDDMMYYYY(row.date)) + ' <span style="color:var(--muted)">· ' + sign + '</span></span><span style="font-variant-numeric:tabular-nums; font-weight:600; color:' + rColor + '">₹' + fmtMoney(row.amount) + '</span></div>';
+             }
+             recentHtml += '</div>';
+          }
+          var waMessage = "Hello " + ", this is a quick reminder for your pending balance of ₹" + amt + " towards " + bName + ". Thank you!";
+          var reminderBtn = (isRcv && c.phone) ? '<button class="mini-btn whatsapp" onclick="NativeBridge.postMessage(\'WHATSAPP:' + c.phone + '|' + escapeHTML(waMessage).replace(/'/g, "\\'") + '\')">' + t('txt_whatsapp') + '</button>' : '';
+
+          var isCreator = (!c.creatorUid || c.creatorUid === currentUid);
+          var creatorHelper =
+    ledgerCreatorHelperHTML(
+        isCreator
+    );
+          var addPayBtn = isCreator ? '<button class="mini-btn primary" data-action="collect-payment-cust" data-custid="'+c.id+'" data-type="'+(isRcv?'recv':'pay')+'">'+t('btn_add_pay')+'</button>' : '';
+          /*
+ * Only the business that owns this ledger
+ * can create another entry for the contact.
+ *
+ * To Collect defaults to Sale.
+ * To Pay defaults to Purchase.
+ */
+var addEntryBtn =
+    isCreator
+        ? (
+            '<button ' +
+                'class="mini-btn accent" ' +
+                'data-action="new-txn-for" ' +
+                'data-id="' +
+                    escapeHTML(c.id) +
+                '" ' +
+                'data-entry-type="' +
+                    (
+                        isRcv
+                            ? 'debtor'
+                            : 'creditor'
+                    ) +
+                '">' +
+                    t('txt_new_ent') +
+            '</button>'
+        )
+        : '';
+
+          h += '<div class="card"><div class="row-top"><div style="display:flex;gap:12px;align-items:center;">'+stampHTML(c,false)+'<div><div class="cust-name">'+escapeHTML(c.name)+'</div><div class="cust-area">'+escapeHTML(c.area||'')+'</div></div></div><div><div class="amount '+(isRcv?'owe-me':'i-owe')+'">₹'+fmtMoney(amt)+'</div><div class="amount-sub">'+t('txt_balance')+'</div></div></div>'+recentHtml+creatorHelper +'<div class="card-actions ledger-card-actions">' +
+
+    addEntryBtn +
+
+    addPayBtn +
+
+    '<button ' +
+        'class="mini-btn secondary" ' +
+        'data-action="view-history" ' +
+        'data-id="' +
+            escapeHTML(c.id) +
+        '">' +
+            t('btn_ledger') +
+    '</button>' +
+
+    reminderBtn +
+
+'</div></div>';
+        } return h;
+      }
+
+      function genRemindersHtml(arr) {
+        if(!arr.length) return emptyStateHTML('reminders', 'txt_all_clear', 'txt_no_rem');
+        var h='';
+        for(var j=0;j<arr.length;j++){
+          var e=arr[j]; var c=myCustById(e.customerId); var s=calculateEntryState(e); var pct = e.originalAmount ? Math.min(100, Math.round((s.paid/e.originalAmount)*100)) : 0;
+          h += '<div class="card"><div class="row-top"><div style="display:flex;gap:12px;align-items:center;">'+stampHTML(c,false)+'<div><div class="cust-name">'+escapeHTML(e.customerName)+'</div>'+dueTag(e)+'</div></div><div><div class="amount owe-me">₹'+fmtMoney(s.bal)+'</div><div class="amount-sub">of ₹'+fmtMoney(e.originalAmount)+'</div></div></div><div class="progress-track"><div class="progress-fill" style="width:'+pct+'%;"></div></div><div class="quality-line"><b>'+escapeHTML(e.description||t('sale'))+'</b></div><div class="card-actions"><button class="mini-btn secondary" data-action="view-history" data-id="'+e.customerId+'">'+t('btn_ledger')+'</button></div></div>';
+        } return h;
+      }
+      if($('#debtorList')) $('#debtorList').innerHTML = genGroupedHtml(dList, true);
+      if($('#creditorList')) $('#creditorList').innerHTML = genGroupedHtml(cList, false);
+      if($('#reminderList')) $('#reminderList').innerHTML = genRemindersHtml(rList);
+    }
+
+    function renderMyCustomers(){
+      var q = $('#myCustSearch') ? $('#myCustSearch').value.toLowerCase().trim() : '';
+      var balanceMap = {}; var cData = computeCustomerBalances();
+      for (var i = 0; i < cData.length; i++) { balanceMap[cData[i].customer.id] = { receivable: Math.max(cData[i].receivable - cData[i].payable, 0), payable: Math.max(cData[i].payable - cData[i].receivable, 0) }; }
+      var html='';
+      var currentUid = getCurrentBusinessUid();
+
+      var sortedMyCustomers = myCustomers.slice().sort(function(a, b) {
+        return (a.name||'').toLowerCase().localeCompare((b.name||'').toLowerCase());
+      });
+
+      for(var i=0;i<sortedMyCustomers.length;i++){
+        var mc = sortedMyCustomers[i];
+
+        if (!isContactVisibleInMyCustomers(mc)) continue;
+
+        var bal = balanceMap[mc.id] || { receivable: 0, payable: 0 };
+        var balanceText = ''; var balanceClass = '';
+        if (bal.receivable > 0.005) { balanceText = t('txt_to_collect') + ': ₹' + fmtMoney(bal.receivable); balanceClass = 'owe-me'; }
+        else if (bal.payable > 0.005) { balanceText = t('txt_to_pay') + ': ₹' + fmtMoney(bal.payable); balanceClass = 'i-owe'; }
+        else { balanceText = t('txt_settled'); }
+        if(q && mc.name.toLowerCase().indexOf(q)===-1 && (mc.phone||'').indexOf(q)===-1) continue;
+
+        var balHtml = '';
+        if (bal.receivable > 0.005) { balHtml = '<div class="amount owe-me">₹' + fmtMoney(bal.receivable) + '</div><div class="amount-sub">' + t('txt_balance') + '</div>'; }
+        else if (bal.payable > 0.005) { balHtml = '<div class="amount i-owe">₹' + fmtMoney(bal.payable) + '</div><div class="amount-sub">' + t('txt_balance') + '</div>'; }
+        else { balHtml = '<div class="amount">₹0</div><div class="amount-sub">' + t('txt_balance') + '</div>'; }
+
+      var isCreator = (!mc.creatorUid || mc.creatorUid === currentUid);
+
+var manageBtn =
+    '<button class="mini-btn primary" ' +
+    'data-action="manage-customer" ' +
+    'data-id="' + mc.id + '">' +
+    '✏️ ' + t('txt_mng') +
+    '</button>';
+        var newTxnBtn = isCreator ? '<button class="mini-btn accent" data-action="new-txn-for" data-id="'+mc.id+'">'+t('txt_new_ent')+'</button>' : '';
+
+        html += '<div class="card"><div class="row-top"><div style="display:flex;gap:12px;align-items:center;">'+stampHTML(mc,false)+'<div><div class="cust-name">'+escapeHTML(mc.name)+(mc.fraudReported?'<span class="badge-public">Reported</span>':'')+'</div><div class="cust-area">'+escapeHTML(mc.area||'')+(mc.phone?' · '+escapeHTML(mc.phone):'')+'</div></div></div><div style="text-align:right;">'+balHtml+'</div></div>'+(mc.privateNotes ? '<div class="quality-line"><b>'+t('lbl_priv_note').split(' (')[0]+':</b> '+escapeHTML(mc.privateNotes)+'</div>' : '')+'<div class="card-actions">' + manageBtn +     '<button ' +
+        'class="mini-btn secondary" ' +
+        'data-action="view-history" ' +
+        'data-id="' +
+            escapeHTML(mc.id) +
+        '">' +
+            t('btn_ledger') +
+    '</button>' + (mc.phone ? '<button class="mini-btn call" onclick="NativeBridge.postMessage(\'CALL:'+escapeHTML(mc.phone)+'\')">'+t('txt_call')+'</button>' : '') + newTxnBtn + '</div></div>';
+      }
+      if($('#myCustomerList')) $('#myCustomerList').innerHTML = html || emptyStateHTML('contacts', 'txt_no_cust', 'txt_tap_first');
+    }
+
+    function renderDirectory() {
+    var query = $('#directorySearch')
+        ? $('#directorySearch').value.toLowerCase().trim()
+        : '';
+
+    var items = directory.filter(function (record) {
+        var reporterUids = Array.isArray(record.reporterUids)
+            ? record.reporterUids
+            : [];
+
+        var reportCount = Number(
+            record.reportCount || reporterUids.length || 0
+        );
+
+        // Requirement 1:
+        // Show only when reported by at least 3 unique users.
+        if (reportCount < 3) {
+            return false;
+        }
+
+        // Requirement 2:
+        // Show only people already known to the logged-in user.
+        if (!isKnownContactFraudRecord(record)) {
+            return false;
+        }
+
+        if (!query) {
+            return true;
+        }
+
+        return (
+            String(record.name || '')
+                .toLowerCase()
+                .indexOf(query) > -1 ||
+            String(record.phone || '')
+                .indexOf(query) > -1 ||
+            String(record.area || '')
+                .toLowerCase()
+                .indexOf(query) > -1
+        );
+    }).sort(function (a, b) {
+        var countA = Number(
+            a.reportCount ||
+            (Array.isArray(a.reporterUids)
+                ? a.reporterUids.length
+                : 0)
+        );
+
+        var countB = Number(
+            b.reportCount ||
+            (Array.isArray(b.reporterUids)
+                ? b.reporterUids.length
+                : 0)
+        );
+
+        // Higher report count first.
+        if (countA !== countB) {
+            return countB - countA;
+        }
+
+        return String(a.name || '')
+            .toLowerCase()
+            .localeCompare(
+                String(b.name || '').toLowerCase()
+            );
+    });
+
+    var element = $('#directoryList');
+
+    if (!element) return;
+
+    if (items.length === 0) {
+        element.innerHTML = emptyStateHTML('fraud', 'txt_no_fraud', 'txt_when_fraud');
+        return;
+    }
+
+    var html = '';
+
+    for (var i = 0; i < items.length; i++) {
+        var record = items[i];
+
+        var reporterUids = Array.isArray(record.reporterUids)
+            ? record.reporterUids
+            : [];
+
+        var reportCount = Number(
+            record.reportCount || reporterUids.length || 0
+        );
+
+        var knownContact = myCustomers.find(function (contact) {
+            var contactPhone = cleanPhone10(contact.phone);
+            var recordPhone = cleanPhone10(record.phone);
+
+            if (recordPhone && contactPhone) {
+                return recordPhone === contactPhone;
+            }
+
+            return (
+                !recordPhone &&
+                !contactPhone &&
+                String(contact.name || '').trim().toLowerCase() ===
+                String(record.name || '').trim().toLowerCase()
+            );
+        });
+
+        // Show the local contact-book name where available.
+        var displayName = knownContact
+            ? knownContact.name
+            : record.name;
+
+        var latestNotes = '';
+
+        if (
+            Array.isArray(record.reports) &&
+            record.reports.length > 0
+        ) {
+            var reportsWithNotes = record.reports.filter(function (report) {
+                return String(report.notes || '').trim() !== '';
+            });
+
+            if (reportsWithNotes.length > 0) {
+                reportsWithNotes.sort(function (a, b) {
+                    return String(b.updatedAt || b.reportedAt || '')
+                        .localeCompare(
+                            String(a.updatedAt || a.reportedAt || '')
+                        );
+                });
+
+                latestNotes = reportsWithNotes[0].notes;
+            }
+        }
+
+        html +=
+            '<div class="card">' +
+                '<div class="row-top">' +
+                    '<div style="display:flex;gap:12px;align-items:center;">' +
+                        stampHTML({ fraudFlag: true }, false) +
+                        '<div>' +
+                            '<div class="cust-name">' +
+                                escapeHTML(displayName || 'Known contact') +
+                            '</div>' +
+                            '<div class="cust-area">' +
+                                escapeHTML(record.area || '') +
+                                (
+                                    record.phone
+                                        ? ' · ' + escapeHTML(record.phone)
+                                        : ''
+                                ) +
+                            '</div>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>' +
+
+                '<div class="quality-line">' +
+                    '<b>' + reportCount + ' independent reports</b>' +
+                '</div>' +
+
+                (
+                    latestNotes
+                        ? '<div class="quality-line">' +
+                            '<b>Latest report:</b> ' +
+                            escapeHTML(latestNotes) +
+                          '</div>'
+                        : ''
+                ) +
+
+                '<div class="meta-line">' +
+                    'Reported anonymously by ' +
+                    reportCount +
+                    ' people' +
+                    (
+                        record.updatedAt
+                            ? ' · ' + formatDDMMYYYY(record.updatedAt)
+                            : ''
+                    ) +
+                '</div>' +
+
+                '<div class="card-actions">' +
+                    '<button class="mini-btn primary lg" ' +
+                        'data-action="dir-rate" ' +
+                        'data-id="' + record.id + '">' +
+                        t('txt_v_rep') +
+                    '</button>' +
+                '</div>' +
+            '</div>';
+    }
+
+    element.innerHTML = html;
+}
+
+/*
+ * Adds the INV: prefix only when the user
+ * entered an invoice/reference number.
+ */
+function formatInvoiceReference(
+    reference
+) {
+    var cleanReference =
+        String(reference || '')
+            .trim();
+
+    if (!cleanReference) {
+        return '';
+    }
+
+    /*
+     * Avoid producing:
+     * INV: INV: 123
+     */
+    if (
+        /^INV\s*:/i.test(
+            cleanReference
+        )
+    ) {
+        return cleanReference;
+    }
+
+    return (
+        'INV: ' +
+        cleanReference
+    );
+}
+
+
+    function buildLedgerRows(customerId) {
+    function getRowTimestamp(row) {
+      if (row.ts) {
+        var datePart = row.date || todayISO();
+        var timePart = "00:00:00";
+        if (typeof row.ts === 'string' && row.ts.indexOf('T') > -1) {
+          var parts = row.ts.split('T');
+          if (parts.length > 1) {
+            timePart = parts[1];
+          }
+        }
+        var isoStr = datePart + 'T' + timePart;
+        var t = new Date(isoStr).getTime();
+        if (!isNaN(t) && t > 0) return t;
+
+        t = new Date(row.ts).getTime();
+        if (!isNaN(t) && t > 0) return t;
+      }
+      var d = new Date(row.date).getTime();
+      return isNaN(d) ? 0 : d;
+    }
+
+    function buildLedgerRows(customerId) {
+      var rows = []; var targetCust = myCustById(customerId); var targetPhone = targetCust ? (targetCust.phone || '').replace(/\D/g, '') : '';
+      var currentUid = getCurrentBusinessUid();
+
+      for (var i = 0; i < ledger.length; i++) {
+        var l = ledger[i];
+        if(!isEntryVisibleToMe(l)) continue;
+        var lPhone = (l.customerPhone || '').replace(/\D/g, '');
+        var isMatch = (l.customerId === customerId) || (targetPhone && lPhone && targetPhone.slice(-10) === lPhone.slice(-10));
+        if (!isMatch) continue;
+
+        var amt = Number(l.grossAmount || l.originalAmount || l.amount || 0);
+        var isOwner = (l.ownerUid === currentUid);
+        var effectiveType = isOwner ? l.type : (l.type === 'debtor' ? 'creditor' : 'debtor');
+
+        rows.push({
+          isBill: true,
+          date: entryDateForSort(l),
+          ref: (l.description && String(l.description).trim())
+            ? formatInvoiceReference(l.description)
+            : (l.invoiceNumber || (effectiveType === 'debtor' ? t('sale') : t('purchase'))),
+          type: effectiveType,
+          amount: amt,
+          discount: Number(l.discountAmount || 0),
+          isConfirmed: l.isConfirmed !== false,
+          entryId: l.id,
+          payId: null,
+          paymentMode: l.paymentMode || '',
+          ts: l.createdAt,
+          createdByName: l.createdByName || '',
+          createdByRole: l.createdByRole || 'owner'
+        });
+
+        if (l.payments) {
+          for (var p = 0; p < l.payments.length; p++) {
+            var py = l.payments[p];
+            rows.push({
+              isBill: false,
+              date: py.date || entryDateForSort(l),
+              ref: py.note || py.receiptNumber || t('payment'),
+              type: effectiveType,
+              amount: Number(py.amount || 0),
+              discount: 0,
+              isConfirmed: py.isConfirmed !== false,
+              entryId: l.id,
+              payId: py.id,
+              paymentMode: py.paymentMode || '',
+              ts: py.createdAt || l.createdAt || '',
+              createdByName: py.createdByName || l.createdByName || '',
+              createdByRole: py.createdByRole || l.createdByRole || 'owner'
+            });
+          }
+        }
+      }
+
+      rows.sort(function(a, b) {
+        var tA = getRowTimestamp(a);
+        var tB = getRowTimestamp(b);
+        if (tA !== tB) {
+          return tA - tB;
+        }
+        if (a.isBill !== b.isBill) {
+          return a.isBill ? -1 : 1;
+        }
+        return String(a.entryId).localeCompare(String(b.entryId));
+      });
+
+      var runningBal = 0;
+      for (var r = 0; r < rows.length; r++) {
+        var row = rows[r]; var isDr = (row.type === 'debtor') ? row.isBill : !row.isBill; var isCr = !isDr; row.isDr = isDr; row.isCr = isCr;
+        if (row.isConfirmed) runningBal += (isDr ? row.amount : -row.amount);
+        row.balAfter = runningBal;
+      }
+      var closingBal = runningBal;
+
+      rows.reverse();
+      return { rows: rows, closingBal: closingBal };
+    }
+
+    function renderHistory(){
+      var currentUid = getCurrentBusinessUid();
+      var c = myCustById(historyCustomerId);
+      if($('#history-cust-name')) $('#history-cust-name').textContent = c ? (c.name + (c.area?' · '+c.area:'')) : '';
+      var data = buildLedgerRows(historyCustomerId); var rows = data.rows;
+      var closingText = Math.abs(data.closingBal) < 0.005 ? (t('txt_all_set')+' (₹0)') : ('₹'+fmtMoney(Math.abs(data.closingBal))+(data.closingBal>0?' — '+t('nav_collect').toLowerCase():' — '+t('nav_pay').toLowerCase()));
+      if($('#historySummaryBar')) $('#historySummaryBar').innerHTML = '<div><span class="label">'+t('txt_txns')+'</span>'+rows.length+'</div><div style="text-align:right;"><span class="label">'+t('txt_closing')+'</span>'+closingText+'</div>';
+
+      var el = $('#historyList'); if(!el) return;
+      if(rows.length===0){ el.innerHTML = emptyStateHTML('history', 'txt_no_txn', 'txt_not_rec'); return; }
+
+      var isCreator = (!c || !c.creatorUid || c.creatorUid === currentUid);
+      var displayRows = rows.slice();
+      var html='';
+      for(var r=0;r<displayRows.length;r++){
+        var row = displayRows[r]; var balText = Math.abs(row.balAfter) < 0.005 ? '₹0' : ('₹'+fmtMoney(Math.abs(row.balAfter))+(row.balAfter>0?' Dr':' Cr'));
+        var confirmBtn = !row.isConfirmed ? '<button class="confirm-mini" data-action="'+(row.isBill?'confirm-inv':'confirm-pay')+'" data-eid="'+row.entryId+'" data-pid="'+(row.payId||'')+'">'+t('btn_confirm')+'</button>' : '';
+
+        var discountHtml = row.discount ? '<div style="font-size:0.75rem; color:var(--turmeric); margin-top:3px; font-weight:600;">'+t('lbl_discount').split(' (')[0]+': ₹'+fmtMoney(row.discount)+'</div>' : '';
+        var actorHtml = '';
+
+if (
+    row.employeeName &&
+    row.employeeName.trim()
+) {
+    actorHtml =
+        '<div class="hr-actor">' +
+            'Added by ' +
+            escapeHTML(
+                row.employeeName
+            ) +
+        '</div>';
+}
+
+        var actionsHtml = '';
+        var menuItems = '';
+
+        // "View Invoice" / "View Receipt" is shown to everyone
+        var viewBtnText = row.isBill ? t('btn_view_inv') : t('btn_view_receipt');
+        menuItems +=
+          '<button class="hr-menu-item" data-action="preview-invoice" data-eid="'+row.entryId+'" data-pid="'+(row.payId||'')+'">' +
+              '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>' +
+              viewBtnText +
+          '</button>';
+
+        // "Edit" and "Delete" only for the creator
+        if (isCreator) {
+          menuItems +=
+            '<button class="hr-menu-item" data-action="edit-item" data-eid="'+row.entryId+'" data-pid="'+(row.payId||'')+'">' +
+                '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>' +
+                t('btn_edit') +
+            '</button>' +
+            '<button class="hr-menu-item danger" data-action="delete-item" data-eid="'+row.entryId+'" data-pid="'+(row.payId||'')+'">' +
+                '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>' +
+                t('btn_del') +
+            '</button>';
+        }
+
+        if (menuItems) {
+            actionsHtml =
+                '<div class="hr-actions">' +
+                    '<button type="button" class="hr-menu-trigger" aria-label="Transaction menu">⋮</button>' +
+                    '<div class="hr-menu-dropdown">' + menuItems + '</div>' +
+                '</div>';
+        }
+
+        var modeText = row.paymentMode ? ' (' + escapeHTML(row.paymentMode) + ')' : '';
+        var typeText = (row.isBill ? (row.type === 'debtor' ? t('sale') : t('purchase')) : t('payment')) + modeText;
+
+        html += '<div class="history-row'+(row.isConfirmed?'':' unconfirmed')+'" style="position: relative; padding-right: 32px;"><div class="hr-top"><div><div class="hr-ref">'+escapeHTML(row.ref)+(!row.isConfirmed?' — <span style="color:var(--madder);">Pending</span>':'')+'</div><div class="hr-type">'+escapeHTML(typeText)+'</div>'+discountHtml + '<div class="hr-date">' +
+    escapeHTML(
+        formatDDMMYYYY(
+            row.date
+        )
+    ) +
+'</div>' +
+actorHtml+confirmBtn+'</div><div style="text-align:right;"><div class="hr-amt '+(row.isDr?'dr':'cr')+'">'+(row.isDr?'Dr ':'Cr ')+'₹'+fmtMoney(row.amount)+'</div>'+(row.isConfirmed ? '<div class="hr-bal">'+balText+'</div>' : '<div class="hr-bal">not counted</div>')+'</div></div>' + actionsHtml + '</div>';
+      } el.innerHTML = html;
+    }
+
+    async function getLogoImage() {
+        // Priority 1: Use pre-fetched base64 from Flutter session
+        if (window.flutterSession && window.flutterSession.businessLogoBase64 && window.flutterSession.businessLogoBase64.length > 50) {
+            return window.flutterSession.businessLogoBase64;
+        }
+
+        // Priority 2: Use profile logoUrl if it's already a Data URL
+        if (profile && profile.logoUrl && profile.logoUrl.startsWith('data:image')) {
+            return profile.logoUrl;
+        }
+
+        // Priority 3: Check DOM preview image element
+        var previewEl = document.getElementById('ob-logo-preview');
+        if (previewEl && previewEl.src && previewEl.src.startsWith('data:image')) {
+            return previewEl.src;
+        }
+
+        // Priority 4: Fetch network URL as Blob and convert via FileReader (bypasses CORS)
+        var url = (profile && profile.logoUrl) || (window.flutterSession && window.flutterSession.businessLogoUrl);
+        if (!url || typeof url !== 'string' || !url.startsWith('http')) return null;
+
+        try {
+            const response = await fetch(url);
+            if (!response.ok) return null;
+            const blob = await response.blob();
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.onerror = () => resolve(null);
+                reader.readAsDataURL(blob);
+            });
+        } catch (e) {
+            console.error("PDF Logo Fetch Error:", e);
+            return null;
+        }
+    }
+
+    async function getCustomerLedgerDoc(c) {
+      var data = buildLedgerRows(c.id); var rows = data.rows; const { jsPDF } = window.jspdf; const doc = new jsPDF();
+      var pageWidth = doc.internal.pageSize.getWidth(); var pageHeight = doc.internal.pageSize.getHeight();
+      var cleanShopName = ((profile && (profile && profile.shop)) ? (profile && profile.shop) : ((profile && (profile && profile.name)) ? (profile && profile.name) : 'My Business')).replace(/[^\x00-\x7F]/g, '').trim() || 'My Business';
+
+      var startY = 22;
+      const logoImg = await getLogoImage();
+      if (logoImg) {
+          try {
+              const format = logoImg.includes('png') ? 'PNG' : 'JPEG';
+              doc.addImage(logoImg, format, pageWidth/2 - 12, 12, 24, 24);
+              startY = 44;
+          } catch (e) {
+              console.error('PDF Logo Add Error:', e);
+          }
+      }
+
+      doc.setFontSize(8); doc.setTextColor(150); doc.setFont('helvetica', 'normal'); doc.text('Generated by Collection Book', pageWidth/2, 10, {align: 'center'});
+     var shopSub = [];
+
+/*
+ * Show business phone below
+ * business name instead of owner name.
+ */
+var ownerPhone =
+    cleanPhone10(
+        (window.flutterSession && (window.flutterSession && window.flutterSession.ownerPhone)) ||
+        (window.flutterSession && window.flutterSession.userPhone) ||
+        ''
+    );
+
+if (ownerPhone) {
+    shopSub.push(
+        'Phone: ' + ownerPhone
+    );
+}
+
+if (profile && (profile && profile.area)) {
+    shopSub.push(
+        (profile && profile.area)
+            .replace(
+                /[^\x00-\x7F]/g,
+                ''
+            )
+            .trim()
+    );
+}
+
+if (profile && (profile && profile.gst)) {
+    shopSub.push(
+        'GST: ' + (profile && profile.gst)
+    );
+}
+      doc.setFontSize(22); doc.setTextColor(0); doc.setFont('helvetica', 'bold'); doc.text(cleanShopName, pageWidth/2, startY, {align: 'center'});
+      if (shopSub.length > 0) { doc.setFontSize(11); doc.setFont('helvetica', 'normal'); doc.setTextColor(80); doc.text(shopSub.filter(Boolean).join(' | '), pageWidth/2, startY + 7, {align: 'center'}); }
+      var cleanCustName = c.name.replace(/[^\x00-\x7F]/g, '').trim() || 'Contact';
+      doc.setFontSize(12); doc.setTextColor(0); doc.setFont('helvetica', 'bold'); doc.text('Contact: ' + cleanCustName, 14, startY + 20);
+      doc.setFontSize(10); doc.setFont('helvetica', 'normal'); doc.setTextColor(80);
+      var custInfo = []; if(c.phone) custInfo.push('Phone: ' + c.phone); if(c.area) custInfo.push('Area: ' + c.area.replace(/[^\x00-\x7F]/g, '').trim());
+      if(custInfo.length > 0) doc.text(custInfo.join(' | '), 14, startY + 25);
+      doc.setFontSize(9); doc.setTextColor(100); doc.text('Printed on: ' + formatDDMMYYYY(todayISO()), pageWidth - 14, startY + 20, {align: 'right'});
+
+      var tableBody = [];
+      var chronologicalRows = rows.slice();
+
+      if(chronologicalRows.length === 0){ tableBody.push([{content: 'No transactions recorded.', colSpan: 6, styles: {halign: 'center'}}]); }
+      else {
+        for(var r=0; r<chronologicalRows.length; r++){
+          var row = chronologicalRows[r]; var balText = !row.isConfirmed ? 'Pending' : (Math.abs(row.balAfter)<0.005 ? '0' : fmtMoney(Math.abs(row.balAfter))+(row.balAfter>0?' Dr':' Cr'));
+          var pdfRef = row.ref; if(pdfRef === t('sale')) pdfRef = 'Sale'; else if(pdfRef === t('purchase')) pdfRef = 'Purchase'; else if(pdfRef === t('payment')) pdfRef = 'Payment';
+          pdfRef = pdfRef.replace(/[^\x00-\x7F]/g, '').trim(); if(pdfRef === '') pdfRef = 'Transaction';
+          tableBody.push([formatDDMMYYYY(row.date), pdfRef + (!row.isConfirmed ? ' [Pending]' : ''), row.discount ? fmtMoney(row.discount) : '', row.isDr ? fmtMoney(row.amount) : '', row.isCr ? fmtMoney(row.amount) : '', balText]);
+        }
+       var closingText;
+
+if (
+    Math.abs(
+        data.closingBal
+    ) < 0.005
+) {
+    closingText =
+        '0';
+} else if (
+    data.closingBal < 0
+) {
+    /*
+     * A negative final balance means the
+     * customer has paid more than the total
+     * outstanding invoice amount.
+     */
+    closingText =
+        fmtMoney(
+            Math.abs(
+                data.closingBal
+            )
+        ) +
+        ' Cr (Overpaid)';
+} else {
+    closingText =
+        fmtMoney(
+            data.closingBal
+        ) +
+        ' Dr';
+}
+        tableBody.push([{content: 'Closing Balance', colSpan: 5, styles: {fontStyle: 'bold', halign: 'right'}}, {content: closingText, styles: {fontStyle: 'bold', halign: 'right'}}]);
+      }
+      doc.autoTable({ startY: startY + 32, head: [['Date', 'Particulars', 'Discount/Ret.', 'Debit', 'Credit', 'Balance']], body: tableBody, theme: 'grid', headStyles: { fillColor: [43, 58, 103], textColor: [255, 255, 255] }, columnStyles: { 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' } } });
+      var totalPages = doc.internal.getNumberOfPages();
+      for (var i = 1; i <= totalPages; i++) { doc.setPage(i); doc.setFontSize(9); doc.setTextColor(120); doc.text('Simplify your ledger & grow your business with Collection Book App!', pageWidth/2, pageHeight - 10, {align: 'center'}); }
+      return doc;
+    }
+
+    async function printCustomerLedger(){
+      if(typeof window.jspdf === 'undefined'){ pdfRetryCount++; if(pdfRetryCount > 10) { showToast('Error loading PDF library. Check network connection.'); pdfRetryCount=0; return; } showToast('Generating PDF... Please wait'); setTimeout(printCustomerLedger, 500); return; }
+      pdfRetryCount = 0; var c = myCustById(historyCustomerId); if(!c){ showToast('Open a contact ledger first.'); return; }
+      var doc = await getCustomerLedgerDoc(c); var safeName = c.name.replace(/[^\x00-\x7F]/g, '').replace(/[^a-z0-9]/gi, '_'); if(!safeName) safeName = "Contact";
+      var filename ='Ledger_' + safeName + '.pdf'; var base64 = doc.output("datauristring").split(",")[1];
+      NativeBridge.postMessage("SAVEPDF:" + filename + "|" + base64);
+    }
+
+    function getGeneratedNo(entry) {
+        if (!entry) return "";
+        if (entry.description && entry.description.trim() !== '') return entry.description.trim();
+        if (entry.invoiceNumber && entry.invoiceNumber.trim() !== '') return entry.invoiceNumber.trim();
+        if (entry.receiptNumber && entry.receiptNumber.trim() !== '') return entry.receiptNumber.trim();
+        if (entry.note && entry.note.trim() !== '') return entry.note.trim();
+        return (entry.type === 'debtor' ? "CB/INV/..." : "Receipt/...");
+    }
+
+    function drawBrandHeader(doc, x, y) {
+        const logoWidth = 32;
+        const logoHeight = 10.1;
+        const appLogo = (window.flutterSession && window.flutterSession.appLogo);
+        const playStoreUrl = "https://tinyurl.com/Collection-Book";
+        const rightX = doc.internal.pageSize.getWidth() - 14;
+        const startX = rightX - logoWidth;
+        const topY = y || 10;
+
+        function drawTextFallback(doc, fx, fy) {
+            doc.setFontSize(6);
+            doc.setTextColor(140, 150, 160);
+            doc.setFont('helvetica', 'bold');
+            doc.text('GENERATED ON', rightX, fy, { align: 'right' });
+
+            doc.setFontSize(10.5);
+            doc.setTextColor(43, 58, 103);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Collection', rightX, fy + 4.5, { align: 'right' });
+
+            doc.setFontSize(12.5);
+            doc.setTextColor(201, 138, 45);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Book', rightX, fy + 9.5, { align: 'right' });
+
+            doc.link(rightX - 35, fy - 2, 35, 14, { url: playStoreUrl });
+        }
+
+        if (appLogo && appLogo.startsWith('data:image')) {
+            try {
+                // "GENERATED ON" text centered above text logo
+                doc.setFontSize(5.5);
+                doc.setTextColor(140, 150, 160);
+                doc.setFont('helvetica', 'bold');
+                doc.text('GENERATED ON', startX + (logoWidth / 2), topY - 1.5, { align: 'center' });
+
+                const format = appLogo.includes('png') ? 'PNG' : 'JPEG';
+                doc.addImage(appLogo, format, startX, topY, logoWidth, logoHeight);
+
+                // Make logo area clickable
+                doc.link(startX, topY - 2, logoWidth, logoHeight + 2, { url: playStoreUrl });
+            } catch (err) {
+                console.error("Logo injection error:", err);
+                drawTextFallback(doc, startX, topY);
+            }
+        } else {
+            drawTextFallback(doc, startX, topY);
+        }
+    }
+
+    async function getSingleInvoiceDoc(entry, c) {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const primaryColor = [43, 58, 103]; // Indigo
+      const secondaryColor = [100, 100, 100]; // Muted text
+
+      // 1. TOP HEADER (COMPANY NAME & INFO)
+      const cleanShopName = ((profile && profile.shop) ? profile.shop : ((profile && profile.name) ? profile.name : 'My Business')).replace(/[^\x00-\x7F]/g, '').trim() || 'My Business';
+
+      var startY = 16.5;
+      let textX = 14;
+      const logoImg = await getLogoImage();
+      if (logoImg) {
+          try {
+              const format = logoImg.includes('png') ? 'PNG' : 'JPEG';
+              doc.addImage(logoImg, format, 14, 10, 16, 16);
+              textX = 34;
+          } catch (e) {
+              console.error('PDF Logo Error:', e);
+          }
+      }
+
+      // 0. BRAND HEADER (TOP RIGHT - center aligned with business header block)
+      drawBrandHeader(doc, 0, 14);
+
+      doc.setFontSize(16);
+      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.setFont('helvetica', 'bold');
+      doc.text(cleanShopName, textX, startY);
+
+      // Company Info Line (Single Row - vertically centered with logo)
+      doc.setFontSize(8.5);
+      let currentX = textX;
+      const infoY = startY + 5.5;
+
+      const addr = (profile && profile.area) ? profile.area.replace(/[^\x00-\x7F]/g, '').trim() : '';
+      if (addr) {
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(0);
+        doc.text('Address:', currentX, infoY);
+        currentX += doc.getTextWidth('Address:') + 1.5;
+
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
+        doc.text(addr, currentX, infoY);
+        currentX += doc.getTextWidth(addr) + 6;
+      }
+
+      const phone = cleanPhone10((window.flutterSession && window.flutterSession.ownerPhone) || (window.flutterSession && window.flutterSession.userPhone) || '');
+      if (phone) {
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(0);
+        doc.text('Contact No.:', currentX, infoY);
+        currentX += doc.getTextWidth('Contact No.:') + 1.5;
+
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
+        doc.text(phone, currentX, infoY);
+      }
+
+      // Document Title (INVOICE) with ample top spacing
+      doc.setFontSize(22);
+      doc.setTextColor(170, 184, 197);
+      doc.setFont('helvetica', 'bold');
+      doc.text('INVOICE', pageWidth / 2, 54, { align: 'center' });
+
+      // 2. METADATA section
+      let y = 66;
+      doc.setFontSize(10);
+      doc.setTextColor(0);
+      doc.setFont('helvetica', 'bold');
+
+      const invLabel = 'Invoice No.:';
+      doc.text(invLabel, 14, y);
+      doc.setFont('helvetica', 'normal');
+      doc.text(getGeneratedNo(entry), 14 + doc.getTextWidth(invLabel) + 4, y);
+
+      doc.setFont('helvetica', 'bold');
+      const dateLabel = 'Invoice Date:';
+      doc.text(dateLabel, pageWidth - 80, y);
+      doc.setFont('helvetica', 'normal');
+      doc.text(formatDDMMYYYY(entry.invoiceDate || entry.createdAt), pageWidth - 80 + doc.getTextWidth(dateLabel) + 4, y);
+
+      if (entry.dueDate) {
+        y += 7;
+        doc.setFont('helvetica', 'bold');
+        const dueLabel = 'Due Date:';
+        doc.text(dueLabel, pageWidth - 80, y);
+        doc.setFont('helvetica', 'normal');
+        doc.text(formatDDMMYYYY(entry.dueDate), pageWidth - 80 + doc.getTextWidth(dueLabel) + 4, y);
+      }
+
+      if (entry.paymentMode) {
+        y += 7;
+        doc.setFont('helvetica', 'bold');
+        const modeLabel = 'Payment Mode:';
+        doc.text(modeLabel, 14, y);
+        doc.setFont('helvetica', 'normal');
+        doc.text(entry.paymentMode, 14 + doc.getTextWidth(modeLabel) + 4, y);
+      }
+
+      // 3. CUSTOMER DETAILS section
+      y = Math.max(y + 10, 78);
+      doc.setFontSize(11);
+      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.setFont('helvetica', 'bold');
+      doc.text('CUSTOMER DETAILS', 14, y);
+      doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.setLineWidth(0.5);
+      doc.line(14, y + 2, 60, y + 2);
+
+      y += 12;
+      doc.setFontSize(10);
+      doc.setTextColor(0);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Name:', 14, y);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
+      doc.text(c.name.replace(/[^\x00-\x7F]/g, '').trim() || 'Contact', 28, y);
+
+      if (c.phone) {
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(0);
+        doc.text('Phone No.:', pageWidth - 80, y);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
+        doc.text(c.phone, pageWidth - 60, y);
+      }
+
+      if (c.area) {
+        y += 6;
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(0);
+        doc.text('Address:', 14, y);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
+        doc.text(c.area.replace(/[^\x00-\x7F]/g, '').trim(), 26, y);
+      }
+
+      // 4. MAIN ITEMS TABLE
+      let tableHead = [['No.', 'Item Description', 'Qty / Unit', 'Rate', 'Total Price']];
+      let tableBody = [];
+
+      if (Array.isArray(entry.items) && entry.items.length > 0) {
+        for (let i = 0; i < entry.items.length; i++) {
+          const item = entry.items[i];
+          let qtyStr = item.qty + ' ' + (item.unit || 'Pcs');
+          if (item.secUnit && item.convFactor) {
+            qtyStr += '\n(' + (item.qty * item.convFactor) + ' ' + item.secUnit + ')';
+          }
+          let descStr = item.name;
+          tableBody.push([
+            (i + 1).toString(),
+            descStr,
+            qtyStr,
+            'Rs. ' + fmtMoney(item.rate),
+            'Rs. ' + fmtMoney(item.amount)
+          ]);
+        }
+      } else {
+        const itemDesc = (entry.itemDescription && entry.itemDescription.trim() !== '') ? entry.itemDescription.trim() : (entry.type === 'debtor' ? 'Sale' : 'Purchase');
+        tableHead = [['No.', 'Item Description', 'Total Price']];
+        tableBody = [[
+          '1',
+          itemDesc,
+          'Rs. ' + fmtMoney(entry.grossAmount || entry.originalAmount)
+        ]];
+      }
+
+      let colStyles = {
+        0: { halign: 'center', cellWidth: 15 },
+        2: { halign: 'right', cellWidth: 45 }
+      };
+      if (Array.isArray(entry.items) && entry.items.length > 0) {
+        colStyles = {
+          0: { halign: 'center', cellWidth: 12 },
+          2: { halign: 'center', cellWidth: 32 },
+          3: { halign: 'right', cellWidth: 32 },
+          4: { halign: 'right', cellWidth: 38 }
+        };
+      }
+
+      doc.autoTable({
+        startY: y + 10,
+        head: tableHead,
+        body: tableBody,
+        theme: 'grid',
+        headStyles: { fillColor: primaryColor, textColor: [255, 255, 255], fontStyle: 'bold' },
+        columnStyles: colStyles,
+        styles: { cellPadding: 5 }
+      });
+
+      // 5. TOTALS Section
+      const totalAmount = entry.grossAmount || entry.originalAmount;
+      const totalReceived = (entry.payments || []).reduce((sum, p) => sum + Number(p.amount || 0), 0);
+      const balanceDue = Math.max(0, totalAmount - totalReceived);
+
+      let finalY = doc.lastAutoTable.finalY + 8;
+      doc.setDrawColor(200, 200, 200);
+      doc.setLineWidth(0.2);
+      doc.line(pageWidth - 80, finalY, pageWidth - 14, finalY);
+
+      finalY += 6;
+      doc.setFontSize(9.5);
+      doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Total Amount', pageWidth - 80, finalY);
+      doc.text('Rs. ' + fmtMoney(totalAmount), pageWidth - 16, finalY, { align: 'right' });
+
+      if (totalReceived > 0) {
+        finalY += 6;
+        doc.text('Amount Received', pageWidth - 80, finalY);
+        doc.text('Rs. ' + fmtMoney(totalReceived), pageWidth - 16, finalY, { align: 'right' });
+
+        finalY += 6;
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(0);
+        doc.text('Balance Due', pageWidth - 80, finalY);
+        doc.text('Rs. ' + fmtMoney(balanceDue), pageWidth - 16, finalY, { align: 'right' });
+      }
+
+      // Grand Total Bar
+      finalY += 8;
+      const boxHeight = 12;
+      doc.setFillColor(245, 247, 250);
+      doc.rect(14, finalY, pageWidth - 28, boxHeight, 'F');
+      doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.setLineWidth(0.8);
+      doc.line(14, finalY, pageWidth - 14, finalY);
+      doc.line(14, finalY + boxHeight, pageWidth - 14, finalY + boxHeight);
+
+      doc.setFontSize(12);
+      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.setFont('helvetica', 'bold');
+      doc.text('GRAND TOTAL', 18, finalY + 8);
+      doc.text('Rs. ' + fmtMoney(totalAmount), pageWidth - 18, finalY + 8, { align: 'right' });
+
+      return doc;
+    }
+
+    async function getSingleReceiptDoc(payment, entry, c) {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const primaryColor = [43, 58, 103]; // Indigo
+      const secondaryColor = [100, 100, 100]; // Muted text
+      const accentColor = [201, 138, 45]; // Turmeric
+
+      // 1. TOP HEADER (COMPANY NAME & INFO)
+      const cleanShopName = ((profile && (profile && profile.shop)) ? (profile && profile.shop) : ((profile && (profile && profile.name)) ? (profile && profile.name) : 'My Business')).replace(/[^\x00-\x7F]/g, '').trim() || 'My Business';
+
+      var startY = 16.5;
+      let textX = 14;
+      const logoImg = await getLogoImage();
+      if (logoImg) {
+          try {
+              const format = logoImg.includes('png') ? 'PNG' : 'JPEG';
+              doc.addImage(logoImg, format, 14, 10, 16, 16);
+              textX = 34;
+          } catch (e) {
+              console.error('PDF Logo Error:', e);
+          }
+      }
+
+      // 0. BRAND HEADER (TOP RIGHT - center aligned with business header block)
+      drawBrandHeader(doc, 0, 14);
+
+      doc.setFontSize(16);
+      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.setFont('helvetica', 'bold');
+      doc.text(cleanShopName, textX, startY);
+
+      // Company Info Line (Single Row - vertically centered with logo)
+      doc.setFontSize(8.5);
+      let currentX = textX;
+      const infoY = startY + 5.5;
+
+      const addr = (profile && (profile && profile.area)) ? (profile && profile.area).replace(/[^\x00-\x7F]/g, '').trim() : '';
+      if (addr) {
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(0);
+        doc.text('Address:', currentX, infoY);
+        currentX += doc.getTextWidth('Address:') + 1.5;
+
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
+        doc.text(addr, currentX, infoY);
+        currentX += doc.getTextWidth(addr) + 6;
+      }
+
+      const phone = cleanPhone10((window.flutterSession && (window.flutterSession && window.flutterSession.ownerPhone)) || (window.flutterSession && window.flutterSession.userPhone) || '');
+      if (phone) {
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(0);
+        doc.text('Contact No.:', currentX, infoY);
+        currentX += doc.getTextWidth('Contact No.:') + 1.5;
+
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
+        doc.text(phone, currentX, infoY);
+      }
+
+      // Document Title (RECEIPT) with ample top spacing
+      doc.setFontSize(22);
+      doc.setTextColor(170, 184, 197);
+      doc.setFont('helvetica', 'bold');
+      doc.text('RECEIPT', pageWidth / 2, 54, { align: 'center' });
+
+      // 2. METADATA section
+      let y = 66;
+      doc.setFontSize(10);
+      doc.setTextColor(0);
+      doc.setFont('helvetica', 'bold');
+
+      const receiptNoLabel = 'Receipt No.:';
+      doc.text(receiptNoLabel, 14, y);
+      doc.setFont('helvetica', 'normal');
+      doc.text(getGeneratedNo(payment), 14 + doc.getTextWidth(receiptNoLabel) + 4, y);
+
+      doc.setFont('helvetica', 'bold');
+      const dateLabel = 'Receipt Date:';
+      doc.text(dateLabel, pageWidth - 80, y);
+      doc.setFont('helvetica', 'normal');
+      doc.text(formatDDMMYYYY(payment.date || payment.createdAt), pageWidth - 80 + doc.getTextWidth(dateLabel) + 4, y);
+
+      if (payment.paymentMode) {
+        y += 7;
+        doc.setFont('helvetica', 'bold');
+        const modeLabel = 'Payment Mode:';
+        doc.text(modeLabel, 14, y);
+        doc.setFont('helvetica', 'normal');
+        doc.text(payment.paymentMode, 14 + doc.getTextWidth(modeLabel) + 4, y);
+      }
+
+      // 3. RECEIVED FROM section
+      y = Math.max(y + 10, 78);
+      doc.setFontSize(11);
+      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.setFont('helvetica', 'bold');
+      doc.text('RECEIVED FROM', 14, y);
+      doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.setLineWidth(0.5);
+      doc.line(14, y + 2, 60, y + 2);
+
+      y += 12;
+      doc.setFontSize(10);
+      doc.setTextColor(0);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Name:', 14, y);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
+      doc.text(c.name.replace(/[^\x00-\x7F]/g, '').trim() || 'Contact', 28, y);
+
+      if (c.phone) {
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(0);
+        doc.text('Phone No.:', pageWidth - 80, y);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
+        doc.text(c.phone, pageWidth - 60, y);
+      }
+
+      if (c.area) {
+        y += 6;
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(0);
+        doc.text('Address:', 14, y);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
+        doc.text(c.area.replace(/[^\x00-\x7F]/g, '').trim(), 28, y);
+      }
+
+      // 4. PAYMENT DETAILS TABLE
+      const tableHead = [['No.', 'Description', 'Paid Amount']];
+      const tableBody = [[
+        '1',
+        payment.note || 'Payment Received',
+        'Rs. ' + fmtMoney(payment.amount)
+      ]];
+
+      doc.autoTable({
+        startY: y + 10,
+        head: tableHead,
+        body: tableBody,
+        theme: 'grid',
+        headStyles: { fillColor: primaryColor, textColor: [255, 255, 255], fontStyle: 'bold' },
+        columnStyles: {
+          0: { halign: 'center', cellWidth: 15 },
+          2: { halign: 'right', cellWidth: 45 }
+        },
+        styles: { cellPadding: 5 }
+      });
+
+      // 5. TOTAL Section
+      let finalY = doc.lastAutoTable.finalY + 10;
+      const boxHeight = 12;
+
+      // Grand Total Bar
+      doc.setFillColor(245, 247, 250);
+      doc.rect(14, finalY, pageWidth - 28, boxHeight, 'F');
+      doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.setLineWidth(0.8);
+      doc.line(14, finalY, pageWidth - 14, finalY);
+      doc.line(14, finalY + boxHeight, pageWidth - 14, finalY + boxHeight);
+
+      doc.setFontSize(12);
+      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.setFont('helvetica', 'bold');
+      doc.text('TOTAL RECEIVED', 18, finalY + 8);
+      doc.text('Rs. ' + fmtMoney(payment.amount), pageWidth - 18, finalY + 8, { align: 'right' });
+
+      return doc;
+    }
+
+    async function sendPdfToCustomer(targetId, entryId) {
+      var pdfData = await generatePdfData(targetId, entryId);
+      if (!pdfData) return;
+      NativeBridge.postMessage("SHAREPDF:" + pdfData.filename + "|" + pdfData.base64);
+    }
+
+    async function generatePdfData(targetId, entryId, payId) {
+      if (typeof window.jspdf === 'undefined') { showToast('Generating PDF... Please wait'); return null; }
+
+      var actualTargetId = (typeof targetId === 'string') ? targetId : historyCustomerId;
+      var c = myCustById(actualTargetId); if (!c) { showToast('Contact not found.'); return null; }
+
+      var doc;
+      var filename = "Document.pdf";
+
+      if (payId) {
+        var entry = ledger.find(e => (e.payments || []).some(p => p.id === payId));
+        if (entry) {
+          var payment = entry.payments.find(p => p.id === payId);
+          doc = await getSingleReceiptDoc(payment, entry, c);
+          var dateStr = formatDDMMYYYY(payment.date || payment.createdAt);
+          var receiptRef = (payment.note && payment.note.trim() !== '') ? payment.note : (payment.receiptNumber || ("Receipt_" + dateStr));
+          filename = receiptRef.replace(/[^a-z0-9_\-]/gi, '_') + ".pdf";
+        }
+      } else if (entryId && typeof entryId === 'string') {
+        var entry = ledger.find(e => e.id === entryId);
+        if (entry) {
+          doc = await getSingleInvoiceDoc(entry, c);
+          var dateStr = formatDDMMYYYY(entry.invoiceDate || entry.createdAt);
+          var invoiceRef = (entry.description && entry.description.trim() !== '') ? entry.description : (entry.invoiceNumber || ("Invoice_" + dateStr));
+
+          // Reconstruct the "Invoice_X_DATE" filename format for auto-generated numbers
+          if (!entry.description && entry.invoiceNumber && entry.invoiceNumber.indexOf('CB/INV/') === 0) {
+              var counter = entry.invoiceNumber.split('/').pop();
+              filename = "Invoice_" + counter + "_" + dateStr + ".pdf";
+          } else {
+              filename = invoiceRef.replace(/[^a-z0-9_\-]/gi, '_') + ".pdf";
+          }
+        } else {
+          doc = await getCustomerLedgerDoc(c);
+          filename = ("Ledger_" + c.name).replace(/[^a-z0-9_\-]/gi, '_') + ".pdf";
+        }
+      } else {
+        doc = await getCustomerLedgerDoc(c);
+        filename = ("Ledger_" + c.name).replace(/[^a-z0-9_\-]/gi, '_') + ".pdf";
+      }
+
+      if (!doc) return null;
+
+      var base64 = doc.output("datauristring").split(",")[1];
+      return { base64: base64, filename: filename, doc: doc };
+    }
+
+    async function previewInvoice(entryId, payId) {
+      var pdfData = await generatePdfData(historyCustomerId, entryId, payId);
+      if (!pdfData) return;
+
+      currentPreviewPdf = pdfData;
+      currentPreviewFilename = pdfData.filename;
+
+      var titleEl = $('#previewTitle');
+      if (titleEl) {
+        var key = payId ? 'head_preview_receipt' : 'head_preview_inv';
+        titleEl.dataset.i18n = key;
+        titleEl.textContent = t(key);
+      }
+
+      openOverlay('#invoicePreviewOverlay');
+
+      // Small delay to ensure the modal is visible and container has dimensions
+      setTimeout(function() {
+        (async function() {
+          var canvas = $('#pdf-render-canvas');
+          var container = $('#pdf-viewer-container');
+          if (!canvas || !container) return;
+
+          try {
+            const binaryString = atob(pdfData.base64);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+              bytes[i] = binaryString.charCodeAt(i);
+            }
+
+            const loadingTask = pdfjsLib.getDocument({data: bytes});
+            const pdf = await loadingTask.promise;
+            const page = await pdf.getPage(1);
+
+            // Use exact container width
+            var containerWidth = container.clientWidth;
+            if (containerWidth === 0) containerWidth = 400; // Fallback
+
+            var baseViewport = page.getViewport({scale: 1.0});
+            var scale = containerWidth / baseViewport.width;
+
+            // Render at high resolution (2x)
+            const viewport = page.getViewport({scale: scale * 2});
+            const context = canvas.getContext('2d');
+
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+
+            // Note: canvas width is managed by CSS (width: 100%)
+
+            const renderContext = {
+              canvasContext: context,
+              viewport: viewport
+            };
+            await page.render(renderContext).promise;
+          } catch (err) {
+            console.error("PDF Preview Error:", err);
+            showToast("Unable to show preview, but you can still Share/Download.");
+          }
+        })();
+      }, 100);
+    }
+
+
+    function openEditEntry(entry) {
+      editingEntryId = entry.id;
+      editingPaymentId = null;
+      selectedCustomerId = entry.customerId;
+
+      $('#en-search-container').style.display = 'none';
+      $('#en-selected-note').style.display = 'block';
+
+      var c = myCustById(entry.customerId);
+      renderSelectedContactCard(c, false);
+
+      $('#en-amount').value = entry.grossAmount || entry.originalAmount;
+      var firstPayment = (entry.payments && entry.payments.length > 0) ? entry.payments[0] : null;
+      if ($('#en-amount-received')) $('#en-amount-received').value = firstPayment ? firstPayment.amount : '';
+      setPaymentModeValue('en', firstPayment ? (firstPayment.paymentMode || 'Cash') : 'Cash');
+      if ($('#en-payment-mode-group')) $('#en-payment-mode-group').style.display = (firstPayment && firstPayment.amount > 0) ? 'block' : 'none';
+      $('#en-idate').value = entry.invoiceDate || entry.createdAt.slice(0, 10);
+      cbUpdateDateDisplay('en-idate');
+
+      $('#en-due').value = entry.dueDate || '';
+      cbUpdateDateDisplay('en-due');
+
+      $('#en-desc').value = entry.description || '';
+      $('#en-item-desc').value = entry.itemDescription || '';
+      $('#en-confirmed').checked = entry.isConfirmed !== false;
+
+      entryType = entry.type;
+      $$('.radio-opt').forEach(function(r) {
+          r.classList.toggle('selected', r.dataset.type === entryType);
+      });
+
+      $('#entryTitle').textContent = 'Edit Entry';
+      $('#en-save').textContent = 'Update Entry';
+
+      currentEntryItems = Array.isArray(entry.items) ? JSON.parse(JSON.stringify(entry.items)) : [];
+      renderEntryItemsList();
+
+      if (entry.invoiceDate || entry.dueDate || entry.discountAmount || entry.itemDescription) {
+          $('#en-additional-details').style.display = 'block';
+          $('#btn-toggle-additional').textContent = t('btn_hide_details');
+      }
+
+      openOverlay('#entryOverlay');
+    }
+
+    function openEditPayment(entry, payment) {
+      editingEntryId = entry.id;
+      editingPaymentId = payment.id;
+      collectTargetCustId = entry.customerId;
+
+      var c = myCustById(entry.customerId);
+      $('#collect-sub').textContent = 'Editing Payment for ' + c.name;
+
+      $('#col-amount').value = payment.amount;
+      $('#col-date').value = payment.date || payment.createdAt.slice(0, 10);
+      cbUpdateDateDisplay('col-date');
+
+      $('#col-note').value = payment.note || '';
+      setPaymentModeValue('col', payment.paymentMode || 'Cash');
+      $('#col-confirmed').checked = payment.isConfirmed !== false;
+
+      $('#col-save').textContent = 'Update Payment';
+
+      openOverlay('#collectOverlay');
+    }
+
+    function computeCustomerBalances(){
+      var out = [];
+      var currentUid = getCurrentBusinessUid();
+
+    for(var i=0; i<myCustomers.length; i++){
+        var c = myCustomers[i];
+
+        if (!isContactVisibleInMyCustomers(c)) continue;
+
+        var recv = 0, pay = 0; var cPhone = (c.phone || '').replace(/\D/g, '');
+        for(var j=0; j<ledger.length; j++){
+          var l = ledger[j];
+          if(!isEntryVisibleToMe(l)) continue;
+          var lPhone = (l.customerPhone || '').replace(/\D/g, '');
+          var isMatch = (l.customerId === c.id) || (cPhone && lPhone && cPhone.slice(-10) === lPhone.slice(-10));
+          if(!isMatch) continue;
+          var s = calculateEntryState(l);
+          if(s.bal === 0 || l.isConfirmed === false) continue;
+          var isOwner = (l.ownerUid === currentUid); var effectiveType = isOwner ? l.type : (l.type === 'debtor' ? 'creditor' : 'debtor');
+
+          if(effectiveType === 'debtor') recv += s.bal; else pay += s.bal;
+        }
+        if(Math.abs(recv) > 0.005 || Math.abs(pay) > 0.005) { out.push({ customer: c, receivable: recv, payable: pay }); }
+      }
+      out.sort(function(a, b){ return (b.receivable + b.payable) - (a.receivable + a.payable); }); return out;
+    }
+
+    function renderBalanceOverlay(type){
+      $('#balanceOverlay').dataset.viewType = type || 'all'; var data = computeCustomerBalances();
+      data.forEach(function(d) { d.netReceivable = Math.max(d.receivable - d.payable, 0); d.netPayable = Math.max(d.payable - d.receivable, 0); });
+      var totalRecv=0, totalPay=0; var filteredData = [];
+      data.forEach(function(d){
+        if(type === 'recv' && d.netReceivable > 0.005) { totalRecv += d.netReceivable; filteredData.push(d); }
+        else if(type === 'pay' && d.netPayable > 0.005) { totalPay += d.netPayable; filteredData.push(d); }
+        else if(type === 'all' || !type) { totalRecv += d.netReceivable; totalPay += d.netPayable; filteredData.push(d); }
+      });
+      filteredData.sort(function(a, b) { return (a.customer.name||'').toLowerCase().localeCompare((b.customer.name||'').toLowerCase()); });
+
+      var title = t('head_bal_sum'); if(type === 'recv') title = t('txt_tot_col'); if(type === 'pay') title = t('txt_tot_pay');
+      if($('#balanceOverlayTitle')) $('#balanceOverlayTitle').textContent = title;
+      var html = '<div class="history-summary-bar" style="justify-content:'+(type==='all'?'space-between':'flex-end')+';">';
+      if(type === 'recv' || type === 'all') html += '<div><span class="label">'+t('txt_tot_col')+'</span>₹'+fmtMoney(totalRecv)+'</div>';
+      if(type === 'pay' || type === 'all') html += '<div style="text-align:right;"><span class="label">'+t('txt_tot_pay')+'</span>₹'+fmtMoney(totalPay)+'</div>';
+      html += '</div>';
+      if(filteredData.length===0){ html += emptyStateHTML('balance', 'txt_all_set', 'txt_no_bal_now'); }
+      else {
+        for(var i=0;i<filteredData.length;i++){
+          var d = filteredData[i];
+          html += '<div class="card"><div class="row-top"><div style="display:flex;gap:12px;align-items:center;">'+stampHTML(d.customer,false)+
+            '<div><div class="cust-name">'+escapeHTML(d.customer.name)+'</div><div class="cust-area">'+escapeHTML(d.customer.area||'')+'</div></div></div><div style="text-align:right;">'+
+            ((type==='all'||type==='recv') && d.netReceivable>0.005 ? '<div class="amount owe-me">₹'+fmtMoney(d.netReceivable)+'</div>' : '') +
+            ((type==='all'||type==='pay') && d.netPayable>0.005 ? '<div class="amount i-owe">₹'+fmtMoney(d.netPayable)+'</div>' : '')+'</div></div>'+
+            '<div class="card-actions"><button class="mini-btn secondary" data-action="view-history" data-id="'+d.customer.id+'">'+t('btn_ledger')+'</button></div></div>';
+        }
+      }
+      if($('#balanceList')) $('#balanceList').innerHTML = html;
+    }
+
+    async function printBalanceSummary(){
+      if(typeof window.jspdf === 'undefined'){ pdfRetryCount++; if(pdfRetryCount > 10) { showToast('Error loading PDF library. Check network connection.'); pdfRetryCount=0; return; } showToast('Generating PDF... Please wait'); setTimeout(printBalanceSummary, 500); return; }
+      pdfRetryCount = 0; var type = $('#balanceOverlay').dataset.viewType || 'all'; var data = computeCustomerBalances(); var totalRecv=0, totalPay=0;
+      const { jsPDF } = window.jspdf; const doc = new jsPDF(); var pageWidth = doc.internal.pageSize.getWidth(); var pageHeight = doc.internal.pageSize.getHeight();
+      var cleanShopName = ((profile && (profile && profile.shop)) ? (profile && profile.shop) : ((profile && (profile && profile.name)) ? (profile && profile.name) : 'My Business')).replace(/[^\x00-\x7F]/g, '').trim() || 'My Business';
+
+      var startY = 22;
+      const logoImg = await getLogoImage();
+      if (logoImg) {
+          try {
+              const format = logoImg.includes('png') ? 'PNG' : 'JPEG';
+              doc.addImage(logoImg, format, pageWidth/2 - 12, 12, 24, 24);
+              startY = 44;
+          } catch (e) {
+              console.error('PDF Logo Add Error:', e);
+          }
+      }
+
+      var shopSub = []; if (profile && (profile && profile.name) && (profile && profile.shop)) shopSub.push((profile && profile.name).replace(/[^\x00-\x7F]/g, '').trim()); if (profile && (profile && profile.area)) shopSub.push((profile && profile.area).replace(/[^\x00-\x7F]/g, '').trim()); if (profile && (profile && profile.gst)) shopSub.push('GST: ' + (profile && profile.gst));
+      doc.setFontSize(8); doc.setTextColor(150); doc.setFont('helvetica', 'normal'); doc.text('Generated by Collection Book', pageWidth/2, 10, {align: 'center'});
+      doc.setFontSize(22); doc.setTextColor(0); doc.setFont('helvetica', 'bold'); doc.text(cleanShopName, pageWidth/2, startY, {align: 'center'});
+      if (shopSub.length > 0) { doc.setFontSize(11); doc.setFont('helvetica', 'normal'); doc.setTextColor(80); doc.text(shopSub.filter(Boolean).join(' | '), pageWidth/2, startY + 7, {align: 'center'}); }
+      var title = 'Balance Summary — All'; if(type === 'recv') title = 'Balance Summary — To Collect'; if(type === 'pay') title = 'Balance Summary — To Pay';
+      doc.setFontSize(13); doc.setTextColor(0); doc.setFont('helvetica', 'bold'); doc.text(title, 14, startY + 20);
+      doc.setFontSize(9); doc.setTextColor(100); doc.setFont('helvetica', 'normal'); doc.text('Printed on: ' + formatDDMMYYYY(todayISO()), pageWidth - 14, startY + 20, {align: 'right'});
+      var head = [['Contact', 'Area / Phone']]; if(type === 'all' || type === 'recv') head[0].push('To Collect'); if(type === 'all' || type === 'pay') head[0].push('To Pay');
+      var tableBody = []; var filteredData = [];
+      data.forEach(function(d){ if(type === 'all' || type === 'recv') { if(d.receivable > 0.005) filteredData.push(d); } else if(type === 'pay') { if(d.payable > 0.005) filteredData.push(d); } else { filteredData.push(d); } });
+      // The filteredData logic above was a bit messy, let's keep the existing logic but fix the Y positions
+
+      if(filteredData.length === 0){ tableBody.push([{content: 'No outstanding balances.', colSpan: head[0].length, styles: {halign: 'center'}}]); }
+      else {
+        for(var i=0; i<filteredData.length; i++){
+          var d = filteredData[i]; if(type === 'all' || type === 'recv') totalRecv += d.receivable; if(type === 'all' || type === 'pay') totalPay += d.payable;
+          var cleanCustName = d.customer.name.replace(/[^\x00-\x7F]/g, '').trim() || 'Contact'; var cleanArea = (d.customer.area||'').replace(/[^\x00-\x7F]/g, '').trim();
+          var contactInfo = cleanArea + (d.customer.phone ? (cleanArea ? ' / ' : '') + d.customer.phone : '');
+          var row = [cleanCustName, contactInfo];
+          if(type === 'all' || type === 'recv') row.push(d.receivable > 0.005 ? fmtMoney(d.receivable) : '');
+          if(type === 'all' || type === 'pay') row.push(d.payable > 0.005 ? fmtMoney(d.payable) : '');
+          tableBody.push(row);
+        }
+        var totalRow = [{content: 'Total', colSpan: 2, styles: {fontStyle: 'bold', halign: 'right'}}];
+        if(type === 'all' || type === 'recv') totalRow.push({content: fmtMoney(totalRecv), styles: {fontStyle: 'bold', halign: 'right'}});
+        if(type === 'all' || type === 'pay') totalRow.push({content: fmtMoney(totalPay), styles: {fontStyle: 'bold', halign: 'right'}});
+        tableBody.push(totalRow);
+      }
+      var colStyles = {}; if(type === 'all') { colStyles = { 2: { halign: 'right' }, 3: { halign: 'right' } }; } else { colStyles = { 2: { halign: 'right' } }; }
+      doc.autoTable({ startY: 50, head: head, body: tableBody, theme: 'grid', headStyles: { fillColor: [43, 58, 103], textColor: [255, 255, 255] }, columnStyles: colStyles });
+      var totalPages = doc.internal.getNumberOfPages();
+      for (var i = 1; i <= totalPages; i++) { doc.setPage(i); doc.setFontSize(9); doc.setTextColor(120); doc.text('Simplify your ledger & grow your business with Collection Book App!', pageWidth/2, pageHeight - 10, {align: 'center'}); }
+      var filename = 'Balance_Summary_' + (type==='recv'?'To_Collect':(type==='pay'?'To_Pay':'All')) + '.pdf';
+      var base64 = doc.output('datauristring').split(',')[1]; NativeBridge.postMessage("SAVEPDF:" + filename + "|" + base64);
+    }
+
+     window.applyDarkMode = function(enabled) {
+       document.documentElement.classList.toggle('dark-mode', enabled === true);
+
+       if (window.NativeBridge && typeof window.NativeBridge.postMessage === 'function') {
+         window.NativeBridge.postMessage('THEME_CHANGE:' + (enabled ? 'dark' : 'light'));
+       }
+
+       var button = document.getElementById('btn-settings-dark-mode');
+       if (button) {
+         button.setAttribute('aria-pressed', enabled === true ? 'true' : 'false');
+       }
+
+       try {
+         localStorage.setItem('cb-dark-mode', enabled === true ? 'true' : 'false');
+       } catch (e) {}
+     };
+
+     window.isDarkModeEnabled = function() {
+       return document.documentElement.classList.contains('dark-mode');
+     };
+
+     // Sync the toggle state with the early <head> theme bootstrap.
+     applyDarkMode(isDarkModeEnabled());
+
+     function bindAllEvents(){
+      safeBind('body', 'click', async function(e){
+        var tNode = e.target;
+        // Hide employee autocomplete if clicking anywhere outside of it
+        if ($('#emp-autocomplete') && !closest(tNode, '#emp-autocomplete') && tNode.id !== 'emp-name') {
+            $('#emp-autocomplete').style.display = 'none';
+        }
+      var notificationItem =
+    closest(
+        tNode,
+        '.notification-item'
+    );
+
+if (notificationItem && notificationSelectionMode) {
+
+    var notificationId =
+        notificationItem.dataset.notificationId;
+
+    if (!notificationId) {
+        return;
+    }
+
+    if (
+        selectedNotificationIds
+            .has(notificationId)
+    ) {
+        selectedNotificationIds
+            .delete(notificationId);
+    } else {
+        selectedNotificationIds
+            .add(notificationId);
+    }
+
+    updateNotificationSelectionUI();
+
+    return;
+}
+        // --- UPDATED OVERLAY CLICK LOGIC ---
+        if (tNode.classList.contains('overlay')) {
+            // If they click the background of the setup popup, verify mandatory fields first
+            if (tNode.id === 'onboardOverlay') {
+                var hasName = Boolean(profile && (profile && profile.name) && (profile && profile.name).trim() !== '');
+                var hasShop = Boolean(profile && (profile && profile.shop) && (profile && profile.shop).trim() !== '');
+                var isProfileComplete = hasName && (getCurrentBusinessUid() || hasShop);
+
+                if (!isProfileComplete) {
+                    showToast("Please fill in the mandatory fields to continue.");
+                    return; // Abort closing
+                }
+            }
+            tNode.classList.remove('open');
+        }
+        // -----------------------------------
+var editEmpBtn =
+    closest(
+        tNode,
+        '[data-action="edit-emp"]'
+    );
+
+if (editEmpBtn) {
+
+    var employeeId =
+        editEmpBtn.dataset.id;
+
+    var employee =
+        companyEmployees.find(
+            function(emp) {
+                return (
+                    emp.id ===
+                    employeeId
+                );
+            }
+        );
+
+    if (!employee) {
+        showToast(
+            'Employee not found'
+        );
+        return;
+    }
+
+    editingEmployeeId =
+        employee.id;
+
+    var permissions =
+        employee.permissions || {};
+
+    /*
+     * Populate existing employee data.
+     */
+    $('#emp-name').value =
+        employee.name || '';
+
+    $('#emp-phone').value =
+        employee.phone || '';
+
+    /*
+     * Phone is the employee's identity.
+     * Do not allow it to change while editing.
+     */
+    $('#emp-phone').disabled =
+        true;
+
+    /*
+     * Populate existing permissions.
+     */
+    $('#emp-perm-add').checked =
+        permissions.add === true;
+
+    $('#emp-perm-view').checked =
+        permissions.view === true;
+
+    $('#emp-perm-manage-contacts').checked =
+        permissions.manageContacts === true;
+
+    $('#emp-perm-del').checked =
+        permissions.del === true;
+
+    /*
+     * Change Save Employee -> Save Changes.
+     */
+    $('#btn-emp-save').textContent =
+        'Save Changes';
+
+    /*
+     * Scroll down to the employee form.
+     */
+    $('#emp-name').scrollIntoView({
+        behavior: 'smooth',
+        block: 'center'
+    });
+
+    return;
+}
+        var delEmpBtn = closest(tNode, '[data-action="delete-emp"]');
+        if (delEmpBtn) {
+          showCustomConfirm('Remove Employee', 'Remove this employee?', 'Remove', async function() {
+            companyEmployees = companyEmployees.filter(function(emp) { return emp.id !== delEmpBtn.dataset.id; });
+            await saveEmployees(); renderEmployeesList(); showToast('Employee removed');
+          });
+          return;
+        }
+        var histBtn = closest(tNode, '[data-action="view-history"]');
+        if(histBtn){ historyCustomerId = histBtn.dataset.id; closeOverlay('#balanceOverlay'); closeOverlay('#manageOverlay'); renderHistory(); openOverlay('#historyOverlay'); return; }
+        if(tNode.id === 'downloadPdfBtn'){ printCustomerLedger(); return; }
+        var confInv = closest(tNode, '[data-action="confirm-inv"]');
+
+if (confInv) {
+    var eid = confInv.dataset.eid || confInv.dataset.id;
+
+    var targetEntry = ledger.find(function (entry) {
+        return entry.id === eid;
+    });
+
+    if (!targetEntry) {
+        showToast('Transaction not found');
+        return;
+    }
+
+    // Update locally immediately
+    targetEntry.isConfirmed = true;
+
+    await saveLedger();
+
+    // If this ledger belongs to another user,
+    // update the CREATOR'S Firestore document.
+    if (
+        targetEntry.ownerUid &&
+        window.NativeBridge &&
+        typeof window.NativeBridge.postMessage === 'function'
+    ) {
+        window.NativeBridge.postMessage(
+            'CONFIRM_SHARED_ENTRY:' +
+            targetEntry.ownerUid + '|' +
+            targetEntry.id
+        );
+    }
+
+    renderAll();
+
+    if (historyCustomerId) {
+        renderHistory();
+    }
+
+    if (
+        $('#pendingOverlay') &&
+        $('#pendingOverlay').classList.contains('open')
+    ) {
+        openPendingList();
+    }
+
+    showToast('Transaction confirmed');
+
+    return;
+}
+        var confPay = closest(tNode, '[data-action="confirm-pay"]');
+
+if (confPay) {
+    var entryId = confPay.dataset.eid;
+    var paymentId = confPay.dataset.pid;
+
+    var targetEntry = ledger.find(function (entry) {
+        return entry.id === entryId;
+    });
+
+    if (!targetEntry) {
+        showToast('Ledger entry not found');
+        return;
+    }
+
+    var targetPayment = null;
+
+    if (Array.isArray(targetEntry.payments)) {
+        targetPayment = targetEntry.payments.find(function (payment) {
+            return payment.id === paymentId;
+        });
+    }
+
+    if (!targetPayment) {
+        showToast('Payment not found');
+        return;
+    }
+
+    // Update receiver UI immediately
+    targetPayment.isConfirmed = true;
+
+    await saveLedger();
+
+    // Persist the confirmation to the creator's Firestore ledger
+    if (
+        targetEntry.ownerUid &&
+        window.NativeBridge &&
+        typeof window.NativeBridge.postMessage === 'function'
+    ) {
+        window.NativeBridge.postMessage(
+            'CONFIRM_SHARED_PAYMENT:' +
+            targetEntry.ownerUid + '|' +
+            targetEntry.id + '|' +
+            targetPayment.id
+        );
+    }
+
+    renderAll();
+
+    if (historyCustomerId) {
+        renderHistory();
+    }
+
+    if (
+        $('#pendingOverlay') &&
+        $('#pendingOverlay').classList.contains('open')
+    ) {
+        openPendingList();
+    }
+
+    showToast('Payment confirmed');
+
+    return;
+}
+var deletePendingBtn =
+    closest(tNode, '[data-action="delete-pending"]');
+
+if (deletePendingBtn) {
+
+    var pendingEntryId =
+        deletePendingBtn.dataset.eid;
+
+    var pendingPaymentId =
+        deletePendingBtn.dataset.pid || '';
+
+    var currentUid =
+        getCurrentBusinessUid();
+
+    var pendingEntry = ledger.find(function (entry) {
+        return entry.id === pendingEntryId;
+    });
+
+    // Hard permission check:
+    // receiver can never delete.
+    if (
+        !pendingEntry ||
+        pendingEntry.ownerUid !== currentUid
+    ) {
+        showToast(
+            'Only the creator can delete this pending transaction.'
+        );
+        return;
+    }
+
+    showCustomConfirm(
+        'Delete Pending Transaction',
+        'This will permanently remove this pending transaction.',
+        'Delete',
+        async function () {
+            var deletedPayment =
+    null;
+            if (pendingPaymentId) {
+                deletedPayment =
+    (
+        pendingEntry.payments ||
+        []
+    ).find(
+        function (payment) {
+            return (
+                payment.id ===
+                pendingPaymentId
+            );
+        }
+    );
+                // Delete only the pending payment.
+                pendingEntry.payments =
+                    (pendingEntry.payments || []).filter(
+                        function (payment) {
+                            return payment.id !== pendingPaymentId;
+                        }
+                    );
+
+                await saveLedger();
+
+            } else {
+
+                // Delete the complete pending bill.
+                ledger = ledger.filter(function (entry) {
+                    return entry.id !== pendingEntryId;
+                });
+
+                await saveLedger();
+
+                // Delete from Firestore too.
+                if (
+                    window.NativeBridge &&
+                    typeof window.NativeBridge.postMessage === 'function'
+                ) {
+                    window.NativeBridge.postMessage(
+                        'DELETE_ENTRY:' + pendingEntryId
+                    );
+                }
+            }
+await sendDeleteNotifications(
+    pendingEntry,
+    deletedPayment
+);
+            renderAll();
+
+            if (
+                $('#pendingOverlay') &&
+                $('#pendingOverlay').classList.contains('open')
+            ) {
+                openPendingList();
+            }
+
+            showToast('Pending transaction deleted');
+        }
+    );
+
+    return;
+}
+        var delItemBtn =
+    closest(
+        tNode,
+        '[data-action="delete-item"]'
+    );
+
+if (delItemBtn) {
+
+    showCustomConfirm(
+        'Delete Transaction',
+        'Delete this? Cannot be undone.',
+        'Delete',
+        async function () {
+
+            var did =
+                delItemBtn.dataset.eid;
+
+            var dpid =
+                delItemBtn.dataset.pid;
+
+            /*
+             * Capture entry BEFORE deleting it.
+             *
+             * We need its customer phone,
+             * amount, type, etc. for the
+             * notification.
+             */
+            var deletedEntry =
+                ledger.find(function (entry) {
+                    return entry.id === did;
+                });
+
+            if (!deletedEntry) {
+                showToast(
+                    'Transaction not found'
+                );
+
+                return;
+            }
+
+            var deletedPayment =
+                null;
+
+
+            /*
+             * ---------------------------------
+             * Delete payment
+             * ---------------------------------
+             */
+            if (dpid) {
+
+                deletedPayment =
+                    (
+                        deletedEntry.payments ||
+                        []
+                    ).find(
+                        function (payment) {
+                            return (
+                                payment.id ===
+                                dpid
+                            );
+                        }
+                    );
+
+                deletedEntry.payments =
+                    (
+                        deletedEntry.payments ||
+                        []
+                    ).filter(
+                        function (payment) {
+                            return (
+                                payment.id !==
+                                dpid
+                            );
+                        }
+                    );
+
+            } else {
+
+                /*
+                 * ---------------------------------
+                 * Delete complete Sale/Purchase
+                 * ---------------------------------
+                 */
+
+                ledger =
+                    ledger.filter(
+                        function (entry) {
+                            return (
+                                entry.id !==
+                                did
+                            );
+                        }
+                    );
+
+                if (
+                    window.NativeBridge &&
+                    typeof window.NativeBridge
+                        .postMessage ===
+                        'function'
+                ) {
+                    window.NativeBridge
+                        .postMessage(
+                            'DELETE_ENTRY:' +
+                            did
+                        );
+                }
+            }
+
+
+            await saveLedger();
+
+
+            /*
+             * Send push + in-app notification
+             * only after local deletion/save
+             * succeeds.
+             */
+            await sendDeleteNotifications(
+                deletedEntry,
+                deletedPayment
+            );
+
+
+            renderAll();
+            renderHistory();
+
+            showToast('Deleted');
+        }
+    );
+
+    return;
+}
+        var collectBtnCust = closest(tNode, '[data-action="collect-payment-cust"]');
+        if(collectBtnCust){
+          if (!window.checkAuth()) return;
+          editingEntryId = null; editingPaymentId = null;
+          if ($('#col-save')) $('#col-save').textContent = t('btn_save_pay');
+          collectTargetCustId = collectBtnCust.dataset.custid; collectTargetType = collectBtnCust.dataset.type; var c = myCustById(collectTargetCustId);
+          var balData = computeCustomerBalances().find(function(x){ return x.customer.id === collectTargetCustId; }); var netReceivable = 0; var netPayable = 0;
+          if (balData) { netReceivable = Math.max(balData.receivable - balData.payable, 0); netPayable = Math.max(balData.payable - balData.receivable, 0); }
+          var displayBal = collectTargetType === 'recv' ? netReceivable : netPayable;
+          if($('#collect-sub')) $('#collect-sub').textContent = c.name + ' · '+t('txt_balance')+': ₹'+fmtMoney(displayBal);
+          if ($('#col-amount')) {
+    $('#col-amount').value =
+        '';
+}
+
+if ($('#col-date')) {
+    $('#col-date').value =
+        todayISO();
+
+    /*
+     * Update the visible custom date field.
+     */
+    cbUpdateDateDisplay(
+        'col-date'
+    );
+}
+
+if ($('#col-note')) {
+    $('#col-note').value =
+        '';
+}
+setPaymentModeValue('col', 'Cash');
+          if($('#col-confirmed')) $('#col-confirmed').checked = true; openOverlay('#collectOverlay'); return;
+        }
+        var manageBtn =
+    closest(
+        tNode,
+        '[data-action="manage-customer"]'
+    );
+
+if (manageBtn) {
+    if (!window.checkAuth()) return;
+
+    if (
+        currentRoleMode === 'employee' &&
+        (window.flutterSession && (window.flutterSession && window.flutterSession.permissions)) &&
+        (window.flutterSession && (window.flutterSession && window.flutterSession.permissions)).manageContacts !== true
+    ) {
+        showToast(
+            'You do not have permission to manage contacts.'
+        );
+
+        return;
+    }
+
+    openManageModal(
+        manageBtn.dataset.id
+    );
+
+    return;
+}
+        var txnBtn = closest(tNode, '[data-action="new-txn-for"]');
+        if(txnBtn){
+          if (!window.checkAuth()) return;
+          editingEntryId = null; editingPaymentId = null;
+          if ($('#en-save')) $('#en-save').textContent = t('btn_save_entry');
+          if ($('#entryTitle')) $('#entryTitle').textContent = t('entry_title_gen');
+
+          /*
+           * OWNER PROFILE CHECK
+           */
+          if (
+              currentRoleMode === 'owner' &&
+              !isOwnerProfileSetup()
+          ) {
+              showToast('Please setup your business profile first');
+              configureProfilePopup(true);
+              openOverlay('#onboardOverlay', true);
+              return;
+          }
+
+          if (activeTab === 'dashboard') {
+              if ($('#en-type-field')) $('#en-type-field').style.display = 'none';
+          } else {
+              if ($('#en-type-field')) $('#en-type-field').style.display = 'block';
+          }
+
+          updateEntryHeaderUI(entryType, 'btn_add_entry');
+          selectedCustomerId = txnBtn.dataset.id;
+          var cc = myCustById(selectedCustomerId);
+          if($('#en-additional-details')) $('#en-additional-details').style.display='none';
+          if($('#btn-toggle-additional')) $('#btn-toggle-additional').textContent = t('btn_add_details');
+
+          if (cc) {
+              renderSelectedContactCard(cc, false);
+              if ($('#en-phone')) $('#en-phone').value = cleanPhone10(cc.phone || '');
+          } else {
+              if ($('#en-search-container')) $('#en-search-container').style.display = 'block';
+              if ($('#en-selected-note')) $('#en-selected-note').style.display = 'none';
+          }
+
+          if($('#en-new-customer-fields')) $('#en-new-customer-fields').style.display='none';
+          if($('#en-new-customer-fields-bottom')) $('#en-new-customer-fields-bottom').style.display='none';
+          if($('#en-autocomplete')) $('#en-autocomplete').style.display='none';
+          /*
+ * Use the type supplied by the card:
+ *
+ * debtor   = Sale / To Collect
+ * creditor = Purchase / To Pay
+ *
+ * Buttons that do not provide data-entry-type
+ * continue defaulting to Sale.
+ */
+entryType =
+    txnBtn.dataset.entryType ===
+        'creditor'
