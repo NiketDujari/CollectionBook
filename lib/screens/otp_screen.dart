@@ -132,14 +132,14 @@ class _OTPScreenState extends State<OTPScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
-    final khadi = isDark ? const Color(0xFF000000) : const Color(0xFFEFE7D6);
-    final paper = isDark ? const Color(0xFF080808) : const Color(0xFFFBF8F1);
-    final charcoal = isDark ? const Color(0xFFE9EDEF) : const Color(0xFF2A2622);
-    final muted = isDark ? const Color(0xFF8696A0) : const Color(0xFF77705F);
+    final khadi = isDark ? const Color(0xFF000000) : const Color(0xFFF4F6F9);
+    final paper = isDark ? const Color(0xFF080808) : const Color(0xFFFFFFFF);
+    final charcoal = isDark ? const Color(0xFFE9EDEF) : const Color(0xFF1E293B);
+    final muted = isDark ? const Color(0xFF8696A0) : const Color(0xFF64748B);
     final turmeric = isDark ? const Color(0xFFB08B4B) : const Color(0xFFC98A2D);
     final indigo = isDark ? const Color(0xFF4A5A96) : const Color(0xFF2B3A67);
     final indigoDeep = isDark ? const Color(0xFFFFFFFF) : const Color(0xFF182449);
-    final khadiLine = isDark ? const Color(0xFF23272F) : const Color(0xFFD8CCB0);
+    final khadiLine = isDark ? const Color(0xFF23272F) : const Color(0xFFCBD5E1);
 
     return Scaffold(
       backgroundColor: khadi,

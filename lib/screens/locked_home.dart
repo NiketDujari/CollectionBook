@@ -32,13 +32,13 @@ class _LockedHomeState
   Color(0xFFC98A2D);
 
   static const Color khadi =
-  Color(0xFFEFE7D6);
+  Color(0xFFF4F6F9);
 
   static const Color paper =
-  Color(0xFFFBF8F1);
+  Color(0xFFFFFFFF);
 
   static const Color muted =
-  Color(0xFF77705F);
+  Color(0xFF64748B);
 
   late bool _locked;
 

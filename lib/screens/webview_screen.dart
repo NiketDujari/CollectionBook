@@ -42,7 +42,7 @@ class _WebViewScreenState extends State<WebViewScreen> {
   bool _webViewReady = false;
   bool _showStartupSplash = true;
 
-  Color _scaffoldBgColor = const Color(0xFFEFE7D6);
+  Color _scaffoldBgColor = const Color(0xFFF4F6F9);
   Color _navBarColor = const Color(0xFFF7F7F7);
   Brightness _navBarIconBrightness = Brightness.dark;
 
@@ -106,14 +106,14 @@ class _WebViewScreenState extends State<WebViewScreen> {
       _navBarColor = Colors.black;
       _navBarIconBrightness = Brightness.light;
     } else {
-      _scaffoldBgColor = const Color(0xFFEFE7D6);
+      _scaffoldBgColor = const Color(0xFFF4F6F9);
       _navBarColor = const Color(0xFFF7F7F7);
       _navBarIconBrightness = Brightness.dark;
     }
 
     MetaAnalyticsService.initialize();
     controller = WebViewController()
-      ..setBackgroundColor(isDark ? Colors.black : const Color(0xFFEFE7D6))
+      ..setBackgroundColor(isDark ? Colors.black : const Color(0xFFF4F6F9))
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setNavigationDelegate(
         NavigationDelegate(
@@ -516,7 +516,7 @@ if (typeof applyDarkMode === 'function' && typeof isDarkModeEnabled === 'functio
                 _navBarColor = Colors.black;
                 _navBarIconBrightness = Brightness.light;
               } else {
-                _scaffoldBgColor = const Color(0xFFEFE7D6);
+                _scaffoldBgColor = const Color(0xFFF4F6F9);
                 _navBarColor = const Color(0xFFF7F7F7);
                 _navBarIconBrightness = Brightness.dark;
               }

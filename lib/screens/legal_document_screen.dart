@@ -40,7 +40,7 @@ class LegalDocumentScreen extends StatelessWidget {
             style: TextStyle(
               fontSize: 15,
               height: 1.7,
-              color: isDark ? const Color(0xFFE9EDEF) : const Color(0xFF2A2622),
+              color: isDark ? const Color(0xFFE9EDEF) : const Color(0xFF1E293B),
             ),
           ),
         ),

@@ -47,7 +47,7 @@ class _SplashScreenState extends State<SplashScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
-    final khadi = isDark ? const Color(0xFF000000) : const Color(0xFFEFE7D6);
+    final khadi = isDark ? const Color(0xFF000000) : const Color(0xFFF4F6F9);
     final indigoDeep = isDark ? const Color(0xFFFFFFFF) : const Color(0xFF182449);
     final turmeric = isDark ? const Color(0xFFB08B4B) : const Color(0xFFC98A2D);
 
@@ -70,7 +70,7 @@ class _SplashScreenState extends State<SplashScreen> {
                 opacity: isDark ? 0.05 : 0.03,
                 child: CustomPaint(
                   painter: GridPainter(
-                    color: isDark ? Colors.white24 : const Color(0xFFD8CCB0),
+                    color: isDark ? Colors.white24 : const Color(0xFFCBD5E1),
                   ),
                 ),
               ),

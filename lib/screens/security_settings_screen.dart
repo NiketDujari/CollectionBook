@@ -25,19 +25,19 @@ class _SecuritySettingsScreenState
   Color(0xFFC98A2D);
 
   static const Color khadi =
-  Color(0xFFEFE7D6);
+  Color(0xFFF4F6F9);
 
   static const Color khadiLine =
-  Color(0xFFD8CCB0);
+  Color(0xFFCBD5E1);
 
   static const Color paper =
-  Color(0xFFFBF8F1);
+  Color(0xFFFFFFFF);
 
   static const Color muted =
-  Color(0xFF77705F);
+  Color(0xFF64748B);
 
   static const Color charcoal =
-  Color(0xFF2A2622);
+  Color(0xFF1E293B);
 
   static const Color sage =
   Color(0xFF5C7A5E);

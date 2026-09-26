@@ -4,11 +4,12 @@ class AppTheme {
   // Brand Colors
   static const Color primary = Color(0xFF182449); // Indigo Deep
   static const Color accent = Color(0xFFC98A2D); // Turmeric
-  static const Color khadi = Color(0xFFEFE7D6);
-  static const Color paper = Color(0xFFFBF8F1);
-  static const Color charcoal = Color(0xFF2A2622);
-  static const Color muted = Color(0xFF77705F);
+  static const Color khadi = Color(0xFFF4F6F9); // Clean Off-White
+  static const Color paper = Color(0xFFFFFFFF); // Pure White Surface
+  static const Color charcoal = Color(0xFF1E293B); // Dark Slate
+  static const Color muted = Color(0xFF64748B); // Slate Muted
   static const Color indigo = Color(0xFF2B3A67);
+  static const Color khadiLine = Color(0xFFCBD5E1); // Crisp Slate Border
 
   // OLED Dark Palette (Matches WebView)
   static const Color oledBlack = Color(0xFF000000);
@@ -32,7 +33,7 @@ class AppTheme {
       bodyLarge: TextStyle(color: charcoal),
       bodyMedium: TextStyle(color: charcoal),
     ),
-    dividerColor: const Color(0xFFD8CCB0),
+    dividerColor: khadiLine,
   );
 
   static ThemeData darkTheme = ThemeData(

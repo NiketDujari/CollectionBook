@@ -21,7 +21,6 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:collection_book/services/app_lock_service.dart';
 import 'package:collection_book/services/app_language_service.dart';
 import 'package:collection_book/services/theme_service.dart';
-import 'package:collection_book/services/theme_service.dart';
 import 'firebase_options.dart';
 
 import 'screens/splash_screen.dart';
@@ -274,7 +273,7 @@ class _StartupLoaderState extends State<StartupLoader> {
         if (snapshot.hasError) {
           final isDark = Theme.of(context).brightness == Brightness.dark;
           return Scaffold(
-            backgroundColor: isDark ? Colors.black : const Color(0xFFEFE7D6),
+            backgroundColor: isDark ? Colors.black : const Color(0xFFF4F6F9),
 
             body: SafeArea(
               top: false,
