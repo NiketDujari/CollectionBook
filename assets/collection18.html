@@ -11822,7 +11822,7 @@ if (profile && (profile && profile.gst)) {
       doc.setFontSize(9); doc.setTextColor(100); doc.text('Printed on: ' + formatDDMMYYYY(todayISO()), pageWidth - 14, startY + 20, {align: 'right'});
 
       var tableBody = [];
-      var chronologicalRows = rows.slice();
+      var chronologicalRows = rows.slice().reverse();
 
       if(chronologicalRows.length === 0){ tableBody.push([{content: 'No transactions recorded.', colSpan: 6, styles: {halign: 'center'}}]); }
       else {
