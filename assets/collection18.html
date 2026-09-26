@@ -7337,7 +7337,7 @@ function cbPrepareTutorialStep(
     switch (stepIndex) {
 
         case 0:
-            var target = document.querySelector(step.target);
+            var target = document.querySelector('#tabs button[data-tab="dashboard"]');
             if (target) target.click();
             break;
 
@@ -7356,16 +7356,18 @@ function cbPrepareTutorialStep(
             if (target) target.click();
             break;
 
+        case 4:
+            // Add Entry step: Switch back to Dashboard screen where Add Sale / Add Purchase buttons live!
+            var target = document.querySelector('#tabs button[data-tab="dashboard"]');
+            if (target) target.click();
+            break;
+
         case 5:
             var target = document.querySelector('#tabs button[data-tab="directory"]');
             if (target) target.click();
             break;
 
         case 6:
-            /*
-             * Return to Dashboard before
-             * explaining the menu.
-             */
             var target = document.querySelector('#tabs button[data-tab="dashboard"]');
             if (target) target.click();
             break;
