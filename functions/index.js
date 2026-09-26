@@ -341,6 +341,26 @@ function getIndiaDateKey(date = new Date()) {
 }
 
 
+function getPushNotificationTitle(notificationKey) {
+  return "New Transaction Alert!";
+}
+
+function formatPushBody(senderName, message) {
+  if (!message) return senderName;
+
+  let bodyText = String(message).trim();
+
+  if (bodyText.startsWith(senderName)) {
+    bodyText = bodyText.substring(senderName.length).trim();
+  }
+
+  if (bodyText.length > 0) {
+    bodyText = bodyText.charAt(0).toLowerCase() + bodyText.slice(1);
+  }
+
+  return `${senderName} ${bodyText}`;
+}
+
 /*
  * Ledger notification function
  */
@@ -481,6 +501,9 @@ const notificationParams =
               strippedMessage.slice(1)
             : strippedMessage;
 
+        const pushTitle = getPushNotificationTitle(notificationKey);
+        const pushBody = formatPushBody(senderName, message);
+
          await notificationRef.set(
            {
              title: senderName,
@@ -536,10 +559,10 @@ const notificationParams =
 
                    notification: {
                      title:
-                       senderName,
+                       pushTitle,
 
                      body:
-                       displayMessage,
+                       pushBody,
                    },
 
                    data: {
@@ -568,6 +591,9 @@ const notificationParams =
 
                        defaultVibrateTimings:
                          true,
+
+                       icon:
+                         "ic_notification",
                      },
                    },
                  });

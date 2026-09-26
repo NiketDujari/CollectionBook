@@ -194,59 +194,134 @@ class NotificationService {
       return;
     }
 
-    final isEngagement =
-        message.data['type'] ==
-            'engagement';
+    final type = message.data['type'];
+    final isOnboarding = type == 'onboarding';
+    final isEngagement = type == 'engagement';
 
-    final channel =
-    isEngagement
+    final channel = (isEngagement || isOnboarding)
         ? _engagementChannel
         : _transactionChannel;
 
-    await _localNotifications.show(
-      id: DateTime.now()
-          .millisecondsSinceEpoch
-          .remainder(1000000),
+    final defaultTitle = (isEngagement || isOnboarding) ? 'Collection Book' : 'New Transaction Alert!';
+    final titleText = notification.title ?? defaultTitle;
+    final bodyText = (notification.body ?? '').replaceAll(RegExp(r'</?[^>]+>'), '');
 
-      title:
-      notification.title ??
-          'Collection Book',
+    String? bannerDrawable;
+    if (isOnboarding) {
+      bannerDrawable = 'engagement_banner';
+    } else if (!isEngagement) {
+      bannerDrawable = 'notification_banner';
+    }
 
-      body:
-      notification.body ?? '',
+    final styleInfo = bannerDrawable != null
+        ? BigPictureStyleInformation(
+            DrawableResourceAndroidBitmap(bannerDrawable),
+            largeIcon: const DrawableResourceAndroidBitmap('splash_logo'),
+            contentTitle: titleText,
+            summaryText: bodyText,
+            htmlFormatContentTitle: true,
+            htmlFormatSummaryText: true,
+          )
+        : null;
 
-      notificationDetails:
-      NotificationDetails(
-        android:
-        AndroidNotificationDetails(
-          channel.id,
-          channel.name,
+    try {
+      await _localNotifications.show(
+        id: DateTime.now()
+            .millisecondsSinceEpoch
+            .remainder(1000000),
 
-          channelDescription:
-          channel.description,
+        title: titleText,
 
-          importance:
-          Importance.max,
+        body: bodyText,
 
-          priority:
-          Priority.max,
+        notificationDetails:
+        NotificationDetails(
+          android:
+          AndroidNotificationDetails(
+            channel.id,
+            channel.name,
 
-          playSound:
-          true,
+            channelDescription:
+            channel.description,
 
-          enableVibration:
-          true,
+            importance:
+            Importance.max,
 
-          icon:
-          'ic_notification',
+            priority:
+            Priority.max,
 
-          visibility:
-          NotificationVisibility.public,
+            playSound:
+            true,
 
-          category:
-          AndroidNotificationCategory.reminder,
+            enableVibration:
+            true,
+
+            icon:
+            'ic_notification',
+
+            largeIcon:
+            const DrawableResourceAndroidBitmap('splash_logo'),
+
+            styleInformation:
+            styleInfo,
+
+            visibility:
+            NotificationVisibility.public,
+
+            category:
+            AndroidNotificationCategory.reminder,
+          ),
         ),
-      ),
-    );
+      );
+    } catch (e) {
+      debugPrint('Local notification display with banner failed: $e');
+      // Fallback display without BigPictureStyle if image resource fails on device
+      try {
+        await _localNotifications.show(
+          id: DateTime.now()
+              .millisecondsSinceEpoch
+              .remainder(1000000),
+
+          title: titleText,
+
+          body: bodyText,
+
+          notificationDetails:
+          NotificationDetails(
+            android:
+            AndroidNotificationDetails(
+              channel.id,
+              channel.name,
+
+              channelDescription:
+              channel.description,
+
+              importance:
+              Importance.max,
+
+              priority:
+              Priority.max,
+
+              playSound:
+              true,
+
+              enableVibration:
+              true,
+
+              icon:
+              'ic_notification',
+
+              visibility:
+              NotificationVisibility.public,
+
+              category:
+              AndroidNotificationCategory.reminder,
+            ),
+          ),
+        );
+      } catch (fallbackError) {
+        debugPrint('Fallback local notification failed: $fallbackError');
+      }
+    }
   }
 }
