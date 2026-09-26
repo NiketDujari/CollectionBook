@@ -3477,7 +3477,7 @@ nav.tabs button .count {
         </div>
         <h2 style="margin: 0 0 8px; color: var(--indigo-deep); font-size: 1.5rem;" data-i18n="guide_title">Start Your Ledger</h2>
         <p style="margin: 0 0 20px; color: var(--muted); font-size: 1rem; line-height: 1.4;" data-i18n="guide_text">Your collection book is empty. Choose an action below to record your first transaction.</p>
-        <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+        <div id="guideActionsRow" style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
             <button class="btn primary" onclick="if(window.checkAuth()) window.openNewEntryWith('creditor')" style="flex: 1; min-width: 140px; background: var(--indigo); font-weight: 700;" data-i18n="guide_btn_purch">- Add Purchase</button>
             <button class="btn primary" onclick="if(window.checkAuth()) window.openNewEntryWith('debtor')" style="flex: 1; min-width: 140px; background: var(--turmeric); font-weight: 700;" data-i18n="guide_btn_sale">+ Add Sale</button>
         </div>
@@ -5503,7 +5503,22 @@ nav.tabs button .count {
     { target: '#tabs button[data-tab="debtors"]', icon: '💰', titleKey: 'tour_step2_title', textKey: 'tour_step2_text' },
     { target: '#tabs button[data-tab="creditors"]', icon: '🧾', titleKey: 'tour_step3_title', textKey: 'tour_step3_text' },
     { target: '#tabs button[data-tab="mycustomers"]', icon: '👥', titleKey: 'tour_step4_title', textKey: 'tour_step4_text' },
-    { target: '#fabBtn', icon: '➕', titleKey: 'tour_step5_title', textKey: 'tour_step5_text' },
+    {
+        target: function() {
+            var actions = document.getElementById('dashboardActions');
+            if (actions && window.getComputedStyle(actions).display !== 'none') {
+                return actions;
+            }
+            var guide = document.getElementById('guideActionsRow');
+            if (guide && window.getComputedStyle(guide).display !== 'none') {
+                return guide;
+            }
+            return actions || guide || document.getElementById('newUserGuide') || document.querySelector('.dashboard-actions-row');
+        },
+        icon: '➕',
+        titleKey: 'tour_step5_title',
+        textKey: 'tour_step5_text'
+    },
     { target: '#tabs button[data-tab="directory"]', icon: '🛡️', titleKey: 'tour_step6_title', textKey: 'tour_step6_text' },
     { target: '#brandMenuBtn', icon: '⚙️', titleKey: 'tour_step7_title', textKey: 'tour_step7_text' }
     ];
@@ -7147,9 +7162,13 @@ function cbRenderTutorialStep() {
     }
 
     var target =
-        document.querySelector(
-            step.target
-        );
+        typeof step.target === 'function'
+            ? step.target()
+            : (
+                typeof step.target === 'string'
+                    ? document.querySelector(step.target)
+                    : step.target
+            );
 
     if (!target) {
 
@@ -7381,8 +7400,11 @@ async function cbFinishAndCreateEntry() {
 
     await cbCompleteTutorial();
 
-    var fab = document.getElementById('fabBtn');
-    if (fab) fab.click();
+    document
+        .getElementById(
+            'fabBtn'
+        )
+        ?.click();
 }
 
 var TUTORIAL_KEY =
@@ -9309,11 +9331,13 @@ async function sendDeleteNotifications(
         var customerMessage =
             isPayment
                 ? (
-                    'Deleted a payment of ₹' +
+                    businessName +
+                    ' Deleted a payment of ₹' +
                     amount
                 )
                 : (
-                    'Deleted a ' +
+                    businessName +
+                    ' Deleted a ' +
                     typeText +
                     ' entry of ₹' +
                     amount
@@ -9392,13 +9416,15 @@ async function sendDeleteNotifications(
             var ownerMessage =
                 isPayment
                     ? (
-                        'Deleted a payment of ₹' +
+                        employeeName +
+                        ' (Employee) Deleted a payment of ₹' +
                         amount +
                         ' for ' +
                         customerName
                     )
                     : (
-                        'Deleted a ' +
+                        employeeName +
+                        ' (Employee) Deleted a ' +
                         typeText +
                         ' entry of ₹' +
                         amount +
@@ -9495,7 +9521,8 @@ async function sendContactDeleteNotifications(
     if (customerPhone) {
 
         var customerMessage =
-            'Deleted your ledger containing ' +
+            businessName +
+            ' Deleted your ledger containing ' +
             entryCount +
             (
                 entryCount === 1
@@ -9560,7 +9587,8 @@ async function sendContactDeleteNotifications(
         if (ownerPhone) {
 
             var ownerMessage =
-                'Deleted ' +
+                employeeName +
+                ' (Employee) Deleted ' +
                 customerName +
                 ' and ' +
                 entryCount +
@@ -15151,8 +15179,15 @@ $$('.rating-star').forEach(
             return;
         }
 
-        var searchVal = $('#en-customer-search') ? $('#en-customer-search').value.trim() : '';
-        if(!editingEntryId && !selectedCustomerId && !searchVal){ showToast('Enter contact name'); return; }
+        var checkCustId = selectedCustomerId;
+        var existingCustForCheck = checkCustId ? myCustById(checkCustId) : null;
+        var searchVal = (existingCustForCheck && existingCustForCheck.name)
+            ? existingCustForCheck.name.trim()
+            : ($('#en-customer-search') ? $('#en-customer-search').value.trim() : '');
+            if (!searchVal) {
+            showToast('Enter contact name');
+            return;
+        }
         var gross = $('#en-amount') ? Number($('#en-amount').value||0) : 0;
         var hasPaymentCheck = $('#en-has-payment-check') ? $('#en-has-payment-check').checked : false;
         var rawRecvAmt = $('#en-amount-received') ? Number($('#en-amount-received').value||0) : 0;
@@ -15221,9 +15256,8 @@ var actor =
 
         // If it's an existing customer, and the field is empty, try to get it from the record
         if (checkCustId && (!rawPhone || rawPhone.length !== 10)) {
-            var existingCust = myCustById(checkCustId);
-            if (existingCust && existingCust.phone) {
-                rawPhone = cleanPhone10(existingCust.phone);
+            if (existingCustForCheck && existingCustForCheck.phone) {
+                rawPhone = cleanPhone10(existingCustForCheck.phone);
             }
         }
 
@@ -15629,7 +15663,8 @@ if (
         : searchVal;
 
 var ownerMessage =
-    "Added a new " +
+    employeeName +
+    " (Employee) Added a new " +
     typeText +
     " entry for ₹" +
     gross +
@@ -15949,7 +15984,8 @@ if (
 ) {
 
     var customerPaymentMessage =
-        "Recorded a payment of ₹" +
+        paymentBusinessName +
+        " Recorded a payment of ₹" +
         originalAmt;
 
    var whatsappConsent = true;
@@ -16007,7 +16043,8 @@ if (
         'Employee';
 
     var ownerPaymentMessage =
-        "Recorded a payment of ₹" +
+        employeeName +
+        " (Employee) Recorded a payment of ₹" +
         originalAmt +
         " for " +
         paymentCustomerName;
