@@ -89,6 +89,7 @@ flutter:
     - assets/logo.png
     - assets/logo-transparent.png
     - assets/logo-text.png
+    - assets/upi_qr.png
 
 flutter_launcher_icons:
   image_path: "assets/logo.png"

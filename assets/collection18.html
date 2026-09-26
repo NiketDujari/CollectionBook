@@ -4028,15 +4028,15 @@ nav.tabs button .count {
 <!-- Donate / Contribute Overlay -->
 <div class="overlay" id="donateOverlay">
   <div class="sheet" style="max-width: 500px; text-align: center;">
-    <div style="margin-bottom: 20px;">
-      <div style="font-size: 3.2rem; margin-bottom: 8px;">💖</div>
+    <div style="margin-bottom: 16px;">
+      <div style="font-size: 3.2rem; margin-bottom: 8px;">🎁</div>
       <h3 style="margin: 0; font-family: 'Rozha One', serif; color: var(--indigo);" data-i18n="donate_title">Support Collection Book</h3>
       <p class="sheet-sub" style="margin-top: 6px; font-size: 0.9rem; line-height: 1.4;" data-i18n="donate_sub">Collection Book is 100% free &amp; ad-free. Your small contribution helps us keep improving the app for your business!</p>
     </div>
 
-    <!-- UPI / Phone Info Card -->
-    <div style="background: var(--khadi); border: 1px solid var(--khadi-line); border-radius: 16px; padding: 18px; margin-bottom: 20px; text-align: left;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+    <!-- UPI & QR Code Info Card -->
+    <div style="background: var(--khadi); border: 1px solid var(--khadi-line); border-radius: 16px; padding: 18px; margin-bottom: 20px; text-align: center;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; text-align: left;">
         <div>
           <div style="font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em;" data-i18n="donate_upi_id_lbl">UPI ID</div>
           <div style="font-size: 1.05rem; font-weight: 700; color: var(--indigo); margin-top: 2px;" id="donate-upi-id">niket.dujari@oksbi</div>
@@ -4044,12 +4044,12 @@ nav.tabs button .count {
         <button type="button" class="mini-btn primary" id="btn-copy-upi-id" style="height: 38px; padding: 0 14px;" data-i18n="btn_copy">Copy</button>
       </div>
 
-      <div style="border-top: 1px dashed var(--khadi-line); padding-top: 10px; display: flex; justify-content: space-between; align-items: center;">
-        <div>
-          <div style="font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em;" data-i18n="donate_phone_lbl">GPAY / PHONEPE / PAYTM NUMBER</div>
-          <div style="font-size: 0.95rem; font-weight: 700; color: var(--charcoal); margin-top: 2px;">9330802304</div>
+      <!-- QR Code Display -->
+      <div style="border-top: 1px dashed var(--khadi-line); padding-top: 14px; display: flex; flex-direction: column; align-items: center; gap: 8px;">
+        <div style="background: white; padding: 12px; border-radius: 16px; border: 1px solid var(--khadi-line); box-shadow: 0 4px 12px rgba(0,0,0,0.06); display: inline-block;">
+          <img src="upi_qr.png" alt="UPI QR Code" style="width: 170px; height: 170px; display: block; border-radius: 8px;" onerror="this.src='assets/upi_qr.png'">
         </div>
-        <button type="button" class="mini-btn ghost" id="btn-copy-donate-phone" style="height: 36px; padding: 0 12px; border: 1px solid var(--khadi-line);" data-i18n="btn_copy">Copy</button>
+        <div style="font-size: 0.78rem; font-weight: 600; color: var(--muted); margin-top: 2px;">Scan to pay with any UPI app</div>
       </div>
     </div>
 
