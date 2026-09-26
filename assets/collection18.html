@@ -9233,9 +9233,8 @@ function getCurrentActor() {
                 : (
                     (window.flutterSession && (window.flutterSession && window.flutterSession.businessOwnerName)) ||
                     (
-                        profile
-                            ? (profile && profile.name)
-                            : ''
+                        profile &&
+                        profile.name
                     ) ||
                     'Business Owner'
                 ),
@@ -15142,6 +15141,16 @@ $$('.rating-star').forEach(
       });
 
      safeBind('#en-save', 'click', async function(){
+      /*
+         * ROBUST PROFILE CHECK
+         */
+        if (currentRoleMode === 'owner' && !isOwnerProfileSetup()) {
+            showToast('Please complete your profile to save entries');
+            configureProfilePopup(true);
+            openOverlay('#onboardOverlay', true);
+            return;
+        }
+
         var searchVal = $('#en-customer-search') ? $('#en-customer-search').value.trim() : '';
         if(!editingEntryId && !selectedCustomerId && !searchVal){ showToast('Enter contact name'); return; }
         var gross = $('#en-amount') ? Number($('#en-amount').value||0) : 0;
@@ -15359,21 +15368,25 @@ if (customerSaved) {
 
         var isConf = $('#en-confirmed') ? $('#en-confirmed').checked : true; var c = myCustById(selectedCustomerId);
         var currentBusinessName =
+        (
+        profile &&
+        profile.shop
+    ) ||
     (window.flutterSession && window.flutterSession.businessName) ||
     (
-        profile
-            ? (profile && profile.shop)
-            : ''
+         profile &&
+        profile.name
     ) ||
     'Business Account';
 
 var currentOwnerName =
     (window.flutterSession && window.flutterSession.businessOwnerName) ||
     (
-        profile
-            ? (profile && profile.name)
-            : ''
+         profile &&
+        profile.name
     ) ||
+     window.flutterSession
+        ?.businessOwnerName ||
     'Business Owner';
 
     var c = myCustById(checkCustId);
@@ -15711,6 +15724,15 @@ var ownerMessage =
       });
 
       safeBind('#col-save', 'click', async function(){
+       /*
+         * ROBUST PROFILE CHECK
+         */
+        if (currentRoleMode === 'owner' && !isOwnerProfileSetup()) {
+            showToast('Please complete your profile to save payments');
+            configureProfilePopup(true);
+            openOverlay('#onboardOverlay', true);
+            return;
+        }
         if(!collectTargetCustId) return;
         var amt = $('#col-amount') ? Number($('#col-amount').value||0) : 0;
         if(!amt){ showToast('Enter amount'); return; }
